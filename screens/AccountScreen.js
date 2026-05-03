@@ -43,7 +43,7 @@ const AccountScreen = ({ navigation }) => {
           try {
             setLoading(true);
             await logoutUser();
-            navigationRef.current?.navigate('Auth', { screen: 'Login' });
+            //navigationRef.current?.navigate('Auth', { screen: 'Login' });
           } catch (error) {
             Alert.alert('Error', 'Failed to logout. Please try again.');
           } finally {

@@ -2,12 +2,13 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuthService from '../services/authService';
-import { updateProfile,deleteProfile,logout,loginByGoogle,signUpByGoogle ,apple_signUp} from '../apis/userApi';
+import { updateProfile,deleteProfile,logout,loginByGoogle,signUpByGoogle ,apple_signUp,vendorLogin} from '../apis/userApi';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [role,setRole] = useState(null)
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -48,6 +49,7 @@ const signUpByApple = async (data) => {
       await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.data.user));
       setToken(response.data.token);
       setUser(response.data.user);
+      setRole(response.data.role);
       setIsAuthenticated(true);
       
       return { success: true, data: response.data };
@@ -73,6 +75,7 @@ const google_login = async (data) => {
         await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.data.user));
         setToken(response.data.token);
         setUser(response.data.user);
+        setRole(response.data.role);
         setIsAuthenticated(true);
         
         return { success: true, data: response.data };
@@ -110,6 +113,7 @@ const google_login = async (data) => {
         await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.data.user));
         setToken(response.data.token);
         setUser(response.data.user);
+        setRole(response.data.role);
         setIsAuthenticated(true);
         
         return { success: true, data: response.data };
@@ -127,12 +131,50 @@ const google_login = async (data) => {
   const login = async (credentials) => {
     try {
       const response = await AuthService.login(credentials);
+      console.log(response.data)
       
       if (response.success) {
-        await AsyncStorage.setItem('@freshyfood_token', response.token);
-        await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.user));
-        setToken(response.token);
-        setUser(response.user);
+        await AsyncStorage.setItem('@freshyfood_token', response.data.token);
+        await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.data.user));
+        setToken(response.data.token);
+        setUser(response.data.user);
+        setRole(response.data.role);
+        setIsAuthenticated(true);
+        
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response.error };
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      return {
+      success: false,
+      status: err.response?.status || (err.request ? 0 : 500),
+      message:
+        err.response?.data?.message ||
+        (err.response?.status === 404
+          ? 'User not found. Please check your email or sign up.'
+          : err.response?.status === 401
+          ? 'Invalid email or password. Please try again.'
+          : err.request
+          ? 'Network error. Please check your internet connection.'
+          : 'An unexpected error occurred. Please try again.'),
+    };;
+    } 
+  };
+
+
+  const vendor_login = async (credentials) => {
+    try {
+      const response = await vendorLogin(credentials);
+      
+      if (response.status === 200) {
+        
+        await AsyncStorage.setItem('@freshyfood_token', response.data.token);
+        await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.data.user));
+        setToken(response.data.token);
+        setUser(response.data.user);
+        setRole(response.data.role);
         setIsAuthenticated(true);
         
         return { success: true, data: response.data };
@@ -168,6 +210,7 @@ const google_login = async (data) => {
         
         setToken(response.token);
         setUser(response.user);
+        setRole(response.data.role);
         setIsAuthenticated(true);
         
         return { success: true, data: response.data };
@@ -190,6 +233,7 @@ const google_login = async (data) => {
       
       setToken(null);
       setUser(null);
+      setRole(null);
       setIsAuthenticated(false);
       }
       return response;
@@ -219,6 +263,7 @@ const google_login = async (data) => {
       await AsyncStorage.removeItem('@freshyfood_user');
       setToken(null);
       setUser(null);
+      setRole(null);
       setIsAuthenticated(false);
     }
     
@@ -233,10 +278,12 @@ const google_login = async (data) => {
     <AuthContext.Provider
       value={{
         user,
+        role,
         token,
         loading,
         isAuthenticated,
         login,
+        vendor_login,
         signUp,
         google_signUp,
         google_login,

@@ -251,7 +251,7 @@ const OrderScreen = ({ route }) => {
         navigation.navigate('Login');
         return;
       }
-      const paymentResult = await triggerPayment({
+      /*const paymentResult = await triggerPayment({
         //popup,
         navigation:navigation,
         email: paymentEmail.trim(),
@@ -260,7 +260,7 @@ const OrderScreen = ({ route }) => {
         //authToken,
       });
       if (!paymentResult?.success) { setPlacingOrder(false); return; }
-
+     */
       const orderData = prepareOrderData();
       const res = await order(orderData, authToken);
       if (res.status === 200) {

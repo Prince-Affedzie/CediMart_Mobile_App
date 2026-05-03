@@ -469,17 +469,33 @@ const LoginScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           {/* Sign Up Link */}
-          <View style={styles.signupLinkContainer}>
-            <Text style={styles.signupLinkText}>Don't have an account? </Text>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate('SignUp')} 
-              disabled={isLoading}
-            >
-              <Text style={[styles.signupLink, isLoading && styles.disabledText]}>
-                Sign Up
-              </Text>
-            </TouchableOpacity>
-          </View>
+         {/* ── Sign Up Link ── */}
+<View style={styles.signupLinkContainer}>
+  <Text style={styles.signupLinkText}>Don't have an account? </Text>
+  <TouchableOpacity 
+    onPress={() => navigation.navigate('SignUp')} 
+    disabled={isLoading}
+  >
+    <Text style={[styles.signupLink, isLoading && styles.disabledText]}>
+      Sign Up
+    </Text>
+  </TouchableOpacity>
+</View>
+
+{/* ── Vendor Login Link ── */}
+<TouchableOpacity 
+  style={styles.vendorLinkContainer}
+  onPress={() => navigation.navigate('VendorLogin')} 
+  disabled={isLoading}
+  activeOpacity={0.8}
+>
+  <View style={styles.vendorLinkContent}>
+    <Ionicons name="storefront-outline" size={20} color="#4E342E" />
+    <Text style={[styles.vendorLinkText, isLoading && styles.disabledText]}>
+      Are you a vendor? <Text style={styles.vendorLinkBold}>Login here</Text>
+    </Text>
+  </View>
+</TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -752,6 +768,36 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
   },
+  // Vendor link styles
+vendorLinkContainer: {
+  marginTop: 12,
+  marginHorizontal: 20,
+  paddingVertical: 14,
+  paddingHorizontal: 16,
+  backgroundColor: '#FFF8E1',
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#FFE082',
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: 16,
+},
+vendorLinkContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+},
+vendorLinkText: {
+  fontSize: 15,
+  color: '#4E342E',
+  fontWeight: '500',
+},
+vendorLinkBold: {
+  fontWeight: '700',
+  color: '#2E7D32',
+  textDecorationLine: 'underline',
+},
 });
 
 export default LoginScreen;

@@ -6,7 +6,7 @@ const BackendURL = Constants.expoConfig.extra?.EXPO_PUBLIC_BACKEND_URL;
 const API = axios.create({
   baseURL: BackendURL, 
   withCredentials: true,
-  timeout: 10000,
+  timeout: 30000,
 });
 
 API.interceptors.request.use(async (config) => {

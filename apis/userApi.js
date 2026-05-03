@@ -2,6 +2,7 @@ import API from "./apiClient";
 
 export const SignUp = (data)=>API.post('/api/register/account',data)
 export const login =(data)=>API.post('/api/login',data)
+export const vendorLogin =(data)=>API.post('/api/vendor/login',data)
 export const signUpByGoogle = (data)=>API.post('/api/google_sign_up',data)
 export const loginByGoogle =(data)=>API.post('/api/google_login',data)
 export const logout =()=>API.post('/api/logout')
