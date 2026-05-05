@@ -522,7 +522,7 @@ const VendorAccountScreen = () => {
               />
             </Section>
 
-            <Text style={styles.versionText}>Version 1.0.0 · FreshyFood Factory</Text>
+            <Text style={styles.versionText}>Version 1.0.0 · CediMart</Text>
             <View style={{ height: 60 }} />
           </View>
         </ScrollView>

@@ -293,6 +293,7 @@ const CategoryScreen = () => {
     const isUpdating = updatingProductId === item.id;
     const busy = isAdding || isUpdating;
     const oos = !item.inStock || item.countInStock <= 0;
+    const vendorInfo = item.market_name || item.location
 
     return (
       <TouchableOpacity
@@ -325,6 +326,7 @@ const CategoryScreen = () => {
         <View style={styles.cardBody}>
           <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
           <Text style={styles.cardUnit}>per {item.unitDisplay || item.unit || 'piece'}</Text>
+          <Text style={styles.cardUnit1}>{vendorInfo}</Text>
 
           <View style={styles.cardFooter}>
             <Text style={styles.cardPrice}>
@@ -707,7 +709,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 130,
-    backgroundColor: 'rgba(27,94,32,0.82)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   heroNav: {
     flexDirection: 'row',
@@ -943,11 +945,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#212121',
-    marginBottom: 2,
-    lineHeight: 18,
+   // marginBottom: 1,
+    lineHeight: 15,
     minHeight: 36,
   },
-  cardUnit: { fontSize: 11, color: '#BDBDBD', marginBottom: 10, fontWeight: '500' },
+  //#4CAF50
+  cardUnit: { fontSize: 11, color: '#BDBDBD', marginBottom: 5, fontWeight: '500' },
+  cardUnit1: { fontSize: 11, color: '#4CAF50', marginBottom: 10, fontWeight: '500' },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',

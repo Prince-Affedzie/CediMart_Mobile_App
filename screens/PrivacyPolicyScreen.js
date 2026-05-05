@@ -45,7 +45,7 @@ const PrivacyPolicyScreen = ({ navigation }) => {
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Ionicons name="leaf" size={40} color="#4CAF50" />
-              <Text style={styles.appName}>FreshyFood Factory</Text>
+              <Text style={styles.appName}>CediMart</Text>
             </View>
             <Text style={styles.lastUpdated}>
               Last Updated: {currentDate}
@@ -56,7 +56,7 @@ const PrivacyPolicyScreen = ({ navigation }) => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>1. Introduction</Text>
             <Text style={styles.paragraph}>
-              Welcome to FreshyFood Factory ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and services.
+              Welcome to CediMart ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and services.
             </Text>
             <Text style={styles.paragraph}>
               Please read this Privacy Policy carefully. By accessing or using our application, you agree to the collection and use of information in accordance with this policy.
@@ -350,7 +350,7 @@ const PrivacyPolicyScreen = ({ navigation }) => {
               <View style={styles.contactItem}>
                 <Ionicons name="location-outline" size={20} color="#4CAF50" />
                 <Text style={styles.contactText}>
-                  FreshyFood Factory Headquarters{'\n'}
+                  CediMart Headquarters{'\n'}
                   Accra, Ghana
                 </Text>
               </View>
@@ -360,7 +360,7 @@ const PrivacyPolicyScreen = ({ navigation }) => {
           {/* Acceptance */}
           <View style={styles.acceptanceSection}>
             <Text style={styles.acceptanceText}>
-              By using FreshyFood Factory, you acknowledge that you have read and understood this Privacy Policy.
+              By using CediMart, you acknowledge that you have read and understood this Privacy Policy.
             </Text>
           </View>
         </View>

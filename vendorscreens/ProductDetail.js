@@ -247,6 +247,7 @@ const VendorProductDetailScreen = () => {
   const [product, setProduct] = useState(initialProduct || null);
   const [loading, setLoading] = useState(!initialProduct);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Form fields
   const [name, setName] = useState('');
@@ -389,7 +390,12 @@ const VendorProductDetailScreen = () => {
         formData.append('remove_image', 'true');
       }
 
-      const res = await updateProduct(product._id, formData);
+      // ✅ FIX: Explicit Content-Type with multipart/form-data so axios
+      // attaches the correct boundary — without this, RN axios sometimes
+      // sends the wrong header and the server rejects the body.
+      const res = await updateProduct(product._id, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
       if (res?.status === 200) {
         setIsDirty(false);
@@ -408,6 +414,46 @@ const VendorProductDetailScreen = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // ── DELETE ────────────────────────────────
+  const handleDelete = () => {
+    Alert.alert(
+      '🗑️  Delete Product',
+      `Are you sure you want to permanently delete "${product?.name}"?\n\nThis action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              const res = await deleteProduct(product._id);
+              if (res?.status === 200 || res?.data?.success) {
+                Toast.show({
+                  type: 'success',
+                  text1: 'Product Deleted',
+                  text2: `"${product?.name}" has been removed.`,
+                });
+                navigation.goBack();
+              } else {
+                throw new Error(res?.data?.message || 'Delete failed');
+              }
+            } catch (err) {
+              console.error('Delete error:', err?.response?.data || err?.message || err);
+              Toast.show({
+                type: 'error',
+                text1: 'Delete Failed',
+                text2: err?.response?.data?.message || err?.message || 'Please try again.',
+              });
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   // ── LOADING STATE ─────────────────────────
@@ -636,7 +682,7 @@ const VendorProductDetailScreen = () => {
 
           {/* ════════════════
               05  TAGS
-              ════════════════ */}
+              ════════════════ 
           <Card title="Product Tags" iconName="pricetags-outline">
             <Text style={styles.tagsHint}>Tap to toggle — helps customers find your product</Text>
             <View style={styles.tagsGrid}>
@@ -669,22 +715,43 @@ const VendorProductDetailScreen = () => {
                 </TouchableOpacity>
               </View>
             )}
-          </Card>
+
+          </Card>*/}
 
           {/* ── SAVE BUTTON ── */}
+          {/* ── ACTION BUTTONS ── */}
           <TouchableOpacity
-            style={[styles.saveBtn, submitting && styles.saveBtnDisabled]}
+            style={[styles.saveBtn, (submitting || deleting) && styles.saveBtnDisabled]}
             onPress={handleSave}
-            disabled={submitting}
+            disabled={submitting || deleting}
             activeOpacity={0.88}
           >
             {submitting ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                
+                <View style={styles.saveBtnIcon}>
+                  <Ionicons name="checkmark" size={18} color="#2E7D32" />
+                </View>
                 <Text style={styles.saveBtnText}>Save Changes</Text>
                 <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.75)" />
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* ── DELETE BUTTON ── */}
+          <TouchableOpacity
+            style={[styles.deleteBtn, (deleting || submitting) && styles.deleteBtnDisabled]}
+            onPress={handleDelete}
+            disabled={deleting || submitting}
+            activeOpacity={0.85}
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color="#C62828" />
+            ) : (
+              <>
+                <Ionicons name="trash-outline" size={17} color="#C62828" />
+                <Text style={styles.deleteBtnText}>Delete Product</Text>
               </>
             )}
           </TouchableOpacity>
@@ -704,13 +771,10 @@ const styles = StyleSheet.create({
 
   // ── HEADER ──
   header: {
-    borderTopRightRadius:8,
-    borderTopLeftRadius:8,
     backgroundColor: '#1B5E20',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginHorizontal:8,
     paddingVertical: 13,
     gap: 12,
   },
@@ -926,6 +990,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
   },
   saveBtnText: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
+
+  // ── DELETE BUTTON ──
+  deleteBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    marginTop: 12,
+    paddingVertical: 15, paddingHorizontal: 24,
+    borderRadius: 18,
+    backgroundColor: '#FFF',
+    borderWidth: 1.5, borderColor: '#FFCDD2',
+    shadowColor: '#C62828', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 2,
+  },
+  deleteBtnDisabled: { opacity: 0.5 },
+  deleteBtnText: { fontSize: 15, fontWeight: '700', color: '#C62828' },
 });
 
 export default VendorProductDetailScreen;

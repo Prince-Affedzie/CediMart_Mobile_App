@@ -35,6 +35,9 @@ import PaymentScreen from '../screens/PaymentScreen';
 import MarketDetailScreen from '../screens/MarketDetailScreen';
 import VendorDetailScreen from '../screens/VendorDetailScreen';
 import MarketsScreen from '../screens/MarketsScreen';
+import GuestProductDetailScreen from '../screens/GuestProductDetail'
+import GuestMarketDetailScreen from '../screens/GuestMarketDetail';
+
 
 // ── Vendor screens ──
 import VendorLoginScreen from '../vendorscreens/VendorLogin';
@@ -61,6 +64,8 @@ function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: '#FFFFFF' } }}>
       <AuthStack.Screen name="GuestHome" component={GuestHomeScreen} />
+      <AuthStack.Screen name="GuestProductDetail" component={GuestProductDetailScreen} />
+      <AuthStack.Screen name="GuestMarketDetail" component={GuestMarketDetailScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="VendorLogin" component={VendorLoginScreen} />
       <AuthStack.Screen name="SignUp" component={SignUpScreen} />
@@ -190,9 +195,6 @@ function MainStackNavigator() {
   }, []);
 
   if (loading || isFirstLaunch === null) return null;
-  console.log(role)
-
-  //const isVendor = user?.role === 'vendor';
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -226,6 +228,7 @@ function MainStackNavigator() {
               <Stack.Screen name="Category" component={CategoryScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="Cart" component={CartScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Order" component={OrderScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="Orders" component={OrdersScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
               <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Notification" component={NotificationScreen} options={{ headerShown: false }} />

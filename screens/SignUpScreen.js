@@ -25,7 +25,7 @@ import FullScreenLoader from '../components/FullScreenLoader';
 import usePushNotifications from "../hooks/usePushNotification"; 
 
 const GoogleLogo = require('../assets/Google-logo.png');
-const BrandLogo = require('../assets/FreshyFoodFactory_App_Icon.png');
+const BrandLogo = require('../assets/cedimart_logo.png');
 
 const { width } = Dimensions.get('window');
 
@@ -169,7 +169,7 @@ const SignUpScreen = ({ navigation }) => {
         setTimeout(() => {
           navigation.navigate('MainTabs');
           Alert.alert(
-            'Welcome to FreshyFoodFactory!',
+            'Welcome to CediMart!',
             `Welcome! Your account has been created successfully 🎉`,
             [{ text: 'Continue' }]
           );
@@ -307,7 +307,7 @@ const SignUpScreen = ({ navigation }) => {
             setTimeout(() => {
               navigation.navigate('MainTabs');
               Alert.alert(
-                'Welcome to FreshyFoodFactory!',
+                'Welcome to CediMart!',
                 `Welcome! Your account has been created successfully 🎉`,
                 [{ text: 'Continue' }]
               );
@@ -370,10 +370,10 @@ const SignUpScreen = ({ navigation }) => {
                 style={styles.brandLogo}
                 resizeMode="contain"
               />
-              <Text style={styles.logoText}>FreshyFood Factory</Text>
+              <Text style={styles.logoText}>CediMart</Text>
             </View>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join our community of fresh food lovers</Text>
+            <Text style={styles.subtitle}>Join our community</Text>
           </View>
 
           {/* Social Sign Up */}
@@ -656,8 +656,8 @@ const SignUpScreen = ({ navigation }) => {
           "Please wait..."
         }
         subText={
-          googleLoading ? "Setting up your FreshyFood Factory account..." : 
-          appleLoading ? "Setting up your FreshyFood Factory account..." :
+          googleLoading ? "Setting up your CediMart account..." : 
+          appleLoading ? "Setting up your CediMart account..." :
           loading ? "We're creating your account..." : 
           "Processing your request..."
         }

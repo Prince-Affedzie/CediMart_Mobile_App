@@ -394,7 +394,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
           <View style={styles.titleRow}>
             <View style={styles.titleLeft}>
               <Text style={styles.productName}>{product.name}</Text>
-              <Text style={styles.productUnit}>{product.unit || 'piece'}, Price</Text>
+              <Text style={styles.productUnit}>{product.unit || 'piece'}</Text>
+              <Text style={styles.productUnit1}>{product.market_name}</Text>
             </View>
             <TouchableOpacity
               style={styles.heartBtn}
@@ -691,6 +692,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   productUnit: { fontSize: 14, color: '#9E9E9E', fontWeight: '500' },
+  productUnit1: { fontSize: 14, color: '#4CAF50', fontWeight: '500' },
   heartBtn: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: '#F7F7F7',

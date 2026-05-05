@@ -34,7 +34,7 @@ const SECTIONS = [
     tag: 'IMPORTANT',
     tagColor: '#2E7D32',
     tagBg: '#E8F5E9',
-    content: `By downloading, installing, or using the FreshyFood Factory mobile application ("App"), you confirm that you have read, understood, and agree to be bound by these Terms of Service ("Terms").
+    content: `By downloading, installing, or using the CediMart mobile application ("App"), you confirm that you have read, understood, and agree to be bound by these Terms of Service ("Terms").
 
 If you do not agree to these Terms, please do not use our App or services. These Terms apply to all users of the App, including visitors, customers, and merchants.
 
@@ -46,7 +46,7 @@ You must be at least 18 years old, or have the consent of a parent or guardian, 
     iconColor: '#1565C0',
     iconBg: '#E3F2FD',
     title: 'Our Services',
-    content: `FreshyFood Factory is an online platform that connects customers with fresh food products including vegetables, fruits, staples, herbs, tubers, and other groceries. Through our App, you can:`,
+    content: `CediMart is an online platform that connects customers with fresh food products including vegetables, fruits, staples, herbs, tubers, and other groceries. Through our App, you can:`,
     bullets: [
       { heading: 'Browse Products', text: 'View our catalogue of fresh food items with current pricing, availability, and product details.' },
       { heading: 'Place Orders', text: 'Add items to your cart and place orders for home delivery to your specified address in our delivery zones.' },
@@ -110,7 +110,7 @@ You must be at least 18 years old, or have the consent of a parent or guardian, 
     tagBg: '#FFEBEE',
     bullets: [
       { heading: 'Cancellation Window', text: 'You may cancel an order at no charge before it has been confirmed for processing. Once processing begins, cancellation may not be possible.' },
-      { heading: 'Cancellation by FreshyFood Factory', text: 'We reserve the right to cancel orders due to product unavailability, delivery zone restrictions, suspected fraud, or pricing errors. You will be notified and refunded in full.' },
+      { heading: 'Cancellation by CediMart', text: 'We reserve the right to cancel orders due to product unavailability, delivery zone restrictions, suspected fraud, or pricing errors. You will be notified and refunded in full.' },
       { heading: 'Refund Eligibility', text: 'Refunds are issued for: cancelled orders, items not delivered, items significantly different from description, or damaged items reported within 24 hours of delivery.' },
       { heading: 'Refund Process', text: 'Approved refunds are processed within 3–5 business days back to your original payment method. Mobile money refunds may be instant.' },
       { heading: 'No Refunds For', text: 'Change of mind after delivery, items consumed or partially used, or claims made more than 24 hours after delivery.' },
@@ -126,7 +126,7 @@ You must be at least 18 years old, or have the consent of a parent or guardian, 
     content: `You agree not to use the App in any way that:`,
     bullets: [
       { heading: 'Violates Laws', text: 'Is unlawful, fraudulent, deceptive, or violates any applicable Ghanaian laws or regulations.' },
-      { heading: 'Harms Others', text: 'Harasses, abuses, threatens, or intimidates other users, delivery riders, or FreshyFood Factory staff.' },
+      { heading: 'Harms Others', text: 'Harasses, abuses, threatens, or intimidates other users, delivery riders, or CediMart staff.' },
       { heading: 'Disrupts Services', text: 'Attempts to gain unauthorised access, introduces malware, or interferes with the proper functioning of the App.' },
       { heading: 'Misrepresents Identity', text: 'Impersonates another person or entity, or falsely claims affiliation with any organisation.' },
       { heading: 'Exploits Promotions', text: 'Abuses promotional offers, referral codes, or discount systems through fraudulent means.' },
@@ -139,11 +139,11 @@ You must be at least 18 years old, or have the consent of a parent or guardian, 
     iconColor: '#F57F17',
     iconBg: '#FFF8E1',
     title: 'Intellectual Property',
-    content: `All content in the App — including logos, product images, text, design, code, and the FreshyFood Factory brand — is owned by or licensed to FreshyFood Factory and is protected by applicable intellectual property laws.
+    content: `All content in the App — including logos, product images, text, design, code, and the CediMart brand — is owned by or licensed to CediMart and is protected by applicable intellectual property laws.
 
 You may not reproduce, distribute, modify, create derivative works from, or commercially exploit any content from the App without our prior written permission.
 
-You retain ownership of content you submit (such as reviews or profile photos), but grant FreshyFood Factory a non-exclusive licence to use such content in connection with our services.`,
+You retain ownership of content you submit (such as reviews or profile photos), but grant CediMart a non-exclusive licence to use such content in connection with our services.`,
   },
   {
     id: 'liability',
@@ -151,7 +151,7 @@ You retain ownership of content you submit (such as reviews or profile photos), 
     iconColor: '#C62828',
     iconBg: '#FFEBEE',
     title: 'Limitation of Liability',
-    content: `To the maximum extent permitted by Ghanaian law, FreshyFood Factory shall not be liable for:`,
+    content: `To the maximum extent permitted by Ghanaian law, CediMart shall not be liable for:`,
     bullets: [
       { heading: 'Indirect Damages', text: 'Any indirect, incidental, special, or consequential damages arising from your use of the App or services.' },
       { heading: 'Service Interruptions', text: 'Loss caused by temporary unavailability of the App due to maintenance, technical issues, or circumstances beyond our control.' },
@@ -393,9 +393,9 @@ const TermsOfServiceScreen = () => {
             </View>
 
             <Text style={styles.heroTitle}>Terms of Service</Text>
-            <Text style={styles.heroSubtitle}>FreshyFood Factory</Text>
+            <Text style={styles.heroSubtitle}>CediMart</Text>
             <Text style={styles.heroDesc}>
-              Please read these terms carefully before using our app and services. By continuing to use FreshyFood Factory, you agree to all terms outlined below.
+              Please read these terms carefully before using our app and services. By continuing to use CediMart, you agree to all terms outlined below.
             </Text>
 
             {/* Date pills */}
@@ -468,7 +468,7 @@ const TermsOfServiceScreen = () => {
           </View>
           <Text style={styles.agreementTitle}>You've Agreed to These Terms</Text>
           <Text style={styles.agreementText}>
-            By using FreshyFood Factory, you acknowledge that you have read and understood these Terms of Service and agree to be bound by them.
+            By using CediMart, you acknowledge that you have read and understood these Terms of Service and agree to be bound by them.
           </Text>
           <View style={styles.agreementMeta}>
             <Text style={styles.agreementMetaText}>Effective: {EFFECTIVE_DATE}</Text>
@@ -481,7 +481,7 @@ const TermsOfServiceScreen = () => {
         <View style={styles.footer}>
           <View style={styles.footerLeafRow}>
             <Ionicons name="leaf" size={14} color="#A5D6A7" />
-            <Text style={styles.footerBrand}>FreshyFood Factory</Text>
+            <Text style={styles.footerBrand}>CediMart</Text>
             <Ionicons name="leaf" size={14} color="#A5D6A7" />
           </View>
           <Text style={styles.footerSub}>Accra, Ghana · © {new Date().getFullYear()}</Text>
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
 
   // ── HERO ────────────────────────────────────────────────────────────────────
   hero: {
-    backgroundColor: '#1A237E',
+    backgroundColor: '#2E7D32',
     marginHorizontal: 16, marginTop: 8, marginBottom: 12,
     borderRadius: 22,
     overflow: 'hidden',

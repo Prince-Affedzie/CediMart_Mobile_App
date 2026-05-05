@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 
-const BrandLogo = require('../assets/FreshyFoodFactory_App_Icon.png');
+const BrandLogo = require('../assets/cedimart_logo.png');
 
 const VendorLoginScreen = ({ navigation }) => {
   const { vendor_login } = useAuth();
@@ -51,11 +51,11 @@ const VendorLoginScreen = ({ navigation }) => {
     setError('');
     try {
       const res = await vendor_login({ phone: trimmed });
-      setSuccess(true);
-      /*setTimeout(() => {
-        navigation.navigate('VendorMainTabs');
-        Alert.alert('Welcome back! 🎉', [{ text: 'Continue' }]);
-      }, 800);*/
+      if(res.success){
+         setSuccess(true);
+        }else(
+          Alert.alert('Login Failed', res?.error || res?.message || "Issues maybe Internet connectivity or you haven't created an account with Us.")
+        )
     } catch (err) {
       const message = err?.response?.data?.error || 'Login failed. Please try again.';
       setError(message);
@@ -91,7 +91,7 @@ const VendorLoginScreen = ({ navigation }) => {
                 style={styles.brandLogo}
                 resizeMode="contain"
               />
-              <Text style={styles.logoText}>FreshyFood Factory</Text>
+              <Text style={styles.logoText}>CediMart</Text>
             </View>
             <Text style={styles.title}>Welcome Back, Vendor</Text>
             <Text style={styles.subtitle}>Sign in to your vendor store</Text>

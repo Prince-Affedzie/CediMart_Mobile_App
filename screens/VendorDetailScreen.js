@@ -40,7 +40,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
       setError(null);
       const res = await getVendorById(vendorId);
       if (res.status === 200 && res.data.success) {
-        console.log(res.data.data)
+        
         setVendor(res.data.data);
       } else {
         setError('Vendor not found.');
@@ -191,13 +191,13 @@ const VendorDetailScreen = ({ route, navigation }) => {
 
         {/* Quick Info Cards */}
         <View style={styles.infoCardsRow}>
-          {vendor.contact && (
+         {/* {vendor.contact && (
             <View style={styles.infoCard}>
               <Ionicons name="call-outline" size={18} color="#2E7D32" />
               <Text style={styles.infoLabel}>Contact</Text>
               <Text style={styles.infoValue} numberOfLines={1}>{vendor.contact}</Text>
             </View>
-          )}
+          )}*/}
           {vendor.location && (
             <View style={styles.infoCard}>
               <Ionicons name="location-outline" size={18} color="#2E7D32" />

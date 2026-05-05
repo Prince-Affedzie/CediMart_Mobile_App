@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-const BrandLogo = require('../assets/FreshyFoodFactory_App_Icon.png');
+const BrandLogo = require('../assets/cedimart_logo.png');
 
 const WelcomeScreen = ({ navigation }) => {
   const handleLogin = useCallback(() => {
@@ -75,7 +75,7 @@ const WelcomeScreen = ({ navigation }) => {
           onPress={handleLogin}
           activeOpacity={0.85}
         >
-          <Text style={styles.loginButtonText}>Explore Products</Text>
+          <Text style={styles.loginButtonText}>Browse Products And Vendors</Text>
         </TouchableOpacity>
 
         <Text style={styles.terms}>

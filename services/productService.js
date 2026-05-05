@@ -30,6 +30,7 @@ async getProducts(filters = {}) {
       search: filters.search || undefined,
       minPrice: filters.minPrice || undefined,
       maxPrice: filters.maxPrice || undefined,
+      market: filters.market || undefined,
       isAvailable: filters.inStockOnly ? 'true' : undefined,
       sort: this.mapSortToBackend(filters.sortBy),
       page: filters.page || 1,

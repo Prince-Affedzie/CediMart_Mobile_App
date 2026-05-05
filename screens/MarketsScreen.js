@@ -1,5 +1,5 @@
 // src/screens/MarketsScreen.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,240 @@ import {
   TextInput,
   Dimensions,
   StatusBar,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getVendorsByMarket } from '../apis/vendorApi';
 
 const { width } = Dimensions.get('window');
+
+// ─────────────────────────────────────────────
+// Hero carousel slides
+// ─────────────────────────────────────────────
+const HERO_SLIDES = [
+  {
+    id: '1',
+    marketName: 'Madina Market',
+    tag: '📍 Madina Market',
+    title: 'Fresh Produce,\nDelivered Daily',
+    subtitle: 'Vegetables, fruits & staples from trusted vendors',
+    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1769990080/vegetables_cpp5n5.jpg',
+  },
+  {
+    id: '2',
+    marketName: 'Makola Market',
+    tag: '🛒 Makola Market',
+    title: "Accra's Biggest\nMarket, Online",
+    subtitle: 'Hundreds of vendors at your fingertips',
+    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1777893982/makola_img_1_ryp6no.jpg',
+  },
+  {
+    id: '3',
+    marketName: null,
+    tag: '🍎 Seasonal Picks',
+    title: 'Juicy Fruits,\nEvery Season',
+    subtitle: 'Tropical & local fruits sourced weekly',
+    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1770885485/colorful-fruits-tasty-fresh-ripe-juicy-white-desk_utdxnl.jpg',
+  },
+  {
+    id: '4',
+    marketName: null,
+    tag: '⚡ Free Delivery',
+    title: 'Free Delivery\nOver GH₵ 200',
+    subtitle: 'Shop from any Accra market and save on delivery',
+    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1769989775/free_delivery_tsytih.jpg',
+  },
+];
+
+const AUTO_SCROLL_MS = 4200;
+
+// Per-market accent palette (keyed by enum name)
+const MARKET_PALETTE = {
+  'Madina Market':       { bg: '#E8F5E9', accent: '#1B5E20', iconBg: '#C8E6C9', emoji: '🏬' },
+  'Makola Market':       { bg: '#FFF3E0', accent: '#E65100', iconBg: '#FFE0B2', emoji: '🛒' },
+  'Kaneshie Market':     { bg: '#E3F2FD', accent: '#1565C0', iconBg: '#BBDEFB', emoji: '🏪' },
+  'Mallam Market':       { bg: '#E0F2F1', accent: '#00695C', iconBg: '#B2DFDB', emoji: '🌿' },
+  'Tema Market':         { bg: '#F3E5F5', accent: '#6A1B9A', iconBg: '#E1BEE7', emoji: '🏭' },
+  'Dansoman Market':     { bg: '#FCE4EC', accent: '#AD1457', iconBg: '#F8BBD0', emoji: '🏘️' },
+  'Agbogbloshie Market': { bg: '#FFF9C4', accent: '#F57F17', iconBg: '#FFF176', emoji: '🌳' },
+  'Dome Market':         { bg: '#EFEBE9', accent: '#4E342E', iconBg: '#D7CCC8', emoji: '🏙️' },
+};
+const DEFAULT_PALETTE = { bg: '#E8F5E9', accent: '#2E7D32', iconBg: '#C8E6C9', emoji: '🛒' };
+
+// Consistent placeholder colors derived from vendor name char code
+const PLACEHOLDER_COLORS = [
+  { bg: '#E8F5E9', text: '#2E7D32' },
+  { bg: '#FFF8E1', text: '#F9A825' },
+  { bg: '#FCE4EC', text: '#AD1457' },
+  { bg: '#E3F2FD', text: '#1565C0' },
+  { bg: '#F3E5F5', text: '#6A1B9A' },
+  { bg: '#FFF3E0', text: '#E65100' },
+  { bg: '#E0F2F1', text: '#00695C' },
+];
+
+// ─────────────────────────────────────────────
+// Hero Carousel
+// ─────────────────────────────────────────────
+const HeroCarousel = ({ onSlidePress }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const flatListRef = useRef(null);
+  const timerRef = useRef(null);
+
+  const startAutoScroll = useCallback(() => {
+    timerRef.current = setInterval(() => {
+      setActiveIndex(prev => {
+        const next = (prev + 1) % HERO_SLIDES.length;
+        flatListRef.current?.scrollToIndex({ index: next, animated: true });
+        return next;
+      });
+    }, AUTO_SCROLL_MS);
+  }, []);
+
+  useEffect(() => {
+    startAutoScroll();
+    return () => clearInterval(timerRef.current);
+  }, [startAutoScroll]);
+
+  const handleMomentumEnd = (e) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / width);
+    setActiveIndex(index);
+    clearInterval(timerRef.current);
+    startAutoScroll();
+  };
+
+  const renderSlide = ({ item }) => (
+    <TouchableOpacity
+      activeOpacity={0.92}
+      onPress={() => onSlidePress(item)}
+      style={{ width, height: 210, position: 'relative' }}
+    >
+      <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,40,0,0.5)' }]} />
+      <View style={heroStyles.content}>
+        <View style={heroStyles.tag}>
+          <Text style={heroStyles.tagText}>{item.tag}</Text>
+        </View>
+        <Text style={heroStyles.title}>{item.title}</Text>
+        <Text style={heroStyles.subtitle}>{item.subtitle}</Text>
+        <View style={heroStyles.btn}>
+          <Text style={heroStyles.btnText}>
+            {item.marketName ? `Shop ${item.marketName.split(' ')[0]}` : 'Browse All'}
+          </Text>
+          <Ionicons name="arrow-forward" size={13} color="#fff" />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <View>
+      <FlatList
+        ref={flatListRef}
+        data={HERO_SLIDES}
+        renderItem={renderSlide}
+        keyExtractor={i => i.id}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleMomentumEnd}
+        scrollEventThrottle={16}
+        getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+      />
+      <View style={heroStyles.dotsRow}>
+        {HERO_SLIDES.map((_, i) => (
+          <TouchableOpacity
+            key={i}
+            onPress={() => {
+              flatListRef.current?.scrollToIndex({ index: i, animated: true });
+              setActiveIndex(i);
+              clearInterval(timerRef.current);
+              startAutoScroll();
+            }}
+          >
+            <View style={[heroStyles.dot, i === activeIndex ? heroStyles.dotActive : heroStyles.dotInactive]} />
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+const heroStyles = StyleSheet.create({
+  content: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20 },
+  tag: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  tagText: { fontSize: 11, color: '#fff', fontWeight: '600' },
+  title: {
+    fontSize: 23,
+    fontWeight: '800',
+    color: '#fff',
+    lineHeight: 28,
+    letterSpacing: -0.4,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.82)', marginBottom: 12 },
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  btnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 10,
+    backgroundColor: '#1B5E20',
+  },
+  dot: { borderRadius: 4, height: 5 },
+  dotActive: { width: 20, backgroundColor: '#fff' },
+  dotInactive: { width: 5, backgroundColor: 'rgba(255,255,255,0.35)' },
+});
+
+// ─────────────────────────────────────────────
+// Stats Row
+// ─────────────────────────────────────────────
+const StatsRow = ({ markets }) => {
+  const totalVendors = markets.reduce((acc, m) => acc + (m.count || 0), 0);
+  const totalProducts = markets.reduce(
+    (acc, m) => acc + (m.vendors || []).reduce((s, v) => s + (v.products?.length || 0), 0),
+    0,
+  );
+  const stats = [
+    { label: 'Markets', value: markets.length },
+    { label: 'Vendors', value: totalVendors },
+    { label: 'Products', value: totalProducts > 999 ? `${(totalProducts / 1000).toFixed(1)}k` : totalProducts },
+  ];
+  return (
+    <View style={styles.statsRow}>
+      {stats.map((s, i) => (
+        <View key={s.label} style={[styles.statChip, i < stats.length - 1 && styles.statChipBorder]}>
+          <Text style={styles.statNum}>{s.value}</Text>
+          <Text style={styles.statLabel}>{s.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+};
 
 // ─────────────────────────────────────────────
 // Vendor Card
@@ -29,23 +257,18 @@ const VendorCard = ({ vendor, onPress }) => {
   const productCount = vendor.products?.length || 0;
   const isVerified = vendor.is_verified;
 
+
+  const colorIdx = (name.charCodeAt(0) || 0) % PLACEHOLDER_COLORS.length;
+  const { bg: placeholderBg, text: placeholderText } = PLACEHOLDER_COLORS[colorIdx];
+
   return (
-    <TouchableOpacity
-      style={styles.vendorCard}
-      onPress={() => onPress(vendor)}
-      activeOpacity={0.82}
-    >
-      {/* Image / Placeholder */}
+    <TouchableOpacity style={styles.vendorCard} onPress={() => onPress(vendor)} activeOpacity={0.82}>
       <View style={styles.vendorImageContainer}>
         {imageUrl ? (
-          <Image
-            source={{ uri: imageUrl }}
-            style={styles.vendorImage}
-            resizeMode="cover"
-          />
+          <Image source={{ uri: imageUrl }} style={styles.vendorImage} resizeMode="cover" />
         ) : (
-          <View style={styles.placeholderContainer}>
-            <Text style={styles.placeholderText}>
+          <View style={[styles.vendorPlaceholder, { backgroundColor: placeholderBg }]}>
+            <Text style={[styles.vendorPlaceholderText, { color: placeholderText }]}>
               {name.charAt(0).toUpperCase()}
             </Text>
           </View>
@@ -56,54 +279,91 @@ const VendorCard = ({ vendor, onPress }) => {
             <Ionicons name="checkmark-circle" size={17} color="#2E7D32" />
           </View>
         )}
+
+        {/* Product count overlay strip */}
+        <View style={styles.productOverlay}>
+          <Ionicons name="cube-outline" size={11} color="#fff" />
+          <Text style={styles.productOverlayText}>
+            {productCount} product{productCount !== 1 ? 's' : ''}
+          </Text>
+        </View>
       </View>
 
-      {/* Info */}
       <View style={styles.vendorInfo}>
-        <Text style={styles.vendorName} numberOfLines={1}>
-          {name}
-        </Text>
-
+        <Text style={styles.vendorName} numberOfLines={1}>{name}</Text>
         {marketTag && (
           <View style={styles.marketTag}>
             <Text style={styles.marketTagText}>{marketTag}</Text>
           </View>
         )}
-
-        <View style={styles.productRow}>
-          <Ionicons name="cube-outline" size={12} color="#888" />
-          <Text style={styles.productCount}>
-            {productCount} product{productCount !== 1 ? 's' : ''}
-          </Text>
-        </View>
       </View>
     </TouchableOpacity>
   );
 };
 
 // ─────────────────────────────────────────────
-// Stats chip row — derived from markets data
+// Market Section
 // ─────────────────────────────────────────────
-const StatsRow = ({ markets }) => {
-  const totalVendors = markets.reduce((acc, m) => acc + (m.count || 0), 0);
-  const totalProducts = markets.reduce(
-    (acc, m) =>
-      acc + (m.vendors || []).reduce((s, v) => s + (v.products?.length || 0), 0),
-    0,
-  );
+const MarketSection = ({ market, onVendorPress, onMarketPress }) => {
+  const palette = MARKET_PALETTE[market._id] || DEFAULT_PALETTE;
+  const previewVendors = (market.vendors || []).slice(0, 6);
 
   return (
-    <View style={styles.statsRow}>
-      {[
-        { label: 'Markets', value: markets.length },
-        { label: 'Vendors', value: totalVendors },
-        { label: 'Products', value: totalProducts > 999 ? `${(totalProducts / 1000).toFixed(1)}k` : totalProducts },
-      ].map((s) => (
-        <View key={s.label} style={styles.statChip}>
-          <Text style={styles.statNum}>{s.value}</Text>
-          <Text style={styles.statLabel}>{s.label}</Text>
+    <View style={styles.marketBlock}>
+      {/* Header */}
+      <TouchableOpacity
+        style={styles.marketHeader}
+        onPress={() => onMarketPress(market)}
+        activeOpacity={0.75}
+      >
+        <View style={styles.marketHeaderLeft}>
+          <View style={[styles.marketIconBadge, { backgroundColor: palette.iconBg }]}>
+            <Text style={styles.marketEmoji}>{palette.emoji}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.marketName, { color: palette.accent }]}>{market._id}</Text>
+            <View style={styles.marketMetaRow}>
+              <View style={[styles.marketLiveDot, { backgroundColor: palette.accent }]} />
+              <Text style={styles.marketMeta}>
+                Accra · {market.count} vendor{market.count !== 1 ? 's' : ''}
+              </Text>
+            </View>
+          </View>
         </View>
-      ))}
+        <View style={[styles.marketChevron, { backgroundColor: palette.bg }]}>
+          <Ionicons name="chevron-forward" size={16} color={palette.accent} />
+        </View>
+      </TouchableOpacity>
+
+      {/* Thin accent divider */}
+      <View style={[styles.accentBar, { backgroundColor: palette.accent + '1A' }]} />
+
+      {/* Vendor horizontal scroll */}
+      {previewVendors.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.vendorsScroll}
+        >
+          {previewVendors.map(vendor => (
+            <VendorCard key={vendor._id} vendor={vendor} onPress={onVendorPress} />
+          ))}
+
+          {market.count > 6 && (
+            <TouchableOpacity
+              style={styles.seeMoreCard}
+              onPress={() => onMarketPress(market)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.seeMoreIconCircle, { backgroundColor: palette.bg }]}>
+                <Ionicons name="arrow-forward" size={20} color={palette.accent} />
+              </View>
+              <Text style={[styles.seeMoreText, { color: palette.accent }]}>See All</Text>
+              <Text style={styles.seeMoreCount}>+{market.count - 6} more</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 };
@@ -138,28 +398,21 @@ const MarketsScreen = ({ navigation }) => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchMarkets();
-  }, [fetchMarkets]);
+  useEffect(() => { fetchMarkets(); }, [fetchMarkets]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchMarkets();
-  };
+  const onRefresh = () => { setRefreshing(true); fetchMarkets(); };
 
   useEffect(() => {
     if (!search.trim()) {
       setFilteredMarkets(markets);
     } else {
-      const query = search.toLowerCase().trim();
+      const q = search.toLowerCase().trim();
       setFilteredMarkets(
         markets.filter(
-          (market) =>
-            market._id.toLowerCase().includes(query) ||
-            (market.vendors || []).some(
-              (v) =>
-                v.name?.toLowerCase().includes(query) ||
-                v.location?.toLowerCase().includes(query),
+          m =>
+            m._id.toLowerCase().includes(q) ||
+            (m.vendors || []).some(
+              v => v.name?.toLowerCase().includes(q) || v.location?.toLowerCase().includes(q),
             ),
         ),
       );
@@ -172,67 +425,77 @@ const MarketsScreen = ({ navigation }) => {
   const handleMarketPress = (market) =>
     navigation.navigate('MarketDetail', { marketName: market._id });
 
-  // ── Loading state ──
+  const handleSlidePress = (slide) => {
+    if (slide.marketName) {
+      const market = markets.find(m => m._id === slide.marketName);
+      if (market) handleMarketPress(market);
+    } else {
+      navigation.navigate('Products');
+    }
+  };
+
+  // ── Loading ──
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <StatusBar barStyle="light-content" backgroundColor="#1B5E20" />
-        <View style={styles.loadingHero}>
-          <Text style={styles.heroTitle}>Fresh Groceries</Text>
+        <View style={styles.loadingHeader}>
+          <Text style={styles.loadingHeaderTitle}>Accra Markets</Text>
         </View>
-        <View style={styles.centerContainer}>
+        <View style={styles.loadingBody}>
           <ActivityIndicator size="large" color="#2E7D32" />
-          <Text style={styles.loadingText}>Loading grocery stores…</Text>
+          <Text style={styles.loadingText}>Loading markets…</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // ── Main render ──
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor="#1B5E20" />
 
-      {/* ── Hero ── */}
-       <ScrollView
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#2E7D32"
-              colors={['#2E7D32']}
-            />
-          }
-          contentContainerStyle={styles.scrollContent}
-        >
-      <View style={styles.heroSection}>
-        <View style={styles.heroTopRow}>
-          {/* Location pill */}
-          <View style={styles.locationPill}>
-            <View style={styles.locationDot} />
-            <Text style={styles.locationText}>Accra, Ghana</Text>
+      {/* Fixed green header */}
+      <View style={styles.fixedHeader}>
+        <View style={styles.fixedHeaderRow}>
+          <View>
+            <Text style={styles.fixedHeaderLabel}>Explore</Text>
+            <Text style={styles.fixedHeaderTitle}>Accra Markets Vendors</Text>
           </View>
-
-          {/* Notification button */}
-          <TouchableOpacity style={styles.notifButton}>
-            <Ionicons name="notifications-outline" size={20} color="#E8F5E9" />
-          </TouchableOpacity>
+          <View style={styles.fixedHeaderBtns}>
+            <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Notification')}>
+              <Ionicons name="notifications-outline" size={18} color="#E8F5E9" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerIconBtn} >
+              <Ionicons name="storefront-outline" size={18} color="#E8F5E9" />
+            </TouchableOpacity>
+          </View>
         </View>
-
-        <Text style={styles.heroTitle}>Fresh Groceries,{'\n'}Delivered Fast</Text>
-        <Text style={styles.heroSubtitle}>Trusted Partners across all Accra Markets</Text>
       </View>
 
-      {/* ── Main card sheet ── */}
-      <View style={styles.mainContent}>
-        {/* Search */}
-        <View style={styles.searchContainer}>
-          <View style={styles.searchWrapper}>
-            <Ionicons name="search" size={18} color="#888" />
+      {/* Main scroll — hero is INSIDE scroll so it scrolls away naturally */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#fff"
+            colors={['#2E7D32']}
+          />
+        }
+        contentContainerStyle={styles.scrollContent}
+        stickyHeaderIndices={[1]} // index 0 = hero, index 1 = search block → sticky
+      >
+        {/* 0 — Hero carousel */}
+        <HeroCarousel onSlidePress={handleSlidePress} />
+
+        {/* 1 — Sticky search block */}
+        <View style={styles.stickyBlock}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={17} color="#9E9E9E" />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search markets or stores…"
+              placeholder="Search markets or vendors…"
               placeholderTextColor="#BDBDBD"
               value={search}
               onChangeText={setSearch}
@@ -241,106 +504,58 @@ const MarketsScreen = ({ navigation }) => {
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close-circle" size={18} color="#BDBDBD" />
+                <Ionicons name="close-circle" size={17} color="#BDBDBD" />
               </TouchableOpacity>
             )}
           </View>
         </View>
 
-        {/* Stats row */}
-        {markets.length > 0 && <StatsRow markets={markets} />}
+        {/* 2 — Stats */}
+        {markets.length > 0 && !search && <StatsRow markets={markets} />}
 
-        {/* Section header */}
-        <View style={styles.allVendorsRow}>
-          <Text style={styles.sectionTitle}>Markets & Vendores</Text>  
+        {/* 3 — Section label */}
+        <View style={styles.sectionLabelRow}>
+          <Text style={styles.sectionLabel}>
+            {search ? `Results for "${search}"` : 'Markets & Vendors'}
+          </Text>
+          {search ? (
+            <Text style={styles.sectionLabelCount}>{filteredMarkets.length} found</Text>
+          ) : null}
         </View>
 
-        {/* ── Scrollable content ── */}
-       
-          {/* Error empty state */}
-          {error && markets.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconWrap}>
-                <Ionicons name="cloud-offline-outline" size={36} color="#A5D6A7" />
-              </View>
-              <Text style={styles.emptyTitle}>Couldn't load markets</Text>
-              <Text style={styles.emptySubtitle}>{error}</Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={fetchMarkets}>
-                <Text style={styles.retryBtnText}>Try Again</Text>
-              </TouchableOpacity>
+        {/* 4 — Content */}
+        {error && markets.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="cloud-offline-outline" size={34} color="#A5D6A7" />
             </View>
-          ) : filteredMarkets.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconWrap}>
-                <Ionicons name="storefront-outline" size={36} color="#A5D6A7" />
-              </View>
-              <Text style={styles.emptyTitle}>No results found</Text>
-              <Text style={styles.emptySubtitle}>
-                Try searching for a different market or store
-              </Text>
+            <Text style={styles.emptyTitle}>Couldn't load markets</Text>
+            <Text style={styles.emptySubtitle}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={fetchMarkets}>
+              <Text style={styles.retryBtnText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : filteredMarkets.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="storefront-outline" size={34} color="#A5D6A7" />
             </View>
-          ) : (
-            filteredMarkets.map((market) => {
-              const previewVendors = (market.vendors || []).slice(0, 6);
-              return (
-                <View key={market._id} style={styles.marketSection}>
-                  {/* Market header row */}
-                  <TouchableOpacity
-                    style={styles.marketHeader}
-                    onPress={() => handleMarketPress(market)}
-                    activeOpacity={0.75}
-                  >
-                    <View style={styles.marketHeaderLeft}>
-                      <View style={styles.marketIconBadge}>
-                        <Text style={styles.marketEmoji}>🛒</Text>
-                      </View>
-                      <View>
-                        <Text style={styles.marketName}>{market._id}</Text>
-                        <Text style={styles.marketMeta}>
-                          Accra · {market.count} store{market.count !== 1 ? 's' : ''}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.marketChevron}>
-                      <Ionicons name="chevron-forward" size={16} color="#2E7D32" />
-                    </View>
-                  </TouchableOpacity>
+            <Text style={styles.emptyTitle}>No results found</Text>
+            <Text style={styles.emptySubtitle}>Try a different market or vendor name</Text>
+          </View>
+        ) : (
+          filteredMarkets.map(market => (
+            <MarketSection
+              key={market._id}
+              market={market}
+              onVendorPress={handleVendorPress}
+              onMarketPress={handleMarketPress}
+            />
+          ))
+        )}
 
-                  {/* Horizontal vendor cards */}
-                  {previewVendors.length > 0 && (
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.vendorsScroll}
-                    >
-                      {previewVendors.map((vendor) => (
-                        <VendorCard
-                          key={vendor._id}
-                          vendor={vendor}
-                          onPress={handleVendorPress}
-                        />
-                      ))}
-
-                      {market.count > 6 && (
-                        <TouchableOpacity
-                          style={styles.seeMoreCard}
-                          onPress={() => handleMarketPress(market)}
-                          activeOpacity={0.8}
-                        >
-                          <Ionicons name="arrow-forward-circle-outline" size={28} color="#2E7D32" />
-                          <Text style={styles.seeMoreText}>See All</Text>
-                          <Text style={styles.seeMoreCount}>+{market.count - 6} more</Text>
-                        </TouchableOpacity>
-                      )}
-                    </ScrollView>
-                  )}
-                </View>
-              );
-            })
-          )}
-       
-      </View>
-       </ScrollView>
+        <View style={{ height: 60 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -349,97 +564,62 @@ const MarketsScreen = ({ navigation }) => {
 // Styles
 // ─────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffff',
-  },
+  container: { flex: 1, backgroundColor: '#F0F2EE' },
 
-  // ── Hero ──
-  heroSection: {
+  // ── Fixed header ──
+  fixedHeader: {
     backgroundColor: '#1B5E20',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 52,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 14,
   },
-  loadingHero: {
-    backgroundColor: '#1B5E20',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
-  },
-  heroTopRow: {
+  fixedHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    alignItems: 'flex-start',
   },
-  locationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+  fixedHeaderLabel: {
+    fontSize: 11,
+    color: '#81C784',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
-  locationDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#69F0AE',
+  fixedHeaderTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.4,
   },
-  locationText: {
-    fontSize: 13,
-    color: '#E8F5E9',
-    fontWeight: '500',
-  },
-  notifButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  fixedHeaderBtns: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  headerIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  heroTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-    lineHeight: 34,
-    marginBottom: 6,
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    color: '#A5D6A7',
-    fontWeight: '400',
-  },
 
-  // ── Main sheet ──
-  mainContent: {
-    flex: 1,
-    backgroundColor: '#F2F4F0',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    marginTop: -28,
-    paddingTop: 18,
-    overflow: 'hidden',
-  },
+  scrollContent: { backgroundColor: '#F0F2EE' },
 
-  // ── Search ──
-  searchContainer: {
+  // ── Sticky search ──
+  stickyBlock: {
+    backgroundColor: '#F0F2EE',
     paddingHorizontal: 16,
-    marginBottom: 14,
+    paddingTop: 14,
+    paddingBottom: 6,
   },
-  searchWrapper: {
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    gap: 10,
-    shadowColor: '#2E7D32',
+    shadowColor: '#1B5E20',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
     shadowRadius: 8,
@@ -447,113 +627,101 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: '#1B2714',
     paddingVertical: 0,
   },
 
-  // ── Stats row ──
+  // ── Stats ──
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 16,
-    marginBottom: 18,
-  },
-  statChip: {
-    flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 14,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  statNum: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1B5E20',
-  },
-  statLabel: {
-    fontSize: 11,
-    color: '#757575',
-    marginTop: 2,
-    fontWeight: '500',
-  },
+  statChip: { flex: 1, paddingVertical: 12, alignItems: 'center' },
+  statChipBorder: { borderRightWidth: 1, borderRightColor: '#F0F0F0' },
+  statNum: { fontSize: 20, fontWeight: '800', color: '#1B5E20' },
+  statLabel: { fontSize: 11, color: '#888', fontWeight: '500', marginTop: 2 },
 
-  // ── Section header ──
-  allVendorsRow: {
+  // ── Section label ──
+  sectionLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 14,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 10,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+  sectionLabel: {
+    fontSize: 17,
+    fontWeight: '800',
     color: '#1B2714',
     letterSpacing: -0.2,
   },
-  allVendorsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2E7D32',
-  },
+  sectionLabelCount: { fontSize: 13, color: '#2E7D32', fontWeight: '600' },
 
-  scrollContent: {
-    paddingBottom: 40,
-  },
-
-  // ── Market section ──
-  marketSection: {
-    marginBottom: 24,
-    backgroundColor:"#ffff",
-    paddingVertical:24,
-    paddingBottom:24,
+  // ── Market block ──
+  marketBlock: {
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
+    paddingBottom: 18,
   },
   marketHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingTop: 18,
+    paddingBottom: 12,
   },
   marketHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
   marketIconBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    backgroundColor: '#E8F5E9',
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  marketEmoji: {
-    fontSize: 18,
-  },
+  marketEmoji: { fontSize: 22 },
   marketName: {
-    fontSize: 15,
-    fontWeight: '700',
-   color: '#1B5E20',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+    marginBottom: 3,
   },
-  marketMeta: {
-    fontSize: 12,
-    color: '#757575',
-    marginTop: 2,
+  marketMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
+  marketLiveDot: { width: 6, height: 6, borderRadius: 3 },
+  marketMeta: { fontSize: 12, color: '#757575' },
   marketChevron: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: '#E8F5E9',
+    width: 30,
+    height: 30,
+    borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
+  },
+  accentBar: {
+    height: 2,
+    marginHorizontal: 16,
+    borderRadius: 1,
+    marginBottom: 14,
   },
 
   // ── Vendor scroll ──
@@ -565,41 +733,26 @@ const styles = StyleSheet.create({
 
   // ── Vendor card ──
   vendorCard: {
-    width: 158,
-    height: 200,
-    margin:8,
+    width: 148,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.07,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F5F5F5',
   },
-  vendorImageContainer: {
-    height: 130,
-    position: 'relative',
-  },
-  vendorImage: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholderContainer: {
-    flex: 1,
-    backgroundColor: '#E8F5E9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    fontSize: 34,
-    fontWeight: '700',
-    color: '#2E7D32',
-  },
+  vendorImageContainer: { height: 110, position: 'relative' },
+  vendorImage: { width: '100%', height: '100%' },
+  vendorPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  vendorPlaceholderText: { fontSize: 32, fontWeight: '800' },
   verifiedBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: 7,
+    right: 7,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     padding: 2,
@@ -609,69 +762,64 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  vendorInfo: {
-    padding: 12,
+  productOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.44)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  vendorName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1B2714',
-    marginBottom: 6,
-  },
+  productOverlayText: { fontSize: 10, color: '#fff', fontWeight: '600' },
+  vendorInfo: { padding: 10 },
+  vendorName: { fontSize: 13, fontWeight: '700', color: '#1B2714', marginBottom: 5 },
   marketTag: {
     backgroundColor: '#FFF3E0',
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    marginBottom: 7,
   },
   marketTagText: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 9,
+    fontWeight: '800',
     color: '#E65100',
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  productRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  productCount: {
-    fontSize: 11,
-    color: '#888',
+    letterSpacing: 0.4,
   },
 
-  // ── See more card ──
+  // ── See more ──
   seeMoreCard: {
-    width: 110,
-    height: 190,
-    backgroundColor: '#F1F8F3',
+    width: 108,
+    height: 183,
+    backgroundColor: '#F4FAF4',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     borderWidth: 1.5,
     borderColor: '#C8E6C9',
     borderStyle: 'dashed',
   },
-  seeMoreText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#2E7D32',
-    marginTop: 4,
+  seeMoreIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  seeMoreCount: {
-    fontSize: 11,
-    color: '#4CAF50',
-  },
+  seeMoreText: { fontSize: 13, fontWeight: '800' },
+  seeMoreCount: { fontSize: 11, color: '#9E9E9E' },
 
-  // ── Empty / error states ──
+  // ── Empty / error ──
   emptyState: {
     alignItems: 'center',
     paddingHorizontal: 40,
-    paddingTop: 80,
+    paddingTop: 70,
   },
   emptyIconWrap: {
     width: 72,
@@ -682,33 +830,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1B2714',
-    marginBottom: 6,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#757575',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1B2714', marginBottom: 6 },
+  emptySubtitle: { fontSize: 14, color: '#757575', textAlign: 'center', lineHeight: 20 },
 
   // ── Loading ──
-  centerContainer: {
+  loadingHeader: {
+    backgroundColor: '#1B5E20',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  loadingHeaderTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  loadingBody: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F2F4F0',
+    backgroundColor: '#F0F2EE',
   },
-  loadingText: {
-    marginTop: 14,
-    fontSize: 15,
-    color: '#757575',
-  },
+  loadingText: { marginTop: 14, fontSize: 15, color: '#757575' },
 
-  // ── Retry button ──
+  // ── Retry ──
   retryBtn: {
     backgroundColor: '#2E7D32',
     paddingHorizontal: 32,
@@ -716,11 +857,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 22,
   },
-  retryBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 15,
-  },
+  retryBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
 });
 
 export default MarketsScreen;

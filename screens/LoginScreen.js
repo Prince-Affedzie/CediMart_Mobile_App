@@ -22,7 +22,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 //import {apple_signUp } from '../apis/userApi';
 
 const GoogleLogo = require('../assets/Google-logo.png');
-const BrandLogo = require('../assets/FreshyFoodFactory_App_Icon.png');
+const BrandLogo = require('../assets/cedimart_logo.png');
 
 // Improved Loading Component with proper animation
 const LoadingOverlay = ({ visible, message = 'Loading...' }) => {
@@ -144,7 +144,7 @@ const LoginScreen = ({ navigation }) => {
       if (response?.success) {
         navigation.navigate('MainTabs')
         Alert.alert(
-          'Welcome to FreshyFoodFactory!',
+          'Welcome to CediMart!',
           `Welcome back! 🎉`,
           [{ text: 'Continue' }]
         );
@@ -221,9 +221,6 @@ const LoginScreen = ({ navigation }) => {
     if (response?.success) {
       // No Alert here makes the flow feel faster/native
       setAppleLoading(false);
-      setTimeout(() => {
-         navigation.navigate('MainTabs'); 
-      },500)
      
     } else {
       Alert.alert('Sign In Failed', response.message || 'We could not sign you in.');
@@ -260,9 +257,9 @@ const LoginScreen = ({ navigation }) => {
       if (response?.success) {
         // Add a small delay to show loading state (optional)
         setTimeout(() => {
-          navigation.navigate('MainTabs')
+          
           Alert.alert(
-          'Welcome to FreshyFoodFactory!',
+          'Welcome to CediMart!',
           `Welcome back! 🎉`,
           [{ text: 'Continue' }]
         );
@@ -310,11 +307,11 @@ const LoginScreen = ({ navigation }) => {
               style={styles.brandLogo}
               resizeMode="contain"
             />
-            <Text style={styles.logoText}>FreshyFood Factory</Text>
+            <Text style={styles.logoText}>CediMart</Text>
           </View>
           
           <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue your fresh food journey</Text>
+          <Text style={styles.subtitle}>Sign in to continue your experince convenient shopping </Text>
         </View>
 
         {/* Social Login */}
@@ -534,8 +531,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   brandLogo: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
     marginRight: 8,
   },
   logoText: {

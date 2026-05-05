@@ -48,7 +48,7 @@ const ALL_MARKETS = [
 const HERO_SLIDES = [
   {
     id: '1',
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&q=80',
+    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1777893983/makola_img_3_dbeymr.jpg',
     tag: '📍  Accra Markets',
     title: 'Your Favourite\nMarkets, Online',
     subtitle: 'Shop from vendors across Madina, Makola, Kaneshie & more',
@@ -61,7 +61,7 @@ const HERO_SLIDES = [
     id: '2',
     image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1769990080/vegetables_cpp5n5.jpg',
     tag: '🥦  Farm Fresh',
-    title: 'Straight From\nThe Farm',
+    title: 'Straight From\nThe Markets',
     subtitle: 'Hand-picked vegetables delivered fresh daily',
     btnText: 'Shop Veggies',
     accentColor: '#A5D6A7',
@@ -81,9 +81,9 @@ const HERO_SLIDES = [
   },
   {
     id: '4',
-    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1770886305/staple_food_xlgo92.jpg',
+    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1769989775/free_delivery_tsytih.jpg',
     tag: '⚡  Special Deal',
-    title: 'Free Delivery\nOver GH₵ 200',
+    title: 'Free Delivery\nOver GH₵ 500',
     subtitle: 'Stock up on staples and save on shipping',
     btnText: 'Shop Staples',
     accentColor: '#FFE082',
@@ -205,7 +205,7 @@ const MarketGridCard = ({ config, liveData, onPress }) => {
 
   if (!hasVendors) {
     return (
-      <View style={styles.marketCardSoon}>
+      <TouchableOpacity onPress={() => onPress(liveData || { _id: id })} style={[styles.marketCard, { backgroundColor: palette.bg, borderColor: palette.border }]}>
         <View style={styles.marketCardTop}>
           <View style={[styles.marketIconBadge, { backgroundColor: '#F5F5F5' }]}>
             <Text style={styles.marketIcon}>{icon}</Text>
@@ -214,9 +214,9 @@ const MarketGridCard = ({ config, liveData, onPress }) => {
             <Text style={styles.comingSoonChipText}>Soon</Text>
           </View>
         </View>
-        <Text style={styles.marketNameSoon} numberOfLines={2}>{id}</Text>
+        <Text style={[styles.marketName, { color: palette.accent }]} numberOfLines={2}>{id}</Text>
         <Text style={styles.marketNoVendors}>No vendors yet</Text>
-      </View>
+      </TouchableOpacity>
     );
   }
 
@@ -317,6 +317,7 @@ const VendorCard = ({ vendor, onPress }) => (
 // ─────────────────────────────────────────────
 const ProductCard = ({ product, onPress, onAddToCart, isAdding, isInCart }) => {
   const imageUri = product.image || product.images?.[0];
+  const vendorInfo = product.vendor.market_name || product.vendor.location;
   return (
     <TouchableOpacity style={styles.productCard} onPress={() => onPress(product)} activeOpacity={0.85}>
       {imageUri ? (
@@ -328,7 +329,21 @@ const ProductCard = ({ product, onPress, onAddToCart, isAdding, isInCart }) => {
       )}
       <View style={styles.productBody}>
         <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
-        {product.unit ? <Text style={styles.productUnit}>{product.unit}</Text> : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+          {product.unit ? <Text style={styles.productUnit}>{product.unit}</Text> : null}
+          
+          
+        </View>
+         {vendorInfo && (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="location-outline" size={10} color="#1fa326" />
+                <Text style={[styles.productUnit1, { marginLeft: 2 }]} numberOfLines={1}>
+                  {vendorInfo}
+                </Text>
+              </View>
+            </>
+          )}
         <View style={styles.productFooter}>
           <Text style={styles.productPrice}>GH₵ {product.price?.toFixed(2)}</Text>
           <TouchableOpacity
@@ -604,7 +619,7 @@ const HomeScreen = () => {
               <Text style={styles.headerGreeting}>
                 {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}
               </Text>
-              <Text style={styles.headerTitle}>FreshyFood Factory</Text>
+              <Text style={styles.headerTitle}>CediMart</Text>
               <View style={styles.locationPill}>
                 <View style={styles.locationDot} />
                 <Text style={styles.locationText}>Accra, Ghana</Text>
@@ -773,7 +788,7 @@ const HomeScreen = () => {
                 {Object.keys(marketsMap).length} of {ALL_MARKETS.length} markets active
               </Text>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('Markets')} style={styles.seeAllRow}>
+            <TouchableOpacity onPress={() => navigation.navigate('Vendors')} style={styles.seeAllRow}>
               <Text style={styles.seeAllText}>See all</Text>
               <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
             </TouchableOpacity>
@@ -928,42 +943,23 @@ const HomeScreen = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>New Arrivals</Text>
-              <TouchableOpacity style={styles.seeAllRow} onPress={() => navigation.navigate('Products', { sortBy: 'newest' })}>
-                <Text style={styles.seeAllText}>See All</Text>
-                <Ionicons name="chevron-forward" size={14} color="#2E7D32" />
+              <TouchableOpacity onPress={() => navigation.navigate('Products', { tag: 'featured' })} style={styles.seeAllRow}>
+                <Text style={styles.seeAllText}>See all</Text>
+                <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
               </TouchableOpacity>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredScroll}>
-              {newArrivals.map(p => (
-                <TouchableOpacity
+            <View style={styles.productsGrid}>
+              {newArrivals.slice(0, 6).map(p => (
+                <ProductCard
                   key={p.id || p._id}
-                  style={styles.dealCard}
-                  onPress={() => navigation.navigate('ProductDetail', { productId: p.id || p._id, product: p })}
-                  activeOpacity={0.85}
-                >
-                  {(p.image || p.images?.[0]) ? (
-                    <Image source={{ uri: p.image || p.images[0] }} style={styles.dealImg} resizeMode="cover" />
-                  ) : (
-                    <View style={styles.dealImgPlaceholder} />
-                  )}
-                  <View style={styles.dealOverlay}>
-                    <Text style={styles.dealName} numberOfLines={1}>{p.name}</Text>
-                    <View style={styles.dealBottom}>
-                      <Text style={styles.dealPrice}>GH₵ {p.price?.toFixed(2)}</Text>
-                      <TouchableOpacity
-                        style={[styles.dealAddBtn, getQtyInCart(p.id || p._id) > 0 && styles.dealAddBtnActive]}
-                        onPress={() => handleAddToCart(p)}
-                        disabled={addingProductId === (p.id || p._id)}
-                      >
-                        {addingProductId === (p.id || p._id)
-                          ? <ActivityIndicator size="small" color="#fff" />
-                          : <Ionicons name={getQtyInCart(p.id || p._id) > 0 ? 'checkmark' : 'add'} size={16} color="#fff" />}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+                  product={p}
+                  onPress={(prod) => navigation.navigate('ProductDetail', { productId: prod.id || prod._id, product: prod })}
+                  onAddToCart={handleAddToCart}
+                  isAdding={addingProductId === (p.id || p._id)}
+                  isInCart={getQtyInCart(p.id || p._id) > 0}
+                />
               ))}
-            </ScrollView>
+            </View>
           </View>
         )}
 
@@ -980,7 +976,7 @@ const HomeScreen = () => {
                 <Text style={styles.bannerTagText}>SPECIAL OFFER</Text>
               </View>
               <Text style={styles.bannerTitle}>Free Delivery</Text>
-              <Text style={styles.bannerSub}>On orders over GH₵ 200 from any Accra market</Text>
+              <Text style={styles.bannerSub}>On orders over GH₵ 500 from any Accra market</Text>
               <View style={styles.bannerBtn}>
                 <Text style={styles.bannerBtnText}>Shop Now</Text>
                 <Ionicons name="arrow-forward" size={13} color="#2E7D32" />
@@ -1419,6 +1415,7 @@ const styles = StyleSheet.create({
   productBody: { padding: 10 },
   productName: { fontSize: 13, fontWeight: '600', color: '#1B2714', marginBottom: 3, lineHeight: 17 },
   productUnit: { fontSize: 11, color: '#9E9E9E', marginBottom: 8 },
+  productUnit1: { fontSize: 11, color: '#1fa326', marginBottom: 8 },
   productFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   productPrice: { fontSize: 14, fontWeight: '800', color: '#1B5E20' },
   addBtn: {

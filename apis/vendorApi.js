@@ -86,3 +86,13 @@ export const getMyOrders =async() => {
     throw error;
   }
 };
+
+
+export const deleteProduct = async (id) => {
+  try {
+    const response = await API.delete(`/api/product-delete/${id}`);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};

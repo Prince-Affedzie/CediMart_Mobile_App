@@ -2,15 +2,15 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: "FreshyFoodFactory-Mobile",
+    name: "CediMart",
     slug: "freshyfoodfactory-mobile",
-    version: "2.0.0",
+    version: "3.0.0",
     orientation: "portrait",
-    icon: "./assets/FreshyFoodFactory_App_Icon.png",
+    icon: "./assets/cedimart_logo.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
     splash: {
-      image: "./assets/FreshyFoodFactory_App_Icon.png",
+      image: "./assets/cedimart_logo.png",
       resizeMode: "contain",
       backgroundColor: "#4CAF50"
     },
@@ -49,14 +49,14 @@ ios: {
     android: {
       package: "com.freshyfood.factory",
       adaptiveIcon: {
-        foregroundImage: "./assets/FreshyFoodFactory_App_Icon.png",
+        foregroundImage: "./assets/cedimart_logo.png",
         backgroundColor: "#ffffff"
       },
       edgeToEdgeEnabled: true,
       googleServicesFile: "./google-services.json"
     },
     web: {
-      favicon: "./assets/FreshyFoodFactory_App_Icon.png"
+      favicon: "./assets/cedimart_logo.png"
     },
     updates: {
       url: "https://u.expo.dev/91d657de-bd96-4749-aa49-34001b7b4191"

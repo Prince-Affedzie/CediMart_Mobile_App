@@ -47,6 +47,7 @@ const signUpByApple = async (data) => {
     if (response.status === 200 || response.success) {
       await AsyncStorage.setItem('@freshyfood_token', response.data.token);
       await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.data.user));
+      await AsyncStorage.setItem('@freshyfood_role', JSON.stringify(response.data.role));
       setToken(response.data.token);
       setUser(response.data.user);
       setRole(response.data.role);
@@ -73,6 +74,7 @@ const google_login = async (data) => {
         console.log(response.data)
         await AsyncStorage.setItem('@freshyfood_token', response.data.token);
         await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.data.user));
+        await AsyncStorage.setItem('@freshyfood_role', JSON.stringify(response.data.role));
         setToken(response.data.token);
         setUser(response.data.user);
         setRole(response.data.role);
@@ -111,6 +113,7 @@ const google_login = async (data) => {
       if (response.status ===200) {
         await AsyncStorage.setItem('@freshyfood_token', response.data.token);
         await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.data.user));
+        await AsyncStorage.setItem('@freshyfood_role', JSON.stringify(response.data.role));
         setToken(response.data.token);
         setUser(response.data.user);
         setRole(response.data.role);
@@ -136,6 +139,7 @@ const google_login = async (data) => {
       if (response.success) {
         await AsyncStorage.setItem('@freshyfood_token', response.data.token);
         await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.data.user));
+        await AsyncStorage.setItem('@freshyfood_role', JSON.stringify(response.data.role));
         setToken(response.data.token);
         setUser(response.data.user);
         setRole(response.data.role);
@@ -172,6 +176,7 @@ const google_login = async (data) => {
         
         await AsyncStorage.setItem('@freshyfood_token', response.data.token);
         await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.data.user));
+        await AsyncStorage.setItem('@freshyfood_role', JSON.stringify(response.data.role));
         setToken(response.data.token);
         setUser(response.data.user);
         setRole(response.data.role);
@@ -207,7 +212,7 @@ const google_login = async (data) => {
       if (response.success) {
         await AsyncStorage.setItem('@freshyfood_token', response.token);
         await AsyncStorage.setItem('@freshyfood_user', JSON.stringify(response.user));
-        
+        await AsyncStorage.setItem('@freshyfood_role', JSON.stringify(response.data.role));
         setToken(response.token);
         setUser(response.user);
         setRole(response.data.role);
@@ -230,6 +235,7 @@ const google_login = async (data) => {
       if (response.status === 200){
         await AsyncStorage.removeItem('@freshyfood_token');
         await AsyncStorage.removeItem('@freshyfood_user');
+        await AsyncStorage.removeItem('@freshyfood_role');
       
       setToken(null);
       setUser(null);

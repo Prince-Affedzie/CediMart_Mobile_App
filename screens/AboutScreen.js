@@ -54,7 +54,7 @@ const AboutScreen = ({ navigation }) => {
     {
       id: 'story',
       title: 'Our Story',
-      content: 'Founded in 2023, FreshyFood Factory connects local farmers directly to your table. We noticed farmers struggled to get fair prices while consumers paid premium for produce that had lost freshness through multiple middlemen. We built a direct connection to solve both problems.',
+      content: 'Founded in 2023, CediMart connects local farmers directly to your table. We noticed farmers struggled to get fair prices while consumers paid premium for produce that had lost freshness through multiple middlemen. We built a direct connection to solve both problems.',
     },
     {
       id: 'impact',
@@ -72,8 +72,8 @@ const AboutScreen = ({ navigation }) => {
   const handleShare = async () => {
     try {
       await Share.share({
-        title: 'FreshyFood Factory',
-        message: 'Check out FreshyFood Factory - Fresh produce delivered to your doorstep! Download now: https://freshyfood.com/download',
+        title: 'CediMart',
+        message: 'Check out CediMart - Fresh produce delivered to your doorstep! Download now: https://freshyfood.com/download',
         url: 'https://freshyfood.com',
       });
     } catch (error) {
@@ -84,7 +84,7 @@ const AboutScreen = ({ navigation }) => {
   const handleRateApp = () => {
     Alert.alert(
       'Rate Our App',
-      'Would you like to rate FreshyFood Factory on the app store?',
+      'Would you like to rate CediMart on the app store?',
       [
         { text: 'Not Now', style: 'cancel' },
         { 
@@ -136,7 +136,7 @@ const AboutScreen = ({ navigation }) => {
             <View style={styles.logoContainer}>
               <Ionicons name="leaf" size={48} color="#4CAF50" />
             </View>
-            <Text style={styles.appName}>FreshyFood Factory</Text>
+            <Text style={styles.appName}>CediMart</Text>
             <Text style={styles.appTagline}>
               Fresh from farm to your table
             </Text>
@@ -250,7 +250,7 @@ const AboutScreen = ({ navigation }) => {
         {/* Footer - Simplified */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            © 2023-2026 FreshyFood Factory. All rights reserved.
+            © 2023-2026 CediMart. All rights reserved.
           </Text>
           <TouchableOpacity onPress={() => Linking.openURL('https://freshyfoodfactory.com')}>
             <Text style={styles.websiteLink}>www.freshyfoodfactory.com</Text>

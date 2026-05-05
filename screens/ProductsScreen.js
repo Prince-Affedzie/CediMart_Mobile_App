@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import {HERO_IMAGES} from '../data/Hero_Images';
+import {ACCRA_MARKETS} from '../data/Accra_Markets'
 import {CATEGORY_ICONS} from '../data/Category_Icons'
 
 const { width } = Dimensions.get('window');
@@ -88,6 +89,8 @@ const ProductsScreen = ({ navigation, route }) => {
     page: 1,
     limit: 100,
   });
+  const [marketFilter, setMarketFilter] = useState('');  
+  const [marketModalVisible, setMarketModalVisible] = useState(false)
   const [viewMode, setViewMode] = useState('grid');
   const [showSearch, setShowSearch] = useState(false);
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -165,10 +168,11 @@ const ProductsScreen = ({ navigation, route }) => {
       const backendCategory = mapCategoryForBackend(category);
       const mergedFilters = { ...filters, ...filterOverrides };
       const params = {
-        category: backendCategory,
-        search: query || undefined,
-        ...mergedFilters,
-        page,
+      category: backendCategory,
+      search: query || undefined,
+      ...mergedFilters,
+      market: marketFilter || undefined,  
+      page,
       };
 
       const response = await productService.getProducts(params);
@@ -194,7 +198,7 @@ const ProductsScreen = ({ navigation, route }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedCategory, searchQuery, filters]);
+  }, [selectedCategory, searchQuery, filters,marketFilter]);
 
   useEffect(() => {
     loadCategories();
@@ -213,6 +217,12 @@ const ProductsScreen = ({ navigation, route }) => {
       loadProducts({ reset: true });
     }
   }, [filters.inStockOnly, filters.sortBy, filters.minPrice, filters.maxPrice]);
+
+   useEffect(() => {
+    if (!loading) {
+    loadProducts({ reset: true });
+    }
+   }, [marketFilter]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -357,6 +367,7 @@ const ProductsScreen = ({ navigation, route }) => {
     const isUpdating = updatingProductId === productId;
     const isLoading = isAdding || isUpdating;
     const outOfStock = item.stock <= 0 || item.countInStock <= 0;
+    const vendorInfo = item.market_name || item.location;
 
     return (
       <TouchableOpacity
@@ -390,7 +401,9 @@ const ProductsScreen = ({ navigation, route }) => {
         <View style={styles.gridInfo}>
           <Text style={styles.gridName} numberOfLines={2}>{item.name}</Text>
           <Text style={styles.gridUnit}>per {item.unit || 'piece'}</Text>
-
+          <Text style={[styles.gridUnit1, { marginLeft: 2 }]} numberOfLines={1}>
+              {vendorInfo}
+           </Text>
           <View style={styles.gridFooter}>
             <Text style={styles.gridPrice}>GH₵{item.price?.toFixed(2)}</Text>
 
@@ -445,6 +458,7 @@ const ProductsScreen = ({ navigation, route }) => {
     const isUpdating = updatingProductId === productId;
     const isLoading = isAdding || isUpdating;
     const outOfStock = item.stock <= 0 || item.countInStock <= 0;
+    const vendorInfo = item.market_name || item.location;
 
     return (
       <TouchableOpacity
@@ -477,6 +491,7 @@ const ProductsScreen = ({ navigation, route }) => {
           </View>
 
           <Text style={styles.listUnit}>per {item.unit || 'piece'}</Text>
+           <Text style={styles.listUnit1}> {vendorInfo}</Text>
 
           <View style={styles.listBottomRow}>
             <Text style={styles.listPrice}>
@@ -614,6 +629,54 @@ const ProductsScreen = ({ navigation, route }) => {
           <View style={{ height: 20 }} />
         </View>
       </Modal>
+
+      {/* MARKET MODAL */}
+<Modal
+  visible={marketModalVisible}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setMarketModalVisible(false)}
+>
+  <TouchableOpacity
+    style={styles.sortBackdrop}
+    activeOpacity={1}
+    onPress={() => setMarketModalVisible(false)}
+  />
+  <View style={styles.sortSheet}>
+    <View style={styles.sortHandle} />
+    <Text style={styles.sortSheetTitle}>Filter by Market</Text>
+
+    {/* "All" option */}
+    <TouchableOpacity
+      style={[styles.sortRow, marketFilter === '' && styles.sortRowActive]}
+      onPress={() => { setMarketFilter(''); setMarketModalVisible(false); }}
+    >
+      <Ionicons name="storefront-outline" size={16} color={marketFilter === '' ? '#2E7D32' : '#666'} />
+      <Text style={[styles.sortRowText, marketFilter === '' && styles.sortRowTextActive]}>
+        All Markets
+      </Text>
+      {marketFilter === '' && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
+    </TouchableOpacity>
+
+    {/* Market items */}
+    {ACCRA_MARKETS.map(market => {
+      const isActive = marketFilter === market;
+      return (
+        <TouchableOpacity
+          key={market}
+          style={[styles.sortRow, isActive && styles.sortRowActive]}
+          onPress={() => { setMarketFilter(market); setMarketModalVisible(false); }}
+        >
+          <Ionicons name="storefront-outline" size={16} color={isActive ? '#2E7D32' : '#666'} />
+          <Text style={[styles.sortRowText, isActive && styles.sortRowTextActive]}>
+            {market}
+          </Text>
+          {isActive && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+</Modal>
 
       <ScrollView
         refreshControl={
@@ -758,11 +821,22 @@ const ProductsScreen = ({ navigation, route }) => {
             TOOLBAR — count, sort, view mode
             ════════════════════════════════════ */}
         <View style={styles.toolbar}>
-          <Text style={styles.toolbarCount}>
-            {loading ? 'Loading…' : `${products.length} of ${totalProducts} products`}
-          </Text>
+          
 
-          <View style={styles.toolbarRight}>
+      <View style={styles.toolbarRight}>
+
+             {/* ── Market Filter Button ── */}
+    <TouchableOpacity
+      style={styles.toolbarSortBtn}
+      onPress={() => setMarketModalVisible(true)}
+      activeOpacity={0.8}
+     >
+    <Ionicons name="location-outline" size={15} color="#2E7D32" />
+    <Text style={styles.toolbarSortText} numberOfLines={1}>
+      {marketFilter || 'Market'}
+    </Text>
+    <Ionicons name="chevron-down" size={13} color="#2E7D32" />
+  </TouchableOpacity>
             {/* Sort */}
             <TouchableOpacity
               style={styles.toolbarSortBtn}
@@ -855,8 +929,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 130,
-    backgroundColor: 'rgba(27,94,32,0.82)',
+    height: 100,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   heroNav: {
     flexDirection: 'row',
@@ -1101,6 +1175,7 @@ const styles = StyleSheet.create({
   gridInfo: { padding: 12, paddingTop: 10 },
   gridName: { fontSize: 13, fontWeight: '700', color: '#212121', marginBottom: 2, lineHeight: 18 },
   gridUnit: { fontSize: 11, color: '#BDBDBD', marginBottom: 10, fontWeight: '500' },
+  gridUnit1: { fontSize: 11, color: '#2E7D32', marginBottom: 10, fontWeight: '500' },
   gridFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   gridPrice: { fontSize: 16, fontWeight: '800', color: '#1B5E20' },
   gridAddBtn: {
@@ -1186,6 +1261,7 @@ const styles = StyleSheet.create({
   listCatText: { fontSize: 10, color: '#2E7D32', fontWeight: '700' },
   listCatTextOOS: { color: '#E53935' },
   listUnit: { fontSize: 11, color: '#BDBDBD', fontWeight: '500', marginBottom: 8 },
+  listUnit1: { fontSize: 11, color: '#2E7D32', fontWeight: '500', marginBottom: 8 },
   listBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   listPrice: { fontSize: 17, fontWeight: '800', color: '#1B5E20' },
   listQtyPill: {
