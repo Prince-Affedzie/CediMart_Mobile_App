@@ -326,7 +326,7 @@ const CategoryScreen = () => {
         <View style={styles.cardBody}>
           <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
           <Text style={styles.cardUnit}>per {item.unitDisplay || item.unit || 'piece'}</Text>
-          <Text style={styles.cardUnit1}>{vendorInfo}</Text>
+          {/*<Text style={styles.cardUnit1}>{vendorInfo}</Text>*/}
 
           <View style={styles.cardFooter}>
             <Text style={styles.cardPrice}>

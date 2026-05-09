@@ -144,6 +144,7 @@ function MainTabNavigator() {
             case 'Products':   iconName = focused ? 'basket' : 'basket-outline'; break;
             case 'Cart':       iconName = focused ? 'cart' : 'cart-outline'; break;
             case 'Vendors':    iconName = focused ? 'storefront' : 'storefront-outline'; break;
+            case 'Orders':     iconName = focused ? 'receipt':'receipt-outline'; break;
             case 'Profile':    iconName = focused ? 'person' : 'person-outline'; break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -163,7 +164,7 @@ function MainTabNavigator() {
       })}
     >
       <Tab.Screen name="Home"     component={HomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="Vendors"  component={MarketsScreen} options={{ title: 'Vendors' }} />
+      {/*<Tab.Screen name="Vendors"  component={MarketsScreen} options={{ title: 'Vendors' }} />*/}
       <Tab.Screen name="Products" component={ProductsScreen} options={{ title: 'Products' }} />
       <Tab.Screen
         name="Cart"
@@ -174,6 +175,7 @@ function MainTabNavigator() {
           tabBarBadgeStyle: { backgroundColor: '#FF3B30', fontSize: 12, minWidth: 20, height: 20 },
         }}
       />
+      <Tab.Screen name="Orders" component={OrdersScreen} options={{ title: 'Orders' }} />
       <Tab.Screen name="Profile"  component={AccountScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );

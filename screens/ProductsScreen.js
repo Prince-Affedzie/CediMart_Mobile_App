@@ -401,9 +401,9 @@ const ProductsScreen = ({ navigation, route }) => {
         <View style={styles.gridInfo}>
           <Text style={styles.gridName} numberOfLines={2}>{item.name}</Text>
           <Text style={styles.gridUnit}>per {item.unit || 'piece'}</Text>
-          <Text style={[styles.gridUnit1, { marginLeft: 2 }]} numberOfLines={1}>
+          {/*<Text style={[styles.gridUnit1, { marginLeft: 2 }]} numberOfLines={1}>
               {vendorInfo}
-           </Text>
+           </Text>*/}
           <View style={styles.gridFooter}>
             <Text style={styles.gridPrice}>GH₵{item.price?.toFixed(2)}</Text>
 
@@ -491,7 +491,7 @@ const ProductsScreen = ({ navigation, route }) => {
           </View>
 
           <Text style={styles.listUnit}>per {item.unit || 'piece'}</Text>
-           <Text style={styles.listUnit1}> {vendorInfo}</Text>
+           {/*<Text style={styles.listUnit1}> {vendorInfo}</Text>*/}
 
           <View style={styles.listBottomRow}>
             <Text style={styles.listPrice}>
@@ -825,7 +825,7 @@ const ProductsScreen = ({ navigation, route }) => {
 
       <View style={styles.toolbarRight}>
 
-             {/* ── Market Filter Button ── */}
+             {/* ── Market Filter Button ── 
     <TouchableOpacity
       style={styles.toolbarSortBtn}
       onPress={() => setMarketModalVisible(true)}
@@ -836,7 +836,7 @@ const ProductsScreen = ({ navigation, route }) => {
       {marketFilter || 'Market'}
     </Text>
     <Ionicons name="chevron-down" size={13} color="#2E7D32" />
-  </TouchableOpacity>
+  </TouchableOpacity>*/}
             {/* Sort */}
             <TouchableOpacity
               style={styles.toolbarSortBtn}
@@ -1090,7 +1090,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   toolbarCount: { fontSize: 13, color: '#9E9E9E', fontWeight: '500' },
-  toolbarRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  toolbarRight: { flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft:140},
   toolbarSortBtn: {
     flexDirection: 'row',
     alignItems: 'center',

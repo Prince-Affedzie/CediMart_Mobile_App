@@ -427,7 +427,7 @@ const GuestProductDetailScreen = () => {
             {product.unit && (
               <InfoRow icon="scale-outline" label="Unit" value={product.unit} />
             )}
-            {product.market_name && (
+            {/*{product.market_name && (
               <InfoRow icon="location-outline" label="Market" value={product.market_name} />
             )}
             {(product.vendor?.name || product.vendorName) && (
@@ -439,7 +439,7 @@ const GuestProductDetailScreen = () => {
                   valueColor="#2E7D32"
                 />
               </TouchableOpacity>
-            )}
+            )}*/}
           </View>
 
           {/* ── Description ── */}

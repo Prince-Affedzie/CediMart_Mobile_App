@@ -395,7 +395,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
             <View style={styles.titleLeft}>
               <Text style={styles.productName}>{product.name}</Text>
               <Text style={styles.productUnit}>{product.unit || 'piece'}</Text>
-              <Text style={styles.productUnit1}>{product.market_name}</Text>
+              {/*<Text style={styles.productUnit1}>{product.market_name}</Text>*/}
             </View>
             <TouchableOpacity
               style={styles.heartBtn}

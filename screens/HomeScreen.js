@@ -333,7 +333,7 @@ const ProductCard = ({ product, onPress, onAddToCart, isAdding, isInCart }) => {
           
           
         </View>
-         {vendorInfo && (
+         {/*{vendorInfo && (
             <>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="location-outline" size={10} color="#1fa326" />
@@ -342,7 +342,7 @@ const ProductCard = ({ product, onPress, onAddToCart, isAdding, isInCart }) => {
                 </Text>
               </View>
             </>
-          )}
+          )}*/}
         <View style={styles.productFooter}>
           <Text style={styles.productPrice}>GH₵ {product.price?.toFixed(2)}</Text>
           <TouchableOpacity
@@ -775,7 +775,7 @@ const HomeScreen = () => {
         {/* ══════════════════════════════════════
             MARKETS IN ACCRA
             All 8 always shown; no vendors = "Soon"
-            ══════════════════════════════════════ */}
+            ══════════════════════════════════════ 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View>
@@ -794,7 +794,7 @@ const HomeScreen = () => {
           </View>
 
 
-         {/* MARKETS IN ACCRA – horizontal scroll */}
+         {/* MARKETS IN ACCRA – horizontal scroll 
         <View style={styles.section}>
           <ScrollView
             horizontal
@@ -809,7 +809,7 @@ const HomeScreen = () => {
                 onPress={handleMarketPress}
               />
             ))}
-            {/* Optional "All Markets" card at the end */}
+           
             <TouchableOpacity
               style={styles.marketSeeAllCard}
               onPress={() => navigation.navigate('Vendors')}
@@ -822,11 +822,11 @@ const HomeScreen = () => {
             </TouchableOpacity>
           </ScrollView>
         </View>
-        </View>
+        </View>  */}
 
         {/* ══════════════════════════════════════
             FEATURED VENDORS
-            ══════════════════════════════════════ */}
+            ══════════════════════════════════════ 
         {featuredVendors.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -849,7 +849,7 @@ const HomeScreen = () => {
               ))}
             </ScrollView>
           </View>
-        )}
+        )}*/}
 
         {/* ══════════════════════════════════════
             SHOP BY CATEGORY
@@ -893,7 +893,7 @@ const HomeScreen = () => {
               </TouchableOpacity>
             </View>
             <View style={styles.productsGrid}>
-              {featuredProducts.slice(0, 4).map(p => (
+              {featuredProducts.slice(0, 6).map(p => (
                 <ProductCard
                   key={p.id || p._id}
                   product={p}

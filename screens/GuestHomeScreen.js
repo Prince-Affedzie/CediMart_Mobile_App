@@ -620,7 +620,7 @@ const GuestHomeScreen = () => {
 
         <Animated.View style={{ opacity: fadeAnim }}>
 
-         {/* MARKETS – now horizontal scroll */}
+         {/* MARKETS – now horizontal scroll 
 <View style={styles.sectionWrap}>
   <View style={styles.sectionHeaderRow}>
     <View>
@@ -678,7 +678,7 @@ const GuestHomeScreen = () => {
       </TouchableOpacity>
     ))}
 
-    {/* "See All" card at the end, same as the vendor section */}
+    
     <TouchableOpacity
       style={[styles.marketSeeMoreCard, { backgroundColor: '#F8F8F8' }]}
       onPress={goToSignUp}
@@ -690,23 +690,9 @@ const GuestHomeScreen = () => {
       <Text style={styles.marketSeeMoreText}>All{'\n'}Markets</Text>
     </TouchableOpacity>
   </ScrollView>
-</View>
+</View>*/}
 
-          {/* PERSUASION BANNER */}
-          <Animated.View style={[styles.persuasionBanner, { transform: [{ scale: bannerAnim }] }]}>
-            <View style={styles.persuasionCircle1} />
-            <View style={styles.persuasionCircle2} />
-            <View style={styles.persuasionContent}>
-              <Text style={styles.persuasionEyebrow}>🎉 New customers</Text>
-              <Text style={styles.persuasionTitle}>Free delivery on{'\n'}your first order</Text>
-              <Text style={styles.persuasionSub}>Sign up today and get started — it's free</Text>
-            </View>
-            <TouchableOpacity style={styles.persuasionBtn} onPress={goToSignUp} activeOpacity={0.85}>
-              <Text style={styles.persuasionBtnText}>Join Free</Text>
-              <Ionicons name="arrow-forward" size={13} color="#1B5E20" />
-            </TouchableOpacity>
-          </Animated.View>
-
+         
           {/* FEATURED VENDORS */}
           {vendors.length > 0 && (
             <View style={styles.sectionWrap}>
@@ -755,7 +741,21 @@ const GuestHomeScreen = () => {
             </View>
           )}
 
-          
+            {/* PERSUASION BANNER */}
+          <Animated.View style={[styles.persuasionBanner, { transform: [{ scale: bannerAnim }] }]}>
+            <View style={styles.persuasionCircle1} />
+            <View style={styles.persuasionCircle2} />
+            <View style={styles.persuasionContent}>
+              <Text style={styles.persuasionEyebrow}>🎉 New customers</Text>
+              <Text style={styles.persuasionTitle}>Free delivery on{'\n'}your first order</Text>
+              <Text style={styles.persuasionSub}>Sign up today and get started — it's free</Text>
+            </View>
+            <TouchableOpacity style={styles.persuasionBtn} onPress={goToSignUp} activeOpacity={0.85}>
+              <Text style={styles.persuasionBtnText}>Join Free</Text>
+              <Ionicons name="arrow-forward" size={13} color="#1B5E20" />
+            </TouchableOpacity>
+          </Animated.View>
+ 
 
           {/* FEATURED PRODUCTS */}
           <View style={styles.sectionWrap}>
@@ -770,7 +770,7 @@ const GuestHomeScreen = () => {
               </TouchableOpacity>
             </View>
             <View style={styles.productGrid}>
-              {featuredProducts.slice(0, 6).map(item => (
+              {featuredProducts.slice(0, 8).map(item => (
                 <ProductCard key={item.id || item._id} item={item} />
               ))}
             </View>
@@ -817,8 +817,8 @@ const GuestHomeScreen = () => {
             </View>
             <View style={styles.howSteps}>
               {[
-                { step: '01', icon: 'storefront-outline', color: '#1565C0', bg: '#E3F2FD', label: 'Choose a Market', desc: 'Pick from 8 Accra markets' },
-                { step: '02', icon: 'cart-outline',       color: '#2E7D32', bg: '#E8F5E9', label: 'Order from Vendors', desc: 'Shop directly from sellers' },
+                { step: '01', icon: 'storefront-outline', color: '#1565C0', bg: '#E3F2FD', label: ' Browse our  foodstuffs', desc: 'Picked from 8 Accra markets' },
+                { step: '02', icon: 'cart-outline',       color: '#2E7D32', bg: '#E8F5E9', label: 'Make an Order ', desc: 'Shop directly from us' },
                 { step: '03', icon: 'bicycle-outline',    color: '#F57F17', bg: '#FFF8E1', label: 'Receive Fresh',     desc: 'Delivered to your door' },
               ].map((s, i) => (
                 <View key={i} style={styles.howStep}>
