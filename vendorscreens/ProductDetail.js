@@ -1,5 +1,5 @@
 // src/vendorscreens/VendorProductDetailScreen.js
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,418 +9,107 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  Modal,
-  FlatList,
   Dimensions,
+  Animated,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { getProductById, updateProduct } from '../apis/vendorApi';
+import { getProductById, deleteProduct } from '../apis/vendorApi';
 import Toast from 'react-native-toast-message';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
-// ─────────────────────────────────────────────
-// CONSTANTS
-// ─────────────────────────────────────────────
-const VALID_CATEGORIES = [
-  { key: 'vegetable', icon: '🥦', label: 'Vegetable' },
-  { key: 'fruit',     icon: '🍎', label: 'Fruit' },
-  { key: 'staple',    icon: '🌾', label: 'Staple' },
-  { key: 'herb',      icon: '🌿', label: 'Herb' },
-  { key: 'tuber',     icon: '🥔', label: 'Tuber' },
-  { key: 'grain',     icon: '🌽', label: 'Grain' },
-  { key: 'cereal',    icon: '🥣', label: 'Cereal' },
-  { key: 'meat',      icon: '🥩', label: 'Meat' },
-  { key: 'poultry',   icon: '🍗', label: 'Poultry' },
-  { key: 'seafood',   icon: '🐟', label: 'Seafood' },
-  { key: 'frozen-food', icon: '🧊', label: 'Frozen Food' },
-  { key: 'spice',     icon: '🌶️', label: 'Spice' },
-  { key: 'other',     icon: '📦', label: 'Other' },
-];
-
-const VALID_UNITS = [
-  { key: 'kg',      label: 'Kilogram (kg)' },
-  { key: 'g',       label: 'Gram (g)' },
-  { key: 'piece',   label: 'Piece' },
-  { key: 'pieces',  label: 'Pieces' },
-  { key: 'bunch',   label: 'Bunch' },
-  { key: 'bag',     label: 'Bag' },
-  { key: 'pack',    label: 'Pack' },
-  { key: 'basket',  label: 'Basket' },
-  { key: 'olonka',  label: 'Olonka' },
-];
-
-const AVAILABLE_TAGS = [
-  { key: 'organic',        icon: '🌱' },
-  { key: 'farm_fresh',     icon: '🚜' },
-  { key: 'locally_sourced',icon: '📍' },
-  { key: 'fresh_today',    icon: '✨' },
-  { key: 'seasonal',       icon: '🍂' },
-  { key: 'popular',        icon: '🔥' },
-  { key: 'best_selling',   icon: '⭐' },
-  { key: 'new_arrival',    icon: '🆕' },
-  { key: 'discounted',     icon: '🏷️' },
-  { key: 'perishable',     icon: '⏱️' },
-  { key: 'ready_to_cook',  icon: '👨‍🍳' },
-  { key: 'ready_to_eat',   icon: '🍽️' },
-];
-
-const formatLabel = (str = '') =>
-  str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ').replace(/-/g, ' ');
-
-// ─────────────────────────────────────────────
-// ✅ FIXED IMAGE PICKER HELPER
-// Fixes: asset.type ("image") → correct MIME via asset.mimeType
-// Fixes: FormData file object needs explicit Content-Type header on submit
-// ─────────────────────────────────────────────
-const pickImageFromLibrary = async () => {
-  const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!granted) {
-    Alert.alert('Permission Required', 'Allow access to your photos.');
-    return null;
-  }
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    allowsEditing: true,
-    aspect: [4, 3],
-    quality: 0.85,
-  });
-  if (result.canceled || !result.assets?.length) return null;
-  const asset = result.assets[0];
-
-  // ✅ FIX: Use asset.mimeType (expo-image-picker v14+), fallback gracefully
-  const mimeType = asset.mimeType || 'image/jpeg';
-  // ✅ FIX: Derive extension from mimeType, not from asset.type
-  const ext = mimeType.split('/')[1] || 'jpg';
-  const fileName = asset.fileName || `product_${Date.now()}.${ext}`;
-
-  return { uri: asset.uri, type: mimeType, name: fileName };
+const CAMPUS_LABELS = {
+  UG: 'University of Ghana',
+  KNUST: 'KNUST',
+  UCC: 'University of Cape Coast',
+  UEW: 'University of Education, Winneba',
+  UPSA: 'UPSA',
+  GIMPA: 'GIMPA',
+  ASHESI: 'Ashesi University',
+  ATU: 'Accra Technical University',
+  OTHER: 'Other',
 };
 
-const pickImageFromCamera = async () => {
-  const { granted } = await ImagePicker.requestCameraPermissionsAsync();
-  if (!granted) {
-    Alert.alert('Permission Required', 'Camera access is needed.');
-    return null;
-  }
-  const result = await ImagePicker.launchCameraAsync({
-    allowsEditing: true,
-    aspect: [4, 3],
-    quality: 0.85,
-  });
-  if (result.canceled || !result.assets?.length) return null;
-  const asset = result.assets[0];
-  const mimeType = asset.mimeType || 'image/jpeg';
-  const ext = mimeType.split('/')[1] || 'jpg';
-  return { uri: asset.uri, type: mimeType, name: asset.fileName || `product_${Date.now()}.${ext}` };
+const CONDITION_COLORS = {
+  'new':           { bg: '#E8F5E9', text: '#2E7D32', label: 'Brand New' },
+  'like-new':      { bg: '#E8F5E9', text: '#2E7D32', label: 'Like New' },
+  'excellent':     { bg: '#E8F5E9', text: '#2E7D32', label: 'Excellent' },
+  'good':          { bg: '#FFF8E1', text: '#F9A825', label: 'Good' },
+  'fair':          { bg: '#FFF3E0', text: '#E65100', label: 'Fair' },
+  'slightly-used': { bg: '#FFF3E0', text: '#E65100', label: 'Slightly Used' },
+  'for-parts':     { bg: '#FFEBEE', text: '#C62828', label: 'For Parts' },
 };
 
-// ─────────────────────────────────────────────
-// DROPDOWN COMPONENT
-// A reusable bottom-sheet style picker modal
-// ─────────────────────────────────────────────
-const DropdownPicker = ({ label, icon, value, options, onSelect, placeholder, renderOption }) => {
-  const [open, setOpen] = useState(false);
-  const slideAnim = useRef(new Animated.Value(300)).current;
-  const backdropAnim = useRef(new Animated.Value(0)).current;
-
-  const openModal = () => {
-    setOpen(true);
-    Animated.parallel([
-      Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }),
-      Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
-  };
-
-  const closeModal = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, { toValue: 300, duration: 220, useNativeDriver: true }),
-      Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => setOpen(false));
-  };
-
-  const handleSelect = (item) => {
-    onSelect(item.key);
-    closeModal();
-  };
-
-  const selectedOption = options.find(o => o.key === value);
-
-  return (
-    <>
-      <TouchableOpacity style={styles.dropdownTrigger} onPress={openModal} activeOpacity={0.8}>
-        <View style={styles.dropdownTriggerLeft}>
-          <Ionicons name={icon} size={16} color={value ? '#2E7D32' : '#9E9E9E'} />
-          <Text style={[styles.dropdownTriggerText, !value && styles.dropdownPlaceholder]}>
-            {selectedOption
-              ? `${selectedOption.icon ? selectedOption.icon + '  ' : ''}${selectedOption.label}`
-              : placeholder}
-          </Text>
-        </View>
-        <Ionicons name="chevron-down" size={16} color="#9E9E9E" />
-      </TouchableOpacity>
-
-      <Modal visible={open} transparent animationType="none" onRequestClose={closeModal}>
-        <Animated.View style={[styles.dropdownBackdrop, { opacity: backdropAnim }]}>
-          <TouchableOpacity style={{ flex: 1 }} onPress={closeModal} />
-        </Animated.View>
-        <Animated.View style={[styles.dropdownSheet, { transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.dropdownHandle} />
-          <View style={styles.dropdownSheetHeader}>
-            <Text style={styles.dropdownSheetTitle}>{label}</Text>
-            <TouchableOpacity onPress={closeModal} style={styles.dropdownCloseBtn}>
-              <Ionicons name="close" size={20} color="#424242" />
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={options}
-            keyExtractor={item => item.key}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 24 }}
-            renderItem={({ item }) => {
-              const selected = item.key === value;
-              return (
-                <TouchableOpacity
-                  style={[styles.dropdownOption, selected && styles.dropdownOptionSelected]}
-                  onPress={() => handleSelect(item)}
-                  activeOpacity={0.75}
-                >
-                  {item.icon && <Text style={styles.dropdownOptionEmoji}>{item.icon}</Text>}
-                  <Text style={[styles.dropdownOptionLabel, selected && styles.dropdownOptionLabelSelected]}>
-                    {item.label}
-                  </Text>
-                  {selected && <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </Animated.View>
-      </Modal>
-    </>
-  );
+const TAG_LABELS = {
+  'featured':         '⭐ Featured',
+  'urgent-sale':      '⚡ Urgent Sale',
+  'popular':          '🔥 Popular',
+  'discounted':       '🏷️ Discounted',
+  'new-arrival':      '🆕 New Arrival',
+  'student-favorite': '❤️ Student Favorite',
 };
 
-// ─────────────────────────────────────────────
-// FIELD WRAPPER
-// ─────────────────────────────────────────────
-const Field = ({ label, required, children, hint }) => (
-  <View style={styles.fieldWrap}>
-    <View style={styles.fieldLabelRow}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      {required && <Text style={styles.fieldRequired}> *</Text>}
-      {hint && <Text style={styles.fieldHint}> · {hint}</Text>}
+const InfoGridItem = ({ icon, label, value }) => (
+  <View style={styles.infoItem}>
+    <View style={styles.infoIcon}>
+      <Ionicons name={icon} size={18} color="#2E7D32" />
     </View>
-    {children}
+    <Text style={styles.infoLabel}>{label}</Text>
+    <Text style={styles.infoValue} numberOfLines={2}>{value}</Text>
   </View>
 );
 
-// ─────────────────────────────────────────────
-// SECTION CARD
-// ─────────────────────────────────────────────
-const Card = ({ title, iconName, children }) => (
-  <View style={styles.card}>
-    <View style={styles.cardTitleRow}>
-      <View style={styles.cardIconWrap}>
-        <Ionicons name={iconName} size={15} color="#2E7D32" />
-      </View>
-      <Text style={styles.cardTitle}>{title}</Text>
-    </View>
-    {children}
-  </View>
-);
-
-// ─────────────────────────────────────────────
-// MAIN SCREEN
-// ─────────────────────────────────────────────
 const VendorProductDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { product: initialProduct } = route.params;
+  const { product: initialProduct, productId } = route.params;
 
   const [product, setProduct] = useState(initialProduct || null);
   const [loading, setLoading] = useState(!initialProduct);
-  const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  // Form fields
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [price, setPrice] = useState('');
-  const [unit, setUnit] = useState('');
-  const [stock, setStock] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [isAvailable, setIsAvailable] = useState(true);
-
-  // Image state
-  const [existingImage, setExistingImage] = useState('');
-  const [newImage, setNewImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
-  const [removeImage, setRemoveImage] = useState(false);
-
-  // Dirty tracking — know if anything changed
-  const [isDirty, setIsDirty] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // ── LOAD ──────────────────────────────────
   useEffect(() => {
     if (initialProduct) {
-      populateForm(initialProduct);
       setLoading(false);
-    } else {
-      (async () => {
-        try {
-          const res = await getProductById(route.params.productId);
-          if (res?.status === 200) {
-            const prod = res.data.data || res.data;
-            setProduct(prod);
-            populateForm(prod);
-          } else {
-            Alert.alert('Error', 'Product not found.');
-            navigation.goBack();
-          }
-        } catch {
-          Alert.alert('Error', 'Failed to load product.');
-          navigation.goBack();
-        } finally {
-          setLoading(false);
-        }
-      })();
+    } else if (productId) {
+      fetchProduct();
     }
-  }, []);
+  }, [productId]);
 
   useEffect(() => {
-    if (!loading) {
-      Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+    if (!loading && product) {
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
     }
-  }, [loading]);
+  }, [loading, product]);
 
-  const populateForm = (prod) => {
-    setName(prod.name || '');
-    setCategory(prod.category || '');
-    setPrice(prod.price != null ? prod.price.toString() : '');
-    setUnit(prod.unit || '');
-    setStock(prod.countInStock != null ? prod.countInStock.toString() : '0');
-    setDescription(prod.description || '');
-    setSelectedTags(Array.isArray(prod.tags) ? prod.tags : []);
-    setIsAvailable(prod.isAvailable !== undefined ? prod.isAvailable : true);
-    setExistingImage(prod.image || '');
-    setImagePreview(prod.image || '');
-  };
-
-  // ── IMAGE ACTIONS ─────────────────────────
-  const handlePickImage = async (source = 'library') => {
-    const picked = source === 'camera'
-      ? await pickImageFromCamera()
-      : await pickImageFromLibrary();
-    if (!picked) return;
-    setNewImage(picked);
-    setImagePreview(picked.uri);
-    setRemoveImage(false);
-    setIsDirty(true);
-  };
-
-  const showImageOptions = () => {
-    Alert.alert('Change Photo', 'Choose a source', [
-      { text: '📷  Camera', onPress: () => handlePickImage('camera') },
-      { text: '🖼️  Photo Library', onPress: () => handlePickImage('library') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
-  const handleRemoveImage = () => {
-    if (newImage) {
-      setNewImage(null);
-      setImagePreview(existingImage);
-    } else {
-      Alert.alert('Remove Image', 'Are you sure you want to remove the product image?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => { setRemoveImage(true); setImagePreview(''); setIsDirty(true); } },
-      ]);
-    }
-  };
-
-  const toggleTag = (tag) => {
-    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-    setIsDirty(true);
-  };
-
-  // ── SUBMIT ────────────────────────────────
-  // ✅ FIX: Pass explicit multipart/form-data header so axios builds correct boundary
-  const handleSave = async () => {
-    if (!name.trim())  return Alert.alert('Missing Field', 'Product name is required.');
-    if (!category)     return Alert.alert('Missing Field', 'Please select a category.');
-    if (!price.trim() || isNaN(parseFloat(price)) || parseFloat(price) <= 0)
-      return Alert.alert('Missing Field', 'Enter a valid price greater than 0.');
-    if (!unit)         return Alert.alert('Missing Field', 'Please select a unit.');
-    const stockCount = stock.trim() ? parseInt(stock, 10) : 0;
-    if (isNaN(stockCount) || stockCount < 0)
-      return Alert.alert('Missing Field', 'Stock must be a non-negative number.');
-
-    setSubmitting(true);
+  const fetchProduct = async () => {
     try {
-      const formData = new FormData();
-      formData.append('name',         name.trim());
-      formData.append('category',     category);
-      formData.append('price',        parseFloat(price).toString());
-      formData.append('unit',         unit);
-      formData.append('countInStock', stockCount.toString());
-      formData.append('description',  description.trim());
-      formData.append('isAvailable',  isAvailable.toString());
-
-      // Tags as array
-      selectedTags.forEach(tag => formData.append('tags[]', tag));
-
-      if (newImage) {
-        // ✅ FIX: Correct FormData file object — type must be a valid MIME string
-        formData.append('productImage', {
-          uri: Platform.OS === 'ios' ? newImage.uri.replace('file://', '') : newImage.uri,
-          type: newImage.type,   // already fixed to be "image/jpeg" etc.
-          name: newImage.name,
-        });
-      } else if (removeImage) {
-        formData.append('remove_image', 'true');
-      }
-
-      // ✅ FIX: Explicit Content-Type with multipart/form-data so axios
-      // attaches the correct boundary — without this, RN axios sometimes
-      // sends the wrong header and the server rejects the body.
-      const res = await updateProduct(product._id, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      if (res?.status === 200) {
-        setIsDirty(false);
-        Toast.show({ type: 'success', text1: '✅ Product Updated', text2: 'All changes saved successfully.' });
-        navigation.goBack();
+      const res = await getProductById(productId);
+      const data = res?.data?.data?.product || res?.data?.data || res?.data;
+      if (data) {
+        setProduct(data);
       } else {
-        throw new Error(res?.data?.message || 'Update failed');
+        Alert.alert('Error', 'Product not found.');
+        navigation.goBack();
       }
     } catch (err) {
-      console.error('Update error:', err?.response?.data || err?.message || err);
-      Toast.show({
-        type: 'error',
-        text1: 'Update Failed',
-        text2: err?.response?.data?.message || err?.message || 'Please try again.',
-      });
+      Alert.alert('Error', 'Failed to load product.');
+      navigation.goBack();
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  // ── DELETE ────────────────────────────────
   const handleDelete = () => {
     Alert.alert(
-      '🗑️  Delete Product',
-      `Are you sure you want to permanently delete "${product?.name}"?\n\nThis action cannot be undone.`,
+      'Delete Listing',
+      `Permanently delete "${product?.name}"?\n\nThis cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -429,24 +118,11 @@ const VendorProductDetailScreen = () => {
           onPress: async () => {
             setDeleting(true);
             try {
-              const res = await deleteProduct(product._id);
-              if (res?.status === 200 || res?.data?.success) {
-                Toast.show({
-                  type: 'success',
-                  text1: 'Product Deleted',
-                  text2: `"${product?.name}" has been removed.`,
-                });
-                navigation.goBack();
-              } else {
-                throw new Error(res?.data?.message || 'Delete failed');
-              }
+              await deleteProduct(product._id || productId);
+              Toast.show({ type: 'success', text1: 'Deleted', text2: 'Listing has been removed.' });
+              navigation.goBack();
             } catch (err) {
-              console.error('Delete error:', err?.response?.data || err?.message || err);
-              Toast.show({
-                type: 'error',
-                text1: 'Delete Failed',
-                text2: err?.response?.data?.message || err?.message || 'Please try again.',
-              });
+              Toast.show({ type: 'error', text1: 'Error', text2: err?.response?.data?.message || 'Failed to delete' });
             } finally {
               setDeleting(false);
             }
@@ -456,554 +132,381 @@ const VendorProductDetailScreen = () => {
     );
   };
 
-  // ── LOADING STATE ─────────────────────────
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={22} color="#fff" />
+            <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Product</Text>
+          <Text style={styles.headerTitle}>Product Details</Text>
           <View style={{ width: 36 }} />
         </View>
-        <View style={styles.loadingState}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2E7D32" />
-          <Text style={styles.loadingText}>Loading product...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // ── RENDER ────────────────────────────────
+  if (!product) return null;
+
+  const images = product.images?.length ? product.images : (product.image ? [product.image] : []);
+  const conditionInfo = CONDITION_COLORS[product.condition] || CONDITION_COLORS['good'];
+
+  const infoItems = [
+    { icon: 'grid-outline', label: 'Category', value: product.category?.replace(/-/g, ' ') },
+    { icon: 'school-outline', label: 'Campus', value: CAMPUS_LABELS[product.campus] || product.campus },
+    { icon: 'location-outline', label: 'Location', value: product.location?.campusArea || '—' },
+    ...(product.location?.hostel ? [{ icon: 'home-outline', label: 'Hostel / Hall', value: product.location.hostel }] : []),
+  ];
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-
-      {/* ── HEADER ── */}
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color="#fff" />
+          <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Edit Product</Text>
-          <Text style={styles.headerSub} numberOfLines={1}>{product?.name}</Text>
+          <Text style={styles.headerTitle}>Product Details</Text>
         </View>
         <TouchableOpacity
-          onPress={handleSave}
-          disabled={submitting}
-          style={[styles.headerSaveBtn, (!isDirty || submitting) && styles.headerSaveBtnDim]}
+          onPress={() => navigation.navigate('UpdateProduct', { productId: product._id || productId })}
+          style={styles.headerEditBtn}
         >
-          {submitting
-            ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={styles.headerSaveBtnText}>Save</Text>}
+          <Ionicons name="create-outline" size={18} color="#1A1A1A" />
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Dirty indicator strip */}
-      {isDirty && (
-        <View style={styles.dirtyStrip}>
-          <Ionicons name="alert-circle-outline" size={13} color="#E65100" />
-          <Text style={styles.dirtyText}>You have unsaved changes</Text>
-        </View>
-      )}
-
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-
-          {/* ════════════════
-              01  PHOTO
-              ════════════════ */}
-          <Card title="Product Photo" iconName="image-outline">
-            {imagePreview ? (
-              <View style={styles.imgWrap}>
-                <Image source={{ uri: imagePreview }} style={styles.imgPreview} resizeMode="cover" />
-
-                {/* State badge */}
-                {(newImage || removeImage) && (
-                  <View style={[styles.imgBadge, removeImage && styles.imgBadgeDanger]}>
-                    <Ionicons name={newImage ? 'checkmark-circle' : 'warning'} size={12} color="#fff" />
-                    <Text style={styles.imgBadgeText}>
-                      {newImage ? 'New image ready' : 'Will be removed'}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Overlay actions */}
-                <View style={styles.imgOverlayActions}>
-                  <TouchableOpacity style={styles.imgOverlayBtn} onPress={showImageOptions}>
-                    <Ionicons name="camera-outline" size={15} color="#fff" />
-                    <Text style={styles.imgOverlayBtnText}>Change</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.imgOverlayBtn, styles.imgOverlayBtnRed]} onPress={handleRemoveImage}>
-                    <Ionicons name="trash-outline" size={15} color="#fff" />
-                    <Text style={styles.imgOverlayBtnText}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.imgUploadBox} onPress={showImageOptions} activeOpacity={0.8}>
-                <View style={styles.imgUploadIcon}>
-                  <Ionicons name="cloud-upload-outline" size={32} color="#2E7D32" />
-                </View>
-                <Text style={styles.imgUploadTitle}>Add Product Photo</Text>
-                <Text style={styles.imgUploadSub}>Tap to choose from camera or library</Text>
-              </TouchableOpacity>
-            )}
-          </Card>
-
-          {/* ════════════════
-              02  BASIC INFO
-              ════════════════ */}
-          <Card title="Basic Information" iconName="information-circle-outline">
-            <Field label="Product Name" required>
-              <View style={styles.inputWrap}>
-                <Ionicons name="pricetag-outline" size={15} color="#9E9E9E" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={name}
-                  onChangeText={v => { setName(v); setIsDirty(true); }}
-                  placeholder="e.g. Fresh Roma Tomatoes"
-                  placeholderTextColor="#C5C5C5"
-                />
-              </View>
-            </Field>
-
-            <Field label="Category" required>
-              <DropdownPicker
-                label="Select Category"
-                icon="grid-outline"
-                value={category}
-                options={VALID_CATEGORIES}
-                onSelect={v => { setCategory(v); setIsDirty(true); }}
-                placeholder="Choose a category..."
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {images.length > 0 && (
+          <View style={styles.imageGallery}>
+            <View style={styles.mainImageWrap}>
+              <Image
+                source={{ uri: images[activeImageIndex] }}
+                style={styles.mainImage}
+                resizeMode="cover"
               />
-            </Field>
-          </Card>
-
-          {/* ════════════════
-              03  PRICING
-              ════════════════ */}
-          <Card title="Pricing & Inventory" iconName="cash-outline">
-            {/* Price */}
-            <Field label="Price" required>
-              <View style={styles.priceWrap}>
-                <View style={styles.currencyBadge}>
-                  <Text style={styles.currencyText}>GH₵</Text>
+              {product.negotiable && (
+                <View style={styles.negotiableBadge}>
+                  <Ionicons name="pricetag" size={12} color="#fff" />
+                  <Text style={styles.negotiableText}>Negotiable</Text>
                 </View>
-                <TextInput
-                  style={styles.priceInput}
-                  value={price}
-                  onChangeText={v => { setPrice(v); setIsDirty(true); }}
-                  placeholder="0.00"
-                  placeholderTextColor="#C5C5C5"
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </Field>
-
-            {/* Unit */}
-            <Field label="Unit" required>
-              <DropdownPicker
-                label="Select Unit"
-                icon="scale-outline"
-                value={unit}
-                options={VALID_UNITS}
-                onSelect={v => { setUnit(v); setIsDirty(true); }}
-                placeholder="Choose a unit..."
-              />
-            </Field>
-
-            {/* Stock + Availability */}
-            <View style={styles.twoCol}>
-              <View style={{ flex: 1, marginRight: 10 }}>
-                <Field label="Stock Qty">
-                  <View style={styles.inputWrap}>
-                    <Ionicons name="layers-outline" size={15} color="#9E9E9E" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.textInput}
-                      value={stock}
-                      onChangeText={v => { setStock(v); setIsDirty(true); }}
-                      placeholder="0"
-                      placeholderTextColor="#C5C5C5"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </Field>
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Field label="Availability">
-                  <View style={styles.availRow}>
-                    <TouchableOpacity
-                      style={[styles.availChip, isAvailable && styles.availChipOn]}
-                      onPress={() => { setIsAvailable(true); setIsDirty(true); }}
-                    >
-                      <View style={[styles.availDot, { backgroundColor: '#4CAF50' }]} />
-                      <Text style={[styles.availText, isAvailable && styles.availTextOn]}>In Stock</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.availChip, !isAvailable && styles.availChipOff]}
-                      onPress={() => { setIsAvailable(false); setIsDirty(true); }}
-                    >
-                      <View style={[styles.availDot, { backgroundColor: '#E53935' }]} />
-                      <Text style={[styles.availText, !isAvailable && styles.availTextOff]}>Out</Text>
-                    </TouchableOpacity>
-                  </View>
-                </Field>
-              </View>
-            </View>
-          </Card>
-
-          {/* ════════════════
-              04  DESCRIPTION
-              ════════════════ */}
-          <Card title="Description" iconName="document-text-outline">
-            <Field label="Product Description" hint="optional">
-              <View style={[styles.inputWrap, styles.textAreaWrap]}>
-                <TextInput
-                  style={[styles.textInput, styles.textArea]}
-                  value={description}
-                  onChangeText={v => { setDescription(v); setIsDirty(true); }}
-                  placeholder="Describe origin, quality, freshness..."
-                  placeholderTextColor="#C5C5C5"
-                  multiline
-                  textAlignVertical="top"
-                />
-              </View>
-              {description.length > 0 && (
-                <Text style={styles.charCount}>{description.length} characters</Text>
               )}
-            </Field>
-          </Card>
-
-          {/* ════════════════
-              05  TAGS
-              ════════════════ 
-          <Card title="Product Tags" iconName="pricetags-outline">
-            <Text style={styles.tagsHint}>Tap to toggle — helps customers find your product</Text>
-            <View style={styles.tagsGrid}>
-              {AVAILABLE_TAGS.map(({ key, icon }) => {
-                const active = selectedTags.includes(key);
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    style={[styles.tagChip, active && styles.tagChipActive]}
-                    onPress={() => toggleTag(key)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={styles.tagEmoji}>{icon}</Text>
-                    <Text style={[styles.tagLabel, active && styles.tagLabelActive]}>
-                      {formatLabel(key)}
-                    </Text>
-                    {active && <Ionicons name="checkmark-circle" size={12} color="#2E7D32" />}
-                  </TouchableOpacity>
-                );
-              })}
+              {images.length > 1 && (
+                <View style={styles.imageCounter}>
+                  <Text style={styles.imageCounterText}>{activeImageIndex + 1}/{images.length}</Text>
+                </View>
+              )}
             </View>
-            {selectedTags.length > 0 && (
-              <View style={styles.tagSummary}>
-                <Ionicons name="pricetags" size={13} color="#2E7D32" />
-                <Text style={styles.tagSummaryText}>
-                  {selectedTags.length} tag{selectedTags.length > 1 ? 's' : ''} selected
-                </Text>
-                <TouchableOpacity onPress={() => { setSelectedTags([]); setIsDirty(true); }}>
-                  <Text style={styles.tagClearText}>Clear all</Text>
-                </TouchableOpacity>
+
+            {images.length > 1 && (
+              <FlatList
+                horizontal
+                data={images}
+                keyExtractor={(_, i) => i.toString()}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.thumbStrip}
+                renderItem={({ item, index }) => (
+                  <TouchableOpacity
+                    onPress={() => setActiveImageIndex(index)}
+                    style={[styles.thumbWrap, activeImageIndex === index && styles.thumbActive]}
+                  >
+                    <Image source={{ uri: item }} style={styles.thumb} resizeMode="cover" />
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        )}
+
+        <View style={styles.titleSection}>
+          <View style={styles.titleRow}>
+            <Text style={styles.productName}>{product.name}</Text>
+            <View style={[styles.conditionBadge, { backgroundColor: conditionInfo.bg }]}>
+              <Text style={[styles.conditionText, { color: conditionInfo.text }]}>{conditionInfo.label}</Text>
+            </View>
+          </View>
+          {product.brand ? (
+            <Text style={styles.brandText}>{product.brand}</Text>
+          ) : null}
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>GH₵ {product.price?.toFixed(2)}</Text>
+            {product.negotiable && (
+              <View style={styles.negotiableChip}>
+                <Text style={styles.negotiableChipText}>Price negotiable</Text>
               </View>
             )}
+          </View>
+        </View>
 
-          </Card>*/}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Product Info</Text>
+          <View style={styles.infoGrid}>
+            {infoItems.map((item, index) => (
+              <InfoGridItem
+                key={index}
+                icon={item.icon}
+                label={item.label}
+                value={item.value}
+              />
+            ))}
+          </View>
+        </View>
 
-          {/* ── SAVE BUTTON ── */}
-          {/* ── ACTION BUTTONS ── */}
+        <View style={styles.card}>
+          <View style={styles.statsRow}>
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>{product.countInStock ?? 0}</Text>
+              <Text style={styles.statLabel}>In Stock</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>{product.views || 0}</Text>
+              <Text style={styles.statLabel}>Views</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>{product.favorites || 0}</Text>
+              <Text style={styles.statLabel}>Favorites</Text>
+            </View>
+          </View>
+          <View style={[styles.statusBar, { backgroundColor: product.isAvailable ? '#E8F5E9' : '#FFEBEE' }]}>
+            <View style={[styles.statusDot, { backgroundColor: product.isAvailable ? '#4CAF50' : '#E53935' }]} />
+            <Text style={[styles.statusText, { color: product.isAvailable ? '#2E7D32' : '#C62828' }]}>
+              {product.isAvailable ? 'Available for sale' : 'Sold Out'}
+            </Text>
+          </View>
+        </View>
+
+        {product.description ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.description}>{product.description}</Text>
+          </View>
+        ) : null}
+
+        {product.tags?.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Tags</Text>
+            <View style={styles.tagsRow}>
+              {product.tags.map(tag => (
+                <View key={tag} style={styles.tag}>
+                  <Text style={styles.tagText}>{TAG_LABELS[tag] || tag}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {product.numReviews > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Reviews</Text>
+            <View style={styles.reviewSummary}>
+              <Ionicons name="star" size={20} color="#F9A825" />
+              <Text style={styles.ratingText}>{product.rating?.toFixed(1) || '0.0'}</Text>
+              <Text style={styles.reviewCount}>({product.numReviews} review{product.numReviews !== 1 ? 's' : ''})</Text>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.actions}>
           <TouchableOpacity
-            style={[styles.saveBtn, (submitting || deleting) && styles.saveBtnDisabled]}
-            onPress={handleSave}
-            disabled={submitting || deleting}
+            style={styles.editBtn}
+            onPress={() => navigation.navigate('UpdateProduct', { productId: product._id || productId })}
             activeOpacity={0.88}
           >
-            {submitting ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <View style={styles.saveBtnIcon}>
-                  <Ionicons name="checkmark" size={18} color="#2E7D32" />
-                </View>
-                <Text style={styles.saveBtnText}>Save Changes</Text>
-                <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.75)" />
-              </>
-            )}
+            <Ionicons name="create-outline" size={20} color="#fff" />
+            <Text style={styles.editBtnText}>Edit Listing</Text>
           </TouchableOpacity>
 
-          {/* ── DELETE BUTTON ── */}
           <TouchableOpacity
-            style={[styles.deleteBtn, (deleting || submitting) && styles.deleteBtnDisabled]}
+            style={styles.deleteBtn}
             onPress={handleDelete}
-            disabled={deleting || submitting}
+            disabled={deleting}
             activeOpacity={0.85}
           >
             {deleting ? (
               <ActivityIndicator size="small" color="#C62828" />
             ) : (
               <>
-                <Ionicons name="trash-outline" size={17} color="#C62828" />
-                <Text style={styles.deleteBtnText}>Delete Product</Text>
+                <Ionicons name="trash-outline" size={20} color="#C62828" />
+                <Text style={styles.deleteBtnText}>Delete</Text>
               </>
             )}
           </TouchableOpacity>
+        </View>
 
-          <View style={{ height: 60 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <View style={{ height: 40 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
-// ─────────────────────────────────────────────
-// STYLES
-// ─────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F2F5F2' },
-
-  // ── HEADER ──
   header: {
-    backgroundColor: '#1B5E20',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    gap: 12,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 14, gap: 12,
+    borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center', alignItems: 'center',
   },
   headerCenter: { flex: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
-  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
-  headerSaveBtn: {
-    backgroundColor: '#4CAF50', paddingHorizontal: 18,
-    paddingVertical: 8, borderRadius: 20,
+  headerTitle: { fontSize: 19, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3 },
+  headerEditBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center', alignItems: 'center',
   },
-  headerSaveBtnDim: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  headerSaveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  scroll: { paddingBottom: 20 },
 
-  // Dirty strip
-  dirtyStrip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#FFF3E0', paddingHorizontal: 16, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: '#FFE0B2',
+  imageGallery: { marginBottom: 4 },
+  mainImageWrap: {
+    width: '100%', height: 280,
+    backgroundColor: '#E0E0E0', position: 'relative',
   },
-  dirtyText: { fontSize: 12, color: '#E65100', fontWeight: '600' },
-
-  // ── LOADING ──
-  loadingState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  loadingText: { fontSize: 15, color: '#616161' },
-
-  // ── SCROLL ──
-  scroll: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 20 },
-
-  // ── CARD ──
-  card: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 18,
-    marginBottom: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
-  },
-  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 },
-  cardIconWrap: {
-    width: 30, height: 30, borderRadius: 8,
-    backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center',
-  },
-  cardTitle: { fontSize: 15, fontWeight: '800', color: '#1A1A1A' },
-
-  // ── FIELD ──
-  fieldWrap: { marginBottom: 14 },
-  fieldLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 7 },
-  fieldLabel: { fontSize: 12, fontWeight: '700', color: '#616161', textTransform: 'uppercase', letterSpacing: 0.4 },
-  fieldRequired: { fontSize: 12, color: '#E53935', fontWeight: '700' },
-  fieldHint: { fontSize: 11, color: '#9E9E9E', fontWeight: '500' },
-
-  // ── INPUT ──
-  inputWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#E8E8E8',
-    borderRadius: 12, backgroundColor: '#FAFAFA',
-    paddingHorizontal: 12, minHeight: 48,
-  },
-  inputIcon: { marginRight: 8 },
-  textInput: { flex: 1, fontSize: 15, color: '#1A1A1A', paddingVertical: 10 },
-  textAreaWrap: { alignItems: 'flex-start', paddingTop: 10 },
-  textArea: { height: 100, paddingTop: 0 },
-  charCount: { fontSize: 11, color: '#BDBDBD', alignSelf: 'flex-end', marginTop: 4 },
-
-  // ── PRICE ──
-  priceWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#E8E8E8',
-    borderRadius: 12, backgroundColor: '#FAFAFA', overflow: 'hidden',
-  },
-  currencyBadge: {
-    backgroundColor: '#E8F5E9', paddingHorizontal: 14,
-    height: 48, justifyContent: 'center',
-    borderRightWidth: 1, borderRightColor: '#E0E0E0',
-  },
-  currencyText: { fontSize: 15, fontWeight: '800', color: '#2E7D32' },
-  priceInput: { flex: 1, paddingHorizontal: 14, fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
-
-  // ── TWO COL ──
-  twoCol: { flexDirection: 'row', alignItems: 'flex-start' },
-
-  // ── AVAILABILITY ──
-  availRow: { flexDirection: 'row', gap: 8 },
-  availChip: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    paddingVertical: 10, borderRadius: 10,
-    backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: 'transparent',
-  },
-  availChipOn:  { backgroundColor: '#E8F5E9', borderColor: '#4CAF50' },
-  availChipOff: { backgroundColor: '#FFEBEE', borderColor: '#E53935' },
-  availDot: { width: 8, height: 8, borderRadius: 4 },
-  availText: { fontSize: 12, fontWeight: '600', color: '#9E9E9E' },
-  availTextOn:  { color: '#2E7D32' },
-  availTextOff: { color: '#C62828' },
-
-  // ── IMAGE ──
-  imgWrap: { borderRadius: 16, overflow: 'hidden', height: 220, position: 'relative' },
-  imgPreview: { width: '100%', height: '100%' },
-  imgBadge: {
-    position: 'absolute', top: 10, left: 10,
+  mainImage: { width: '100%', height: '100%' },
+  negotiableBadge: {
+    position: 'absolute', top: 12, left: 12,
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(46,125,50,0.85)',
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+    backgroundColor: 'rgba(249,115,22,0.9)',
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
   },
-  imgBadgeDanger: { backgroundColor: 'rgba(198,40,40,0.85)' },
-  imgBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  imgOverlayActions: {
-    position: 'absolute', bottom: 10, right: 10,
-    flexDirection: 'row', gap: 8,
-  },
-  imgOverlayBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
+  negotiableText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  imageCounter: {
+    position: 'absolute', bottom: 12, right: 12,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
   },
-  imgOverlayBtnRed: { backgroundColor: 'rgba(198,40,40,0.85)' },
-  imgOverlayBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  imgUploadBox: {
-    height: 180, borderRadius: 16,
-    backgroundColor: '#F1F8F3',
-    borderWidth: 1.5, borderColor: '#A5D6A7', borderStyle: 'dashed',
-    justifyContent: 'center', alignItems: 'center', gap: 6,
+  imageCounterText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  thumbStrip: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  thumbWrap: {
+    width: 56, height: 56, borderRadius: 10,
+    borderWidth: 2, borderColor: 'transparent', overflow: 'hidden',
   },
-  imgUploadIcon: {
-    width: 60, height: 60, borderRadius: 30,
-    backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center', marginBottom: 4,
-  },
-  imgUploadTitle: { fontSize: 15, fontWeight: '700', color: '#2E7D32' },
-  imgUploadSub: { fontSize: 13, color: '#888' },
+  thumbActive: { borderColor: '#2E7D32' },
+  thumb: { width: '100%', height: '100%' },
 
-  // ── DROPDOWN ──
-  dropdownTrigger: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 12,
-    backgroundColor: '#FAFAFA', paddingHorizontal: 14, paddingVertical: 13,
+  titleSection: {
+    backgroundColor: '#fff', marginHorizontal: 12, marginTop: 12,
+    borderRadius: 16, padding: 16,
   },
-  dropdownTriggerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  dropdownTriggerText: { fontSize: 15, color: '#1A1A1A', fontWeight: '500' },
-  dropdownPlaceholder: { color: '#C5C5C5', fontWeight: '400' },
-  dropdownBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+  titleRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'flex-start', gap: 10, marginBottom: 6,
   },
-  dropdownSheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    maxHeight: height * 0.6,
-    paddingHorizontal: 16, paddingTop: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1, shadowRadius: 12, elevation: 10,
+  productName: { fontSize: 20, fontWeight: '800', color: '#1A1A1A', flex: 1 },
+  conditionBadge: {
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 10,
   },
-  dropdownHandle: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: '#E0E0E0', alignSelf: 'center', marginBottom: 12,
+  conditionText: { fontSize: 11, fontWeight: '700' },
+  brandText: { fontSize: 13, color: '#888', fontWeight: '500', marginBottom: 8 },
+  priceRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
   },
-  dropdownSheetHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 10, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
+  price: { fontSize: 24, fontWeight: '800', color: '#1B5E20' },
+  negotiableChip: {
+    backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 10, borderWidth: 1, borderColor: '#FFB74D',
   },
-  dropdownSheetTitle: { fontSize: 16, fontWeight: '800', color: '#1A1A1A' },
-  dropdownCloseBtn: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center',
-  },
-  dropdownOption: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 14, paddingHorizontal: 4,
-    borderBottomWidth: 1, borderBottomColor: '#F8F8F8',
-  },
-  dropdownOptionSelected: { backgroundColor: '#F1F8F3', borderRadius: 10, paddingHorizontal: 10 },
-  dropdownOptionEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
-  dropdownOptionLabel: { flex: 1, fontSize: 15, color: '#424242', fontWeight: '500' },
-  dropdownOptionLabelSelected: { color: '#1B5E20', fontWeight: '700' },
+  negotiableChipText: { fontSize: 11, fontWeight: '700', color: '#E65100' },
 
-  // ── TAGS ──
-  tagsHint: { fontSize: 12, color: '#9E9E9E', marginBottom: 12, marginTop: -8 },
-  tagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tagChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 11, paddingVertical: 7,
-    borderRadius: 22, backgroundColor: '#F5F5F5',
-    borderWidth: 1.5, borderColor: 'transparent',
+  card: {
+    backgroundColor: '#fff', marginHorizontal: 12, marginTop: 10,
+    borderRadius: 16, padding: 16,
   },
-  tagChipActive: { backgroundColor: '#F1F8F3', borderColor: '#81C784' },
-  tagEmoji: { fontSize: 13 },
-  tagLabel: { fontSize: 12.5, color: '#555', fontWeight: '500' },
-  tagLabelActive: { color: '#2E7D32', fontWeight: '700' },
-  tagSummary: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 12, paddingTop: 12,
-    borderTopWidth: 1, borderTopColor: '#F0F0F0',
-  },
-  tagSummaryText: { fontSize: 12, color: '#2E7D32', fontWeight: '600', flex: 1 },
-  tagClearText: { fontSize: 12, color: '#E53935', fontWeight: '600' },
+  sectionTitle: { fontSize: 14, fontWeight: '800', color: '#1A1A1A', marginBottom: 12 },
 
-  // ── SAVE BUTTON ──
-  saveBtn: {
-    backgroundColor: '#1B5E20', paddingVertical: 17, paddingHorizontal: 24,
-    borderRadius: 18, flexDirection: 'row',
-    justifyContent: 'center', alignItems: 'center', gap: 12,
-    marginTop: 6,
-    shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3, shadowRadius: 14, elevation: 8,
+  infoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 10,
   },
-  saveBtnDisabled: { backgroundColor: '#A5D6A7', shadowOpacity: 0 },
-  saveBtnIcon: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+  infoItem: {
+    width: '48%',
+    alignItems: 'center',
+    backgroundColor: '#F8FAF8',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#EEF2EE',
   },
-  saveBtnText: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
+  infoIcon: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center',
+    marginBottom: 10,
+  },
+  infoLabel: {
+    fontSize: 10,
+    color: '#999',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    textTransform: 'capitalize',
+  },
 
-  // ── DELETE BUTTON ──
+  statsRow: {
+    flexDirection: 'row', alignItems: 'center',
+    marginBottom: 12,
+  },
+  stat: { flex: 1, alignItems: 'center' },
+  statValue: { fontSize: 20, fontWeight: '800', color: '#1B5E20' },
+  statLabel: { fontSize: 11, color: '#999', fontWeight: '500', marginTop: 2 },
+  statDivider: { width: 1, height: 30, backgroundColor: '#E8E8E8' },
+  statusBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 10, borderRadius: 10,
+  },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: { fontSize: 13, fontWeight: '700' },
+
+  description: { fontSize: 14, color: '#555', lineHeight: 22 },
+
+  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tag: {
+    backgroundColor: '#F1F8F3', paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 20, borderWidth: 1, borderColor: '#C8E6C9',
+  },
+  tagText: { fontSize: 12, fontWeight: '600', color: '#2E7D32' },
+
+  reviewSummary: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ratingText: { fontSize: 18, fontWeight: '800', color: '#1A1A1A' },
+  reviewCount: { fontSize: 13, color: '#999', fontWeight: '500' },
+
+  actions: {
+    flexDirection: 'row', gap: 12,
+    marginHorizontal: 12, marginTop: 20,
+  },
+  editBtn: {
+    flex: 1,
+    backgroundColor: '#1B5E20', paddingVertical: 16,
+    borderRadius: 16, flexDirection: 'row',
+    justifyContent: 'center', alignItems: 'center', gap: 8,
+    shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
+  },
+  editBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
   deleteBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    marginTop: 12,
-    paddingVertical: 15, paddingHorizontal: 24,
-    borderRadius: 18,
-    backgroundColor: '#FFF',
-    borderWidth: 1.5, borderColor: '#FFCDD2',
-    shadowColor: '#C62828', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 2,
+    width: 56, height: 56, borderRadius: 16,
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#FFCDD2',
+    justifyContent: 'center', alignItems: 'center',
   },
-  deleteBtnDisabled: { opacity: 0.5 },
-  deleteBtnText: { fontSize: 15, fontWeight: '700', color: '#C62828' },
+  deleteBtnText: { fontSize: 11, fontWeight: '700', color: '#C62828', marginTop: 2 },
 });
 
 export default VendorProductDetailScreen;

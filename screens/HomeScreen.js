@@ -24,79 +24,106 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { NotificationContext } from '../context/NotificationContext';
 import { useNavigation } from '@react-navigation/native';
-import { getVendorsByMarket, getVendors } from '../apis/vendorApi';
 
 const { width } = Dimensions.get('window');
 
 // ─────────────────────────────────────────────
-// ALL 8 ACCRA MARKETS (enum-driven, always shown)
+// CAMPUS DATA
 // ─────────────────────────────────────────────
-const ALL_MARKETS = [
-  { id: 'Madina Market',       icon: '🏬', palette: { bg: '#E8F5E9', accent: '#1B5E20', border: '#A5D6A7' } },
-  { id: 'Makola Market',       icon: '🛒', palette: { bg: '#FFF3E0', accent: '#E65100', border: '#FFCC80' } },
-  { id: 'Agbogbloshie Market', icon: '🌳', palette: { bg: '#FFF9C4', accent: '#F57F17', border: '#FFF176' } },
-  { id: 'Kaneshie Market',     icon: '🏪', palette: { bg: '#E3F2FD', accent: '#1565C0', border: '#90CAF9' } },
-  { id: 'Mallam Market',       icon: '🌿', palette: { bg: '#E0F2F1', accent: '#00695C', border: '#80CBC4' } },
-  { id: 'Tema Market',         icon: '🏭', palette: { bg: '#F3E5F5', accent: '#6A1B9A', border: '#CE93D8' } },
-  { id: 'Dome Market',         icon: '🏙️', palette: { bg: '#EFEBE9', accent: '#4E342E', border: '#BCAAA4' } },
+const ALL_CAMPUSES = [
+  { id: 'UG',     label: 'University of Ghana',           icon: '🎓', palette: { bg: '#E8F5E9', accent: '#1B5E20', border: '#A5D6A7' } },
+  { id: 'KNUST',  label: 'KNUST',                         icon: '⚙️', palette: { bg: '#FFF3E0', accent: '#E65100', border: '#FFCC80' } },
+  { id: 'UCC',    label: 'Univ. of Cape Coast',           icon: '🌊', palette: { bg: '#E3F2FD', accent: '#1565C0', border: '#90CAF9' } },
+  { id: 'ASHESI', label: 'Ashesi University',             icon: '💡', palette: { bg: '#F3E5F5', accent: '#6A1B9A', border: '#CE93D8' } },
+  { id: 'GIMPA',  label: 'GIMPA',                         icon: '📊', palette: { bg: '#E0F2F1', accent: '#00695C', border: '#80CBC4' } },
+  { id: 'UEW',    label: 'Univ. of Education',            icon: '📚', palette: { bg: '#FFF9C4', accent: '#F57F17', border: '#FFF176' } },
+  { id: 'UPSA',   label: 'UPSA',                         icon: '📈', palette: { bg: '#FCE4EC', accent: '#880E4F', border: '#F48FB1' } },
+  { id: 'ATU',    label: 'Accra Technical Univ.',         icon: '🔧', palette: { bg: '#EFEBE9', accent: '#4E342E', border: '#BCAAA4' } },
 ];
 
 // ─────────────────────────────────────────────
-// HERO SLIDES
+// HERO SLIDES  – campus marketplace themed
 // ─────────────────────────────────────────────
 const HERO_SLIDES = [
   {
     id: '1',
-    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1777893983/makola_img_3_dbeymr.jpg',
-    tag: '📍  Accra Markets',
-    title: 'Your Favourite\nMarkets, Online',
-    subtitle: 'Shop from vendors across Madina, Makola, Kaneshie & more',
-    btnText: 'Browse Markets',
+    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780692313/ChatGPT_Image_Jun_5_2026_08_37_eybjm8.png',
+    tag: '🎓  Campus Marketplace',
+    title: 'Buy & Sell on\nYour Campus',
+    subtitle: "Connect with students across Ghana's top universities",
+    btnText: 'Start Shopping',
     accentColor: '#fff',
-    overlayColor: 'rgba(0,0,0,0.38)',
-    nav: { screen: 'Markets' },
+    overlayColor: 'rgba(0,0,0,0.45)',
+    nav: { screen: 'Products', params: {} },
   },
   {
     id: '2',
-    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1769990080/vegetables_cpp5n5.jpg',
-    tag: '🥦  Farm Fresh',
-    title: 'Straight From\nThe Markets',
-    subtitle: 'Hand-picked vegetables delivered fresh daily',
-    btnText: 'Shop Veggies',
-    accentColor: '#A5D6A7',
-    overlayColor: 'rgba(0,60,0,0.44)',
-    nav: { screen: 'Products', params: { category: 'vegetables' } },
+    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780771354/flyer11_qkxwpv.jpg',
+    tag: '💻  Electronics & Gadgets',
+    title: 'Laptops, Phones\n& More',
+    subtitle: 'Student-priced tech from trusted campus sellers',
+    btnText: 'Browse Electronics',
+    accentColor: '#90CAF9',
+    overlayColor: 'rgba(10,20,60,0.50)',
+    nav: { screen: 'Products', params: { category: 'electronics' } },
   },
   {
     id: '3',
-    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1770885485/colorful-fruits-tasty-fresh-ripe-juicy-white-desk_utdxnl.jpg',
-    tag: '🍎  Seasonal Picks',
-    title: 'Juicy Fruits,\nEvery Season',
-    subtitle: 'Tropical & local fruits sourced weekly',
-    btnText: 'Explore Fruits',
+    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780695851/books_flyer_ljnqis.jpg',
+    tag: '📚  Textbooks & Notes',
+    title: 'Save on\nCampus Books',
+    subtitle: 'Used textbooks, notes & past questions at low prices',
+    btnText: 'Shop Books',
     accentColor: '#FFCC80',
-    overlayColor: 'rgba(80,20,0,0.38)',
-    nav: { screen: 'Products', params: { category: 'fruits' } },
+    overlayColor: 'rgba(60,30,0,0.46)',
+    nav: { screen: 'Products', params: { category: 'books' } },
   },
   {
     id: '4',
-    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1769989775/free_delivery_tsytih.jpg',
-    tag: '⚡  Special Deal',
-    title: 'Free Delivery\nOver GH₵ 500',
-    subtitle: 'Stock up on staples and save on shipping',
-    btnText: 'Shop Staples',
-    accentColor: '#FFE082',
-    overlayColor: 'rgba(20,10,0,0.44)',
-    nav: { screen: 'Products', params: { category: 'staples' } },
+    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800',
+    tag: '🛏️  Hostel Essentials',
+    title: 'Furnish Your\nHostel Room',
+    subtitle: 'Beds, fans, fridges and everything you need',
+    btnText: 'Explore Hostel Items',
+    accentColor: '#A5D6A7',
+    overlayColor: 'rgba(0,30,10,0.46)',
+    nav: { screen: 'Products', params: { category: 'hostel-items' } },
   },
 ];
 
 const AUTO_SCROLL_INTERVAL = 4200;
 
-const CATEGORY_ICONS = {
-  fruits: '🍎', vegetables: '🥦', dairy: '🥛', meat: '🥩',
-  seafood: '🐟', bakery: '🍞', beverages: '🥤', staples: '🌾',
-  herb: '🌿', tuber: '🥔', organic: '🌱', snacks: '🍪', default: '🛒',
+// ─────────────────────────────────────────────
+// CATEGORY CONFIG
+// Matches the product schema enum exactly
+// ─────────────────────────────────────────────
+const CATEGORY_CONFIG = {
+  electronics:   { icon: '🔌', label: 'Electronics',    color: '#E3F2FD', accent: '#1565C0' },
+  'phones and tablets':        { icon: '📱', label: 'Phones & Tablets',          color: '#F3E5F5', accent: '#6A1B9A' },
+  'computers and laptops':       { icon: '💻', label: 'Computers & Laptops',         color: '#E8EAF6', accent: '#283593' },
+  gaming:        { icon: '🎮', label: 'Gaming',          color: '#FCE4EC', accent: '#880E4F' },
+  fashion:       { icon: '👗', label: 'Fashion',         color: '#FFF3E0', accent: '#E65100' },
+  'books-course-materials':         { icon: '📚', label: 'Books',           color: '#FFF9C4', accent: '#F57F17' },
+  'hostel-items':{ icon: '🛏️', label: 'Hostel Items',   color: '#E8F5E9', accent: '#2E7D32' },
+  appliances:    { icon: '🔧', label: 'Appliances',      color: '#EFEBE9', accent: '#4E342E' },
+  furniture:     { icon: '🪑', label: 'Furniture',       color: '#F1F8E9', accent: '#33691E' },
+  'beauty and grooming':        { icon: '💄', label: 'Beauty',          color: '#FCE4EC', accent: '#AD1457' },
+  'sports and fitness':        { icon: '⚽', label: 'Sports',          color: '#E8F5E9', accent: '#1B5E20' },
+  accessories:   { icon: '👜', label: 'Accessories',     color: '#FFF9C4', accent: '#827717' },
+  food:          { icon: '🍱', label: 'Food',            color: '#FBE9E7', accent: '#BF360C' },
+  services:      { icon: '🛠️', label: 'Services',        color: '#E3F2FD', accent: '#01579B' },
+  other:         { icon: '📦', label: 'Other',           color: '#F5F5F5', accent: '#616161' },
+};
+
+// Condition display map
+const CONDITION_LABELS = {
+  'new':          { label: 'Brand New',    color: '#1B5E20', bg: '#E8F5E9' },
+  'like-new':     { label: 'Like New',     color: '#1565C0', bg: '#E3F2FD' },
+  'excellent':    { label: 'Excellent',    color: '#4527A0', bg: '#EDE7F6' },
+  'good':         { label: 'Good',         color: '#E65100', bg: '#FFF3E0' },
+  'fair':         { label: 'Fair',         color: '#827717', bg: '#F9FBE7' },
+  'slightly-used':{ label: 'Slight Used',  color: '#4E342E', bg: '#EFEBE9' },
+  'for-parts':    { label: 'For Parts',    color: '#B71C1C', bg: '#FFEBEE' },
 };
 
 // ─────────────────────────────────────────────
@@ -139,11 +166,11 @@ const HeroCarousel = ({ onSlidePress }) => {
       <Image source={{ uri: item.image }} style={styles.slideImage} resizeMode="cover" />
       <View style={[styles.slideScrim, { backgroundColor: item.overlayColor }]} />
       <View style={styles.slideContent}>
-        <View style={styles.slideTagPill}>
+        {/*<View style={styles.slideTagPill}>
           <Text style={styles.slideTagText}>{item.tag}</Text>
-        </View>
+        </View>*/}
         <Text style={styles.slideTitle}>{item.title}</Text>
-        <Text style={styles.slideSubtitle}>{item.subtitle}</Text>
+        {/*<Text style={styles.slideSubtitle}>{item.subtitle}</Text>*/}
         <TouchableOpacity
           style={[styles.slideBtn, { borderColor: item.accentColor }]}
           onPress={() => onSlidePress(item)}
@@ -192,159 +219,91 @@ const HeroCarousel = ({ onSlidePress }) => {
 };
 
 // ─────────────────────────────────────────────
-// MARKET GRID CARD
-// Shows live data if vendors exist, "Coming soon" if not
+// CAMPUS CARD  (horizontal strip)
 // ─────────────────────────────────────────────
-const MarketGridCard = ({ config, liveData, onPress }) => {
-  const { id, icon, palette } = config;
-  const hasVendors = liveData && (liveData.count ?? liveData.vendors?.length ?? 0) > 0;
-  const vendorCount = liveData?.count ?? liveData?.vendors?.length ?? 0;
-  const previewVendors = (liveData?.vendors || []).slice(0, 3);
-  const extra = vendorCount > 3 ? vendorCount - 3 : 0;
-
-  if (!hasVendors) {
-    return (
-      <TouchableOpacity onPress={() => onPress(liveData || { _id: id })} style={[styles.marketCard, { backgroundColor: palette.bg, borderColor: palette.border }]}>
-        <View style={styles.marketCardTop}>
-          <View style={[styles.marketIconBadge, { backgroundColor: '#F5F5F5' }]}>
-            <Text style={styles.marketIcon}>{icon}</Text>
-          </View>
-          <View style={styles.comingSoonChip}>
-            <Text style={styles.comingSoonChipText}>Soon</Text>
-          </View>
-        </View>
-        <Text style={[styles.marketName, { color: palette.accent }]} numberOfLines={2}>{id}</Text>
-        <Text style={styles.marketNoVendors}>No vendors yet</Text>
-      </TouchableOpacity>
-    );
-  }
-
+const CampusCard = ({ config, count, onPress }) => {
+  const { id, icon, palette, label } = config;
   return (
     <TouchableOpacity
-      style={[styles.marketCard, { backgroundColor: palette.bg, borderColor: palette.border }]}
-      onPress={() => onPress(liveData || { _id: id })}
+      style={[styles.campusCard, { backgroundColor: palette.bg, borderColor: palette.border }]}
+      onPress={() => onPress(id)}
       activeOpacity={0.82}
     >
-      <View style={styles.marketCardTop}>
-        <View style={[styles.marketIconBadge, { backgroundColor: palette.accent + '22' }]}>
-          <Text style={styles.marketIcon}>{icon}</Text>
-        </View>
-        <View style={[styles.vendorCountChip, { backgroundColor: palette.bg, borderColor: palette.border }]}>
-          <View style={[styles.vendorCountDot, { backgroundColor: palette.accent }]} />
-          <Text style={[styles.vendorCountText, { color: palette.accent }]}>
-            {vendorCount} vendor{vendorCount !== 1 ? 's' : ''}
-          </Text>
-        </View>
+      <View style={[styles.campusIconBadge, { backgroundColor: palette.accent + '22' }]}>
+        <Text style={styles.campusIcon}>{icon}</Text>
       </View>
-
-      <Text style={[styles.marketName, { color: palette.accent }]} numberOfLines={2}>
-        {id}
-      </Text>
-
-      {/* Stacked vendor avatars */}
-      {previewVendors.length > 0 && (
-        <View style={styles.avatarStack}>
-          {previewVendors.map((v, vi) => (
-            <View key={v._id} style={[styles.avatarItem, { left: vi * 19, zIndex: 3 - vi }]}>
-              {v.profile_image ? (
-                <Image
-                  source={{ uri: v.profile_image }}
-                  style={[styles.avatarImg, { borderColor: palette.bg }]}
-                />
-              ) : (
-                <View style={[styles.avatarImg, styles.avatarPlaceholder, { backgroundColor: palette.accent, borderColor: palette.bg }]}>
-                  <Text style={styles.avatarInitial}>{v.name?.[0]?.toUpperCase() || '?'}</Text>
-                </View>
-              )}
-            </View>
-          ))}
-          {extra > 0 && (
-            <View style={[styles.avatarItem, { left: 3 * 19, zIndex: 0 }]}>
-              <View style={[styles.avatarImg, styles.avatarMore, { backgroundColor: palette.accent, borderColor: palette.bg }]}>
-                <Text style={styles.avatarMoreText}>+{extra}</Text>
-              </View>
-            </View>
-          )}
+      <Text style={[styles.campusName, { color: palette.accent }]} numberOfLines={2}>{id}</Text>
+      {count > 0 ? (
+        <View style={[styles.campusCountChip, { borderColor: palette.border }]}>
+          <View style={[styles.campusCountDot, { backgroundColor: palette.accent }]} />
+          <Text style={[styles.campusCountText, { color: palette.accent }]}>{count} listing{count !== 1 ? 's' : ''}</Text>
         </View>
+      ) : (
+        <Text style={styles.campusNoListings}>No listings yet</Text>
       )}
     </TouchableOpacity>
   );
 };
 
 // ─────────────────────────────────────────────
-// VENDOR CARD
+// CONDITION BADGE
 // ─────────────────────────────────────────────
-const VendorCard = ({ vendor, onPress }) => (
-  <TouchableOpacity style={styles.vendorCard} onPress={() => onPress(vendor)} activeOpacity={0.85}>
-    <View style={styles.vendorImgWrap}>
-      {vendor.profile_image ? (
-        <Image source={{ uri: vendor.profile_image }} style={styles.vendorImg} resizeMode="cover" />
-      ) : (
-        <View style={styles.vendorImgPlaceholder}>
-          <Text style={styles.vendorInitial}>{vendor.name?.[0]?.toUpperCase() || '?'}</Text>
-        </View>
-      )}
-      <View style={styles.openBadge}>
-        <View style={styles.openDot} />
-        <Text style={styles.openText}>Open</Text>
-      </View>
+const ConditionBadge = ({ condition }) => {
+  const cfg = CONDITION_LABELS[condition] || { label: condition, color: '#616161', bg: '#F5F5F5' };
+  return (
+    <View style={[styles.conditionBadge, { backgroundColor: cfg.bg }]}>
+      <Text style={[styles.conditionBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
     </View>
-    <View style={styles.vendorInfo}>
-      <Text style={styles.vendorName} numberOfLines={1}>{vendor.name}</Text>
-      {vendor.location ? (
-        <View style={styles.vendorLocRow}>
-          <Ionicons name="location-outline" size={11} color="#9E9E9E" />
-          <Text style={styles.vendorLoc} numberOfLines={1}>{vendor.location}</Text>
-        </View>
-      ) : null}
-      {vendor.market_name ? (
-        <View style={styles.vendorMktPill}>
-          <Text style={styles.vendorMktText}>{vendor.market_name}</Text>
-        </View>
-      ) : null}
-      {vendor.products?.length > 0 ? (
-        <Text style={styles.vendorProds}>
-          {vendor.products.length} product{vendor.products.length !== 1 ? 's' : ''}
-        </Text>
-      ) : null}
-    </View>
-  </TouchableOpacity>
-);
+  );
+};
 
 // ─────────────────────────────────────────────
-// PRODUCT CARD (deal style, used in grid)
+// PRODUCT CARD  – grid layout (2-col)
+// Adapted for campus marketplace: shows condition, campus, negotiable tag
 // ─────────────────────────────────────────────
 const ProductCard = ({ product, onPress, onAddToCart, isAdding, isInCart }) => {
-  const imageUri = product.image || product.images?.[0];
-  const vendorInfo = product.vendor.market_name || product.vendor.location;
+  const imageUri = product.images?.[0];
+  const catCfg = CATEGORY_CONFIG[product.category] || CATEGORY_CONFIG.other;
+
   return (
     <TouchableOpacity style={styles.productCard} onPress={() => onPress(product)} activeOpacity={0.85}>
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.productImg} resizeMode="cover" />
-      ) : (
-        <View style={styles.productImgPlaceholder}>
-          <Ionicons name="image-outline" size={28} color="#C8E6C9" />
-        </View>
-      )}
+      <View style={styles.productImgWrap}>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.productImg} resizeMode="cover" />
+        ) : (
+          <View style={[styles.productImgPlaceholder, { backgroundColor: catCfg.color }]}>
+            <Text style={{ fontSize: 30 }}>{catCfg.icon}</Text>
+          </View>
+        )}
+        {/* Condition badge overlay */}
+        {product.condition && (
+          <View style={styles.conditionOverlay}>
+            <ConditionBadge condition={product.condition} />
+          </View>
+        )}
+        {/* Negotiable tag */}
+        {product.negotiable && (
+          <View style={styles.negotiableTag}>
+            <Text style={styles.negotiableTagText}>Negotiable</Text>
+          </View>
+        )}
+      </View>
+
       <View style={styles.productBody}>
         <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          {product.unit ? <Text style={styles.productUnit}>{product.unit}</Text> : null}
-          
-          
-        </View>
-         {/*{vendorInfo && (
-            <>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="location-outline" size={10} color="#1fa326" />
-                <Text style={[styles.productUnit1, { marginLeft: 2 }]} numberOfLines={1}>
-                  {vendorInfo}
-                </Text>
-              </View>
-            </>
-          )}*/}
+
+        {/* Campus pill */}
+        {product.campus && (
+          <View style={styles.campusPill}>
+            <Ionicons name="school-outline" size={9} color="#2E7D32" />
+            <Text style={styles.campusPillText}>{product.campus}</Text>
+          </View>
+        )}
+
         <View style={styles.productFooter}>
-          <Text style={styles.productPrice}>GH₵ {product.price?.toFixed(2)}</Text>
+          <View>
+            <Text style={styles.productPrice}>GH₵ {product.price?.toFixed(2)}</Text>
+          </View>
           <TouchableOpacity
             style={[styles.addBtn, isInCart && styles.addBtnActive]}
             onPress={() => onAddToCart(product)}
@@ -361,22 +320,97 @@ const ProductCard = ({ product, onPress, onAddToCart, isAdding, isInCart }) => {
 };
 
 // ─────────────────────────────────────────────
+// DEAL CARD  – horizontal scroll (urgent-sale / popular)
+// ─────────────────────────────────────────────
+const DealCard = ({ product, onPress, onAddToCart, isAdding, isInCart }) => {
+  const imageUri = product.images?.[0];
+  const catCfg = CATEGORY_CONFIG[product.category] || CATEGORY_CONFIG.other;
+
+  return (
+    <TouchableOpacity
+      style={styles.dealCard}
+      onPress={() => onPress(product)}
+      activeOpacity={0.85}
+    >
+      {imageUri ? (
+        <Image source={{ uri: imageUri }} style={styles.dealImg} resizeMode="cover" />
+      ) : (
+        <View style={[styles.dealImgPlaceholder, { backgroundColor: catCfg.color }]}>
+          <Text style={{ fontSize: 34 }}>{catCfg.icon}</Text>
+        </View>
+      )}
+      {/* Tags strip */}
+      {product.tags?.includes('urgent-sale') && (
+        <View style={styles.urgentBadge}>
+          <Ionicons name="flash" size={9} color="#fff" />
+          <Text style={styles.urgentBadgeText}>Urgent</Text>
+        </View>
+      )}
+      <View style={styles.dealOverlay}>
+        <Text style={styles.dealName} numberOfLines={1}>{product.name}</Text>
+        {product.condition && <ConditionBadge condition={product.condition} />}
+        <View style={styles.dealBottom}>
+          <View>
+            <Text style={styles.dealPrice}>GH₵ {product.price?.toFixed(2)}</Text>
+            {product.negotiable && <Text style={styles.dealNeg}>Negotiable</Text>}
+          </View>
+          <TouchableOpacity
+            style={[styles.dealAddBtn, isInCart && styles.dealAddBtnActive]}
+            onPress={() => onAddToCart(product)}
+            disabled={isAdding}
+          >
+            {isAdding
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Ionicons name={isInCart ? 'checkmark' : 'add'} size={16} color="#fff" />}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// ─────────────────────────────────────────────
+// STATS BANNER  (live platform stats)
+// ─────────────────────────────────────────────
+const StatsBanner = ({ stats }) => {
+  if (!stats) return null;
+  return (
+    <View style={styles.statsBanner}>
+      <View style={styles.statItem}>
+        <Text style={styles.statValue}>{stats.totalProducts?.toLocaleString() ?? '—'}</Text>
+        <Text style={styles.statLabel}>Listings</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={styles.statValue}>{stats.byCampus?.length ?? '—'}</Text>
+        <Text style={styles.statLabel}>Campuses</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={styles.statValue}>{stats.byCategory?.length ?? '—'}</Text>
+        <Text style={styles.statLabel}>Categories</Text>
+      </View>
+    </View>
+  );
+};
+
+// ─────────────────────────────────────────────
 // MAIN HOME SCREEN
 // ─────────────────────────────────────────────
 const HomeScreen = () => {
   const navigation = useNavigation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { addToCart, cartCount, cartItems } = useCart();
   const { notifications } = useContext(NotificationContext);
 
   // Data
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [urgentSales, setUrgentSales] = useState([]);
+  const [popularProducts, setPopularProducts] = useState([]);
   const [newArrivals, setNewArrivals] = useState([]);
-  const [bestSellers, setBestSellers] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [marketsMap, setMarketsMap] = useState({});   // keyed by market _id
-  const [featuredVendors, setFeaturedVendors] = useState([]);
-  const [allVendors, setAllVendors] = useState([]);
+  const [studentFavorites, setStudentFavorites] = useState([]);
+  const [campusStats, setCampusStats] = useState({});  // { UG: count, KNUST: count, ... }
+  const [platformStats, setPlatformStats] = useState(null);
 
   // UI
   const [loading, setLoading] = useState(true);
@@ -388,9 +422,7 @@ const HomeScreen = () => {
   // Search
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [searchProducts, setSearchProducts] = useState([]);
-  const [searchVendors, setSearchVendors] = useState([]);
-  const [searchMarkets, setSearchMarkets] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
 
   const unreadCount = notifications?.filter(n => !n.read).length ?? 0;
@@ -410,7 +442,7 @@ const HomeScreen = () => {
   const loadHomeData = async () => {
     try {
       setLoading(true);
-      await Promise.all([loadProductData(), loadVendorData()]);
+      await Promise.all([loadProductData(), loadStatsData()]);
     } catch (err) {
       console.error('HomeScreen load error:', err);
     } finally {
@@ -421,43 +453,38 @@ const HomeScreen = () => {
 
   const loadProductData = async () => {
     try {
-      const categoriesRes = await productService.getCategories();
-      if (categoriesRes.success) setCategories(categoriesRes.data.slice(0, 8));
-
-      const [featuredRes, bestRes,newRes] = await Promise.all([
+      // Tags from schema: "featured" | "urgent-sale" | "popular" | "discounted" | "new-arrival" | "student-favorite"
+      const [featuredRes, urgentRes, popularRes, newRes, favRes] = await Promise.all([
         productService.getProductByTag('featured'),
-        productService.getProductByTag('best_selling'),
-        productService.getProductByTag('new_arrival'),
+        productService.getProductByTag('urgent-sale'),
+        productService.getProductByTag('popular'),
+        productService.getProductByTag('new-arrival'),
+        productService.getProductByTag('student-favorite'),
       ]);
-      if (featuredRes.status === 200) setFeaturedProducts(featuredRes.data.data || []);
-      if (bestRes.status === 200) setBestSellers(bestRes.data.data || []);
-      if (newRes.status === 200) setNewArrivals(newRes.data.data);
+      if (featuredRes?.data?.data) setFeaturedProducts(featuredRes.data.data);
+      if (urgentRes?.data?.data)   setUrgentSales(urgentRes.data.data);
+      if (popularRes?.data?.data)  setPopularProducts(popularRes.data.data);
+      if (newRes?.data?.data)      setNewArrivals(newRes.data.data);
+      if (favRes?.data?.data)      setStudentFavorites(favRes.data.data);
     } catch (err) {
       console.error('Product data error:', err);
     }
   };
 
-  const loadVendorData = async () => {
+  const loadStatsData = async () => {
     try {
-      const [marketsRes, vendorsRes] = await Promise.all([
-        getVendorsByMarket(),
-        getVendors(),
-      ]);
-
-      if (marketsRes?.data?.success) {
-        // Build a lookup map by market name for O(1) access in render
+      const statsRes = await productService.getProductStats?.();
+      if (statsRes?.data?.success) {
+        const stats = statsRes.data;
+        setPlatformStats(stats);
+        // Build campusStats map { UG: 12, KNUST: 8, ... }
         const map = {};
-        (marketsRes.data.data || []).forEach(m => { map[m._id] = m; });
-        setMarketsMap(map);
-      }
-
-      if (vendorsRes?.data?.success) {
-        const vendors = vendorsRes.data.data || [];
-        setFeaturedVendors(vendors.slice(0, 8));
-        setAllVendors(vendors);
+        (stats.byCampus || []).forEach(c => { map[c._id] = c.count; });
+        setCampusStats(map);
       }
     } catch (err) {
-      console.error('Vendor data error:', err);
+      // Stats are non-critical; fail silently
+      console.log('Stats load skipped:', err.message);
     }
   };
 
@@ -466,30 +493,20 @@ const HomeScreen = () => {
   // ── SEARCH ───────────────────────────────────
   const performSearch = async () => {
     setSearching(true);
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     try {
-      const res = await productService.getProducts({ search: q, limit: 5 });
-      if (res.success) setSearchProducts(res.data || []);
-    } catch { /* silent */ }
-
-    setSearchVendors(allVendors.filter(v =>
-      v.name?.toLowerCase().includes(q) ||
-      v.market_name?.toLowerCase().includes(q) ||
-      v.location?.toLowerCase().includes(q)
-    ).slice(0, 3));
-
-    setSearchMarkets(ALL_MARKETS.filter(m =>
-      m.id.toLowerCase().includes(q) && marketsMap[m.id]
-    ).slice(0, 3));
-
+      const res = await productService.getProducts({ search: q, limit: 8 });
+      if (res?.data) setSearchResults(res.data);
+      else setSearchResults([]);
+    } catch {
+      setSearchResults([]);
+    }
     setShowSearchResults(true);
     setSearching(false);
   };
 
   const clearSearchResults = () => {
-    setSearchProducts([]);
-    setSearchVendors([]);
-    setSearchMarkets([]);
+    setSearchResults([]);
     setShowSearchResults(false);
   };
 
@@ -507,61 +524,52 @@ const HomeScreen = () => {
 
   // ── CART ─────────────────────────────────────
   const getQtyInCart = (productId) => {
-    const item = cartItems.find(i => i.product?._id === productId || i.productId === productId);
+    const item = cartItems?.find(i => i.product?._id === productId || i.productId === productId);
     return item?.quantity ?? 0;
   };
 
   const handleAddToCart = async (product) => {
     if (!isAuthenticated) {
-      Alert.alert('Login Required', 'Please login to add items to your cart.', [
+      Alert.alert('Login Required', 'Please login to save or contact sellers.', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Login', onPress: () => navigation.navigate('Login') },
       ]);
       return;
     }
-    const stock = product.stock ?? product.countInStock ?? 0;
+    const stock = product.countInStock ?? 0;
     if (stock <= 0) {
-      Alert.alert('Out of Stock', `${product.name} is currently unavailable.`);
+      Alert.alert('Unavailable', `${product.name} is no longer available.`);
       return;
     }
     try {
-      setAddingProductId(product.id || product._id);
+      setAddingProductId(product._id);
       setAddedProductName(product.name);
-      await addToCart(product.id || product._id, 1);
+      await addToCart(product._id, 1);
       setModalVisible(true);
-      setTimeout(() => setModalVisible(false), 2000);
+      setTimeout(() => setModalVisible(false), 2200);
     } catch {
-      Alert.alert('Error', 'Failed to add item to cart.');
+      Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
       setAddingProductId(null);
     }
   };
 
-  // ── HELPERS ───────────────────────────────────
-  const getCategoryIcon = (name = '') => {
-    const n = name.toLowerCase();
-    if (n.includes('fruit')) return CATEGORY_ICONS.fruits;
-    if (n.includes('vegetable') || n.includes('veggie')) return CATEGORY_ICONS.vegetables;
-    if (n.includes('dairy') || n.includes('milk')) return CATEGORY_ICONS.dairy;
-    if (n.includes('meat') || n.includes('chicken')) return CATEGORY_ICONS.meat;
-    if (n.includes('seafood') || n.includes('fish')) return CATEGORY_ICONS.seafood;
-    if (n.includes('bakery') || n.includes('bread')) return CATEGORY_ICONS.bakery;
-    if (n.includes('beverage') || n.includes('drink')) return CATEGORY_ICONS.beverages;
-    if (n.includes('staple')) return CATEGORY_ICONS.staples;
-    if (n.includes('herb') || n.includes('spice')) return CATEGORY_ICONS.herb;
-    if (n.includes('tuber') || n.includes('potato')) return CATEGORY_ICONS.tuber;
-    if (n.includes('organic')) return CATEGORY_ICONS.organic;
-    if (n.includes('snack')) return CATEGORY_ICONS.snacks;
-    return CATEGORY_ICONS.default;
-  };
-
+  // ── NAVIGATION HELPERS ────────────────────────
   const handleSlidePress = (slide) => {
     const { screen, params } = slide.nav;
     navigation.navigate(screen, params);
   };
 
-  const handleMarketPress = (market) => {
-    navigation.navigate('MarketDetail', { marketName: market._id });
+  const handleCampusPress = (campusId) => {
+    navigation.navigate('Campus', { campus: campusId });
+  };
+
+  const handleCategoryPress = (category,categoryName) => {
+    navigation.navigate('Category', {category,categoryName });
+  };
+
+  const handleProductPress = (product) => {
+    navigation.navigate('ProductDetail', { productId: product._id, product });
   };
 
   // ── LOADING ───────────────────────────────────
@@ -581,21 +589,21 @@ const HomeScreen = () => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar backgroundColor="#1B5E20" barStyle="light-content" />
 
-      {/* Cart success modal */}
+      {/* ── Cart / interest success modal ── */}
       <Modal animationType="fade" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.successModal}>
             <Ionicons name="checkmark-circle" size={52} color="#2E7D32" />
-            <Text style={styles.successTitle}>Added to cart!</Text>
-            <Text style={styles.successMessage}>{addedProductName} has been added to your cart</Text>
+            <Text style={styles.successTitle}>Saved!</Text>
+            <Text style={styles.successMessage}>{addedProductName} has been added to your list</Text>
             <TouchableOpacity
               style={styles.viewCartBtn}
               onPress={() => { setModalVisible(false); navigation.navigate('Cart'); }}
             >
-              <Text style={styles.viewCartBtnText}>View Cart</Text>
+              <Text style={styles.viewCartBtnText}>View Saved Items</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.continueBtn} onPress={() => setModalVisible(false)}>
-              <Text style={styles.continueBtnText}>Continue Shopping</Text>
+              <Text style={styles.continueBtnText}>Continue Browsing</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -609,19 +617,20 @@ const HomeScreen = () => {
         onScrollBeginDrag={() => setShowSearchResults(false)}
         scrollEventThrottle={16}
       >
-        {/* ══════════════════════════════════════
+        {/* ════════════════════════════════
             HEADER
-            ══════════════════════════════════════ */}
+            ════════════════════════════════ */}
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
             <View>
               <Text style={styles.headerGreeting}>
                 {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}
+                {user?.name ? `, ${user.name.split(' ')[0]}` : ''}
               </Text>
               <Text style={styles.headerTitle}>CediMart</Text>
               <View style={styles.locationPill}>
                 <View style={styles.locationDot} />
-                <Text style={styles.locationText}>Accra, Ghana</Text>
+                <Text style={styles.locationText}>Ghana's Campus Marketplace</Text>
               </View>
             </View>
             <View style={styles.headerActions}>
@@ -647,13 +656,13 @@ const HomeScreen = () => {
             </View>
           </View>
 
-          {/* Search */}
+          {/* ── Search ── */}
           <View style={styles.searchWrapper}>
             <View style={styles.searchBar}>
               <Ionicons name="search-outline" size={17} color="#9E9E9E" />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search products, vendors, markets…"
+                placeholder="Search products, categories…"
                 placeholderTextColor="#BDBDBD"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -675,7 +684,7 @@ const HomeScreen = () => {
               )}
             </View>
 
-            {/* Search results dropdown */}
+            {/* ── Search dropdown ── */}
             {showSearchResults && (
               <>
                 <TouchableWithoutFeedback onPress={() => setShowSearchResults(false)}>
@@ -683,78 +692,44 @@ const HomeScreen = () => {
                 </TouchableWithoutFeedback>
                 <View style={styles.searchDropdown}>
                   <ScrollView style={{ maxHeight: 380 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                    {searchProducts.length > 0 && (
+                    {searchResults.length > 0 ? (
                       <View style={styles.searchSection}>
                         <Text style={styles.searchSectionLabel}>Products</Text>
-                        {searchProducts.map(p => (
+                        {searchResults.map(p => (
                           <TouchableOpacity
-                            key={p.id || p._id}
+                            key={p._id}
                             style={styles.searchRow}
-                            onPress={() => { navigation.navigate('ProductDetail', { productId: p.id || p._id, product: p }); clearSearch(); }}
+                            onPress={() => { handleProductPress(p); clearSearch(); }}
                           >
-                            <Image source={{ uri: p.image || p.images?.[0] }} style={styles.searchThumb} />
+                            {p.images?.[0] ? (
+                              <Image source={{ uri: p.images[0] }} style={styles.searchThumb} />
+                            ) : (
+                              <View style={[styles.searchThumb, { backgroundColor: CATEGORY_CONFIG[p.category]?.color || '#F5F5F5', justifyContent: 'center', alignItems: 'center' }]}>
+                                <Text style={{ fontSize: 18 }}>{CATEGORY_CONFIG[p.category]?.icon || '📦'}</Text>
+                              </View>
+                            )}
                             <View style={{ flex: 1 }}>
                               <Text style={styles.searchRowName} numberOfLines={1}>{p.name}</Text>
-                              <Text style={styles.searchRowSub}>GH₵ {p.price?.toFixed(2)}</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                                <Text style={styles.searchRowPrice}>GH₵ {p.price?.toFixed(2)}</Text>
+                                {p.campus && <Text style={styles.searchRowCampus}>{p.campus}</Text>}
+                              </View>
                             </View>
+                            {p.condition && <ConditionBadge condition={p.condition} />}
                           </TouchableOpacity>
                         ))}
                       </View>
-                    )}
-
-                    {searchVendors.length > 0 && (
-                      <View style={styles.searchSection}>
-                        <Text style={styles.searchSectionLabel}>Vendors</Text>
-                        {searchVendors.map(v => (
-                          <TouchableOpacity
-                            key={v._id}
-                            style={styles.searchRow}
-                            onPress={() => { navigation.navigate('VendorDetail', { vendorId: v._id, vendor: v }); clearSearch(); }}
-                          >
-                            <View style={styles.searchVendorAvatar}>
-                              <Text style={styles.searchVendorInitial}>{v.name?.[0]?.toUpperCase() || '?'}</Text>
-                            </View>
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.searchRowName} numberOfLines={1}>{v.name}</Text>
-                              <Text style={styles.searchRowSub}>{v.market_name}</Text>
-                            </View>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-
-                    {searchMarkets.length > 0 && (
-                      <View style={styles.searchSection}>
-                        <Text style={styles.searchSectionLabel}>Markets</Text>
-                        {searchMarkets.map(m => (
-                          <TouchableOpacity
-                            key={m.id}
-                            style={styles.searchRow}
-                            onPress={() => { navigation.navigate('MarketDetail', { marketName: m.id }); clearSearch(); }}
-                          >
-                            <View style={styles.searchMarketIcon}>
-                              <Text style={{ fontSize: 18 }}>{m.icon}</Text>
-                            </View>
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.searchRowName}>{m.id}</Text>
-                              <Text style={styles.searchRowSub}>{marketsMap[m.id]?.count ?? 0} vendors</Text>
-                            </View>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-
-                    {searchProducts.length === 0 && searchVendors.length === 0 && searchMarkets.length === 0 && !searching && (
+                    ) : !searching ? (
                       <View style={styles.noResults}>
                         <Ionicons name="search-outline" size={36} color="#C8E6C9" />
                         <Text style={styles.noResultsTitle}>No results</Text>
                         <Text style={styles.noResultsSub}>Try a different keyword</Text>
                       </View>
-                    )}
+                    ) : null}
 
-                    {(searchProducts.length > 0 || searchVendors.length > 0 || searchMarkets.length > 0) && (
+                    {searchResults.length > 0 && (
                       <TouchableOpacity style={styles.viewAllRow} onPress={handleSearchSubmit}>
-                        <Text style={styles.viewAllText}>View all results for "{searchQuery}"</Text>
+                        <Text style={styles.viewAllText}>See all results for "{searchQuery}"</Text>
                         <Ionicons name="arrow-forward" size={14} color="#2E7D32" />
                       </TouchableOpacity>
                     )}
@@ -765,129 +740,85 @@ const HomeScreen = () => {
           </View>
         </View>
 
-        {/* ══════════════════════════════════════
+        {/* ════════════════════════════════
             HERO CAROUSEL
-            ══════════════════════════════════════ */}
+            ════════════════════════════════ */}
         <View style={styles.carouselSection}>
           <HeroCarousel onSlidePress={handleSlidePress} />
         </View>
 
-        {/* ══════════════════════════════════════
-            MARKETS IN ACCRA
-            All 8 always shown; no vendors = "Soon"
-            ══════════════════════════════════════ 
+        {/* ════════════════════════════════
+            PLATFORM STATS STRIP
+            ════════════════════════════════ */}
+        {platformStats && <StatsBanner stats={platformStats} />}
+
+        {/* ════════════════════════════════
+            QUICK CATEGORY PILLS
+            ════════════════════════════════ */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Browse by Category</Text>
+            {/*<TouchableOpacity onPress={() => navigation.navigate('Products')} style={styles.seeAllRow}>
+              <Text style={styles.seeAllText}>See all</Text>
+              <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
+            </TouchableOpacity>*/}
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+            {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
+              <TouchableOpacity
+                key={key}
+                style={styles.categoryPill}
+                onPress={() => handleCategoryPress(key,cfg.label)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.categoryIconCircle, { backgroundColor: cfg.color, borderColor: cfg.color }]}>
+                  <Text style={styles.categoryEmoji}>{cfg.icon}</Text>
+                </View>
+                <Text style={styles.categoryName} numberOfLines={1}>{cfg.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* ════════════════════════════════
+            SHOP BY CAMPUS
+            ════════════════════════════════ 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View>
-              <View style={styles.sectionTitleRow}>
-                <Ionicons name="location-sharp" size={16} color="#2E7D32" />
-                <Text style={styles.sectionTitle}>Markets you can shop from</Text>
-              </View>
-              <Text style={styles.sectionSubtitle}>
-                {Object.keys(marketsMap).length} of {ALL_MARKETS.length} markets active
-              </Text>
+              <Text style={styles.sectionTitle}>Shop by Campus</Text>
+              <Text style={styles.sectionSubtitle}>Find listings near your school</Text>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('Vendors')} style={styles.seeAllRow}>
+            <TouchableOpacity onPress={() => navigation.navigate('Products')} style={styles.seeAllRow}>
               <Text style={styles.seeAllText}>See all</Text>
               <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
             </TouchableOpacity>
           </View>
-
-
-         {/* MARKETS IN ACCRA – horizontal scroll 
-        <View style={styles.section}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.marketsScrollContent}
-          >
-            {ALL_MARKETS.map(config => (
-              <MarketGridCard
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.campusScrollContent}>
+            {ALL_CAMPUSES.map(config => (
+              <CampusCard
                 key={config.id}
                 config={config}
-                liveData={marketsMap[config.id] || null}
-                onPress={handleMarketPress}
+                count={campusStats[config.id] ?? 0}
+                onPress={handleCampusPress}
               />
             ))}
-           
-            <TouchableOpacity
-              style={styles.marketSeeAllCard}
-              onPress={() => navigation.navigate('Vendors')}
-              activeOpacity={0.85}
-            >
-              <View style={styles.marketSeeAllIcon}>
-                <Ionicons name="location-outline" size={22} color="#2E7D32" />
-              </View>
-              <Text style={styles.marketSeeAllText}>All Markets</Text>
-            </TouchableOpacity>
           </ScrollView>
         </View>
-        </View>  */}
+        */}
 
-        {/* ══════════════════════════════════════
-            FEATURED VENDORS
-            ══════════════════════════════════════ 
-        {featuredVendors.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>Featured Vendors</Text>
-                <Text style={styles.sectionSubtitle}>Top sellers from Accra markets</Text>
-              </View>
-              <TouchableOpacity onPress={() => navigation.navigate('Vendors')} style={styles.seeAllRow}>
-                <Text style={styles.seeAllText}>See all</Text>
-                <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-              {featuredVendors.map(v => (
-                <VendorCard
-                  key={v._id}
-                  vendor={v}
-                  onPress={(vendor) => navigation.navigate('VendorDetail', { vendorId: vendor._id, vendor })}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        )}*/}
 
-        {/* ══════════════════════════════════════
-            SHOP BY CATEGORY
-            ══════════════════════════════════════ */}
-        {categories.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Shop by Category</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Products')} style={styles.seeAllRow}>
-                <Text style={styles.seeAllText}>See all</Text>
-                <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-              {categories.map(cat => (
-                <TouchableOpacity
-                  key={cat.id || cat._id}
-                  style={styles.categoryPill}
-                  onPress={() => navigation.navigate('Category', { category: cat.name })}
-                >
-                  <View style={styles.categoryIconCircle}>
-                    <Text style={styles.categoryEmoji}>{getCategoryIcon(cat.name)}</Text>
-                  </View>
-                  <Text style={styles.categoryName} numberOfLines={1}>{cat.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ══════════════════════════════════════
-            FEATURED PRODUCTS
-            ══════════════════════════════════════ */}
+        {/* ════════════════════════════════
+            FEATURED PRODUCTS  (2-col grid)
+            ════════════════════════════════ */}
         {featuredProducts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Featured Products</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Products', { tag: 'featured' })} style={styles.seeAllRow}>
+              <View>
+                <Text style={styles.sectionTitle}>Featured Listings</Text>
+                <Text style={styles.sectionSubtitle}>Hand-picked by our team</Text>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'featured' })} style={styles.seeAllRow}>
                 <Text style={styles.seeAllText}>See all</Text>
                 <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
               </TouchableOpacity>
@@ -895,117 +826,191 @@ const HomeScreen = () => {
             <View style={styles.productsGrid}>
               {featuredProducts.slice(0, 6).map(p => (
                 <ProductCard
-                  key={p.id || p._id}
+                  key={p._id}
                   product={p}
-                  onPress={(prod) => navigation.navigate('ProductDetail', { productId: prod.id || prod._id, product: prod })}
+                  onPress={handleProductPress}
                   onAddToCart={handleAddToCart}
-                  isAdding={addingProductId === (p.id || p._id)}
-                  isInCart={getQtyInCart(p.id || p._id) > 0}
+                  isAdding={addingProductId === p._id}
+                  isInCart={getQtyInCart(p._id) > 0}
                 />
               ))}
             </View>
           </View>
         )}
 
-        {/* ══════════════════════════════════════
-            POPULAR DEALS (best sellers horizontal)
-            ══════════════════════════════════════ */}
-        {bestSellers.length > 0 && (
+        {/* ════════════════════════════════
+            URGENT SALES  (horizontal deal cards)
+            ════════════════════════════════ */}
+        {urgentSales.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Popular Deals</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Products', { sortBy: 'stock-desc' })} style={styles.seeAllRow}>
+              <View style={styles.sectionTitleRow}>
+                <View style={styles.urgentDot} />
+                <View>
+                  <Text style={styles.sectionTitle}>Urgent Sales</Text>
+                  <Text style={styles.sectionSubtitle}>Grab them before they're gone</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'urgent-sale' })} style={styles.seeAllRow}>
                 <Text style={styles.seeAllText}>See all</Text>
                 <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
               </TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-              {bestSellers.map(p => (
-                <TouchableOpacity
-                  key={p.id || p._id}
-                  style={styles.dealCard}
-                  onPress={() => navigation.navigate('ProductDetail', { productId: p.id || p._id, product: p })}
-                  activeOpacity={0.85}
-                >
-                  {(p.image || p.images?.[0]) ? (
-                    <Image source={{ uri: p.image || p.images[0] }} style={styles.dealImg} resizeMode="cover" />
-                  ) : (
-                    <View style={styles.dealImgPlaceholder} />
-                  )}
-                  <View style={styles.dealOverlay}>
-                    <Text style={styles.dealName} numberOfLines={1}>{p.name}</Text>
-                    <View style={styles.dealBottom}>
-                      <Text style={styles.dealPrice}>GH₵ {p.price?.toFixed(2)}</Text>
-                      <TouchableOpacity
-                        style={[styles.dealAddBtn, getQtyInCart(p.id || p._id) > 0 && styles.dealAddBtnActive]}
-                        onPress={() => handleAddToCart(p)}
-                        disabled={addingProductId === (p.id || p._id)}
-                      >
-                        {addingProductId === (p.id || p._id)
-                          ? <ActivityIndicator size="small" color="#fff" />
-                          : <Ionicons name={getQtyInCart(p.id || p._id) > 0 ? 'checkmark' : 'add'} size={16} color="#fff" />}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+              {urgentSales.map(p => (
+                <DealCard
+                  key={p._id}
+                  product={p}
+                  onPress={handleProductPress}
+                  onAddToCart={handleAddToCart}
+                  isAdding={addingProductId === p._id}
+                  isInCart={getQtyInCart(p._id) > 0}
+                />
               ))}
             </ScrollView>
           </View>
         )}
 
-
-
-        {/* ── NEW ARRIVALS ── */}
-        {newArrivals.length > 0 && (
+        {/* ════════════════════════════════
+            POPULAR ON CAMPUS  (2-col grid)
+            ════════════════════════════════ */}
+        {popularProducts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>New Arrivals</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Products', { tag: 'featured' })} style={styles.seeAllRow}>
+              <View>
+                <Text style={styles.sectionTitle}>Popular on Campus</Text>
+                <Text style={styles.sectionSubtitle}>Most viewed this week</Text>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'popular', sort: 'popular' })} style={styles.seeAllRow}>
                 <Text style={styles.seeAllText}>See all</Text>
                 <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
               </TouchableOpacity>
             </View>
             <View style={styles.productsGrid}>
-              {newArrivals.slice(0, 6).map(p => (
+              {popularProducts.slice(0, 6).map(p => (
                 <ProductCard
-                  key={p.id || p._id}
+                  key={p._id}
                   product={p}
-                  onPress={(prod) => navigation.navigate('ProductDetail', { productId: prod.id || prod._id, product: prod })}
+                  onPress={handleProductPress}
                   onAddToCart={handleAddToCart}
-                  isAdding={addingProductId === (p.id || p._id)}
-                  isInCart={getQtyInCart(p.id || p._id) > 0}
+                  isAdding={addingProductId === p._id}
+                  isInCart={getQtyInCart(p._id) > 0}
                 />
               ))}
             </View>
           </View>
         )}
 
-
-
-        {/* ══════════════════════════════════════
-            FREE DELIVERY BANNER
-            ══════════════════════════════════════ */}
-        <View style={styles.bannerSection}>
-          <TouchableOpacity style={styles.banner} activeOpacity={0.9} onPress={() => navigation.navigate('Products')}>
-            <View style={styles.bannerLeft}>
-              <View style={styles.bannerTag}>
-                <Ionicons name="flash" size={11} color="#fff" />
-                <Text style={styles.bannerTagText}>SPECIAL OFFER</Text>
+        {/* ════════════════════════════════
+            NEW ARRIVALS  (horizontal)
+            ════════════════════════════════ */}
+        {newArrivals.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>New Arrivals</Text>
+                <Text style={styles.sectionSubtitle}>Just listed by students</Text>
               </View>
-              <Text style={styles.bannerTitle}>Free Delivery</Text>
-              <Text style={styles.bannerSub}>On orders over GH₵ 500 from any Accra market</Text>
-              <View style={styles.bannerBtn}>
-                <Text style={styles.bannerBtnText}>Shop Now</Text>
-                <Ionicons name="arrow-forward" size={13} color="#2E7D32" />
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'new-arrival', sort: 'newest' })} style={styles.seeAllRow}>
+                <Text style={styles.seeAllText}>See all</Text>
+                <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+              {newArrivals.map(p => (
+                <DealCard
+                  key={p._id}
+                  product={p}
+                  onPress={handleProductPress}
+                  onAddToCart={handleAddToCart}
+                  isAdding={addingProductId === p._id}
+                  isInCart={getQtyInCart(p._id) > 0}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ════════════════════════════════
+            STUDENT FAVORITES  (2-col grid)
+            ════════════════════════════════ */}
+        {studentFavorites.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>Student Favorites</Text>
+                <Text style={styles.sectionSubtitle}>Loved by campus shoppers</Text>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'student-favorite' })} style={styles.seeAllRow}>
+                <Text style={styles.seeAllText}>See all</Text>
+                <Ionicons name="chevron-forward" size={13} color="#2E7D32" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.productsGrid}>
+              {studentFavorites.slice(0, 4).map(p => (
+                <ProductCard
+                  key={p._id}
+                  product={p}
+                  onPress={handleProductPress}
+                  onAddToCart={handleAddToCart}
+                  isAdding={addingProductId === p._id}
+                  isInCart={getQtyInCart(p._id) > 0}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* ════════════════════════════════
+            SELL YOUR STUFF BANNER
+            ════════════════════════════════ */}
+        <View style={styles.bannerSection}>
+          <TouchableOpacity
+            style={styles.sellBanner}
+            activeOpacity={0.9}
+            onPress={() => isAuthenticated
+              ? navigation.navigate('CreateProduct')
+              : navigation.navigate('Login')
+            }
+          >
+            <View style={styles.sellBannerContent}>
+              <View style={styles.sellBannerTag}>
+                <Ionicons name="storefront-outline" size={11} color="#fff" />
+                <Text style={styles.sellBannerTagText}>FOR SELLERS</Text>
+              </View>
+              <Text style={styles.sellBannerTitle}>Got something{'\n'}to sell?</Text>
+              <Text style={styles.sellBannerSub}>List your items for free and reach thousands of students across campuses</Text>
+              <View style={styles.sellBannerBtn}>
+                <Text style={styles.sellBannerBtnText}>Start Selling</Text>
+                <Ionicons name="arrow-forward" size={13} color="#1B5E20" />
               </View>
             </View>
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1601600571002-6e1e0c6e3d6f?w=400' }}
-              style={styles.bannerImage}
-              resizeMode="cover"
-            />
+            <View style={styles.sellBannerIllustration}>
+              <Text style={{ fontSize: 60 }}>🛍️</Text>
+            </View>
           </TouchableOpacity>
         </View>
+
+        {/* ════════════════════════════════
+            SAFETY & TRUST TIPS
+            ════════════════════════════════ 
+        <View style={styles.safetySection}>
+          <Text style={styles.safetySectionTitle}>Safe Trading Tips</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.safetyScroll}>
+            {[
+              { icon: '🤝', title: 'Meet on Campus', desc: 'Always meet in a public campus area' },
+              { icon: '👀', title: 'Inspect First', desc: 'Check items before paying any money' },
+              { icon: '🚫', title: 'Avoid Transfers', desc: 'Never pay before seeing the item' },
+              { icon: '📞', title: 'Use In-App Chat', desc: 'Communicate via the app for safety' },
+            ].map((tip, i) => (
+              <View key={i} style={styles.safetyCard}>
+                <Text style={styles.safetyCardIcon}>{tip.icon}</Text>
+                <Text style={styles.safetyCardTitle}>{tip.title}</Text>
+                <Text style={styles.safetyCardDesc}>{tip.desc}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View> */}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -1024,10 +1029,10 @@ const styles = StyleSheet.create({
 
   // ── Header ──
   header: {
-    borderTopRightRadius:12,
-    borderTopLeftRadius:12,
+    borderTopRightRadius: 12,
+    borderTopLeftRadius: 12,
     backgroundColor: '#1B5E20',
-    marginHorizontal:4,
+    marginHorizontal: 4,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 18,
@@ -1064,17 +1069,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginTop: 6,
   },
-  locationDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#69F0AE',
-  },
-  locationText: {
-    fontSize: 11,
-    color: '#E8F5E9',
-    fontWeight: '500',
-  },
+  locationDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#69F0AE' },
+  locationText: { fontSize: 11, color: '#E8F5E9', fontWeight: '500' },
   headerActions: { flexDirection: 'row', gap: 6, marginTop: 4 },
   headerIconBtn: {
     width: 34,
@@ -1163,25 +1159,17 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     gap: 12,
   },
-  searchThumb: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#E8F5E9' },
+  searchThumb: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#E8F5E9' },
   searchRowName: { fontSize: 13, fontWeight: '600', color: '#1B2714' },
-  searchRowSub: { fontSize: 11, color: '#9E9E9E', marginTop: 1 },
-  searchVendorAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  searchRowPrice: { fontSize: 12, fontWeight: '700', color: '#1B5E20' },
+  searchRowCampus: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#2E7D32',
     backgroundColor: '#E8F5E9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchVendorInitial: { fontSize: 16, fontWeight: '700', color: '#2E7D32' },
-  searchMarketIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   noResults: { alignItems: 'center', padding: 28 },
   noResultsTitle: { fontSize: 15, fontWeight: '600', color: '#424242', marginTop: 10 },
@@ -1200,7 +1188,7 @@ const styles = StyleSheet.create({
   // ── Carousel ──
   carouselSection: { marginHorizontal: 16, marginTop: 16 },
   carouselWrap: { borderRadius: 20, overflow: 'hidden' },
-  slideWrapper: { height: 186, position: 'relative', backgroundColor: '#1B5E20' },
+  slideWrapper: { height: 200, position: 'relative', backgroundColor: '#1B5E20' },
   slideImage: { width: '100%', height: '100%', position: 'absolute' },
   slideScrim: { ...StyleSheet.absoluteFillObject },
   slideContent: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 18 },
@@ -1250,6 +1238,23 @@ const styles = StyleSheet.create({
   dotActive: { width: 18, backgroundColor: '#1B5E20' },
   dotInactive: { width: 5, backgroundColor: '#C8E6C9' },
 
+  // ── Stats Banner ──
+  statsBanner: {
+    flexDirection: 'row',
+    backgroundColor: '#1B5E20',
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  statItem: { alignItems: 'center' },
+  statValue: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  statLabel: { fontSize: 10, color: '#A5D6A7', marginTop: 2, fontWeight: '500' },
+  statDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.2)' },
+
   // ── Section ──
   section: { backgroundColor: '#FFFFFF', marginTop: 10, paddingTop: 18, paddingBottom: 20 },
   sectionHeader: {
@@ -1259,47 +1264,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 14,
   },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1B2714' },
   sectionSubtitle: { fontSize: 12, color: '#9E9E9E', marginTop: 2 },
   seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 },
   seeAllText: { fontSize: 13, fontWeight: '600', color: '#2E7D32' },
+  urgentDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF5252',
+    marginTop: 4,
+  },
 
-  // ── Markets grid ──
-  marketsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingHorizontal: 16,
-  },
-  marketCard: {
-    width: (width - 42) / 2,
+  // ── Campus cards ──
+  campusScrollContent: { paddingHorizontal: 16, gap: 10 },
+  campusCard: {
+    width: 140,
     borderRadius: 16,
-    padding: 14,
+    padding: 13,
     borderWidth: 1,
-    gap: 8,
+    gap: 7,
   },
-  marketCardSoon: {
-    width: (width - 42) / 2,
-    borderRadius: 16,
-    padding: 14,
-    gap: 8,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: '#E0E0E0',
-    backgroundColor: '#FAFAFA',
-    opacity: 0.65,
-  },
-  marketCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  marketIconBadge: {
-    width: 36,
-    height: 36,
+  campusIconBadge: {
+    width: 38,
+    height: 38,
     borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  marketIcon: { fontSize: 18 },
-  vendorCountChip: {
+  campusIcon: { fontSize: 18 },
+  campusName: { fontSize: 13, fontWeight: '700', lineHeight: 17 },
+  campusCountChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -1307,99 +1303,26 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 7,
     paddingVertical: 3,
-  },
-  vendorCountDot: { width: 5, height: 5, borderRadius: 3 },
-  vendorCountText: { fontSize: 9, fontWeight: '700' },
-  comingSoonChip: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  comingSoonChipText: { fontSize: 9, fontWeight: '700', color: '#9E9E9E' },
-  marketName: { fontSize: 13, fontWeight: '700', lineHeight: 18 },
-  marketNameSoon: { fontSize: 13, fontWeight: '700', color: '#9E9E9E', lineHeight: 18 },
-  marketNoVendors: { fontSize: 10, color: '#BDBDBD' },
-  avatarStack: { flexDirection: 'row', height: 26, position: 'relative' },
-  avatarItem: { position: 'absolute', top: 0 },
-  avatarImg: { width: 24, height: 24, borderRadius: 12, borderWidth: 2 },
-  avatarPlaceholder: { justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 9, fontWeight: '800', color: '#fff' },
-  avatarMore: { justifyContent: 'center', alignItems: 'center' },
-  avatarMoreText: { fontSize: 8, fontWeight: '800', color: '#fff' },
-
-  // ── Vendor card ──
-  horizontalScroll: { paddingHorizontal: 16, gap: 12 },
-  vendorCard: {
-    width: 136,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  vendorImgWrap: { position: 'relative' },
-  vendorImg: { width: '100%', height: 100 },
-  vendorImgPlaceholder: {
-    width: '100%',
-    height: 100,
-    backgroundColor: '#E8F5E9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  vendorInitial: { fontSize: 30, fontWeight: '800', color: '#2E7D32' },
-  openBadge: {
-    position: 'absolute',
-    top: 7,
-    right: 7,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  openDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#69F0AE' },
-  openText: { color: '#fff', fontSize: 9, fontWeight: '700' },
-  vendorInfo: { padding: 10 },
-  vendorName: { fontSize: 13, fontWeight: '700', color: '#1B2714', marginBottom: 4 },
-  vendorLocRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 5 },
-  vendorLoc: { fontSize: 11, color: '#9E9E9E', flex: 1 },
-  vendorMktPill: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 7,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
     alignSelf: 'flex-start',
-    marginBottom: 4,
   },
-  vendorMktText: { fontSize: 10, fontWeight: '600', color: '#2E7D32' },
-  vendorProds: { fontSize: 10, color: '#9E9E9E' },
+  campusCountDot: { width: 5, height: 5, borderRadius: 3 },
+  campusCountText: { fontSize: 10, fontWeight: '700' },
+  campusNoListings: { fontSize: 10, color: '#BDBDBD' },
 
   // ── Category ──
   categoryScroll: { paddingHorizontal: 16, gap: 10 },
-  categoryPill: { alignItems: 'center', width: 70 },
+  categoryPill: { alignItems: 'center', width: 68 },
   categoryIconCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#F1F8E9',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: '#E8F5E9',
   },
-  categoryEmoji: { fontSize: 24 },
-  categoryName: { fontSize: 11, fontWeight: '600', color: '#424242', textAlign: 'center' },
+  categoryEmoji: { fontSize: 22 },
+  categoryName: { fontSize: 10, fontWeight: '600', color: '#424242', textAlign: 'center' },
 
   // ── Product grid ──
   productsGrid: {
@@ -1421,18 +1344,39 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 2,
   },
-  productImg: { width: '100%', height: 110 },
+  productImgWrap: { position: 'relative' },
+  productImg: { width: '100%', height: 120 },
   productImgPlaceholder: {
     width: '100%',
-    height: 110,
-    backgroundColor: '#E8F5E9',
+    height: 120,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  conditionOverlay: { position: 'absolute', top: 6, left: 6 },
+  negotiableTag: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: '#1B5E20',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  negotiableTagText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   productBody: { padding: 10 },
-  productName: { fontSize: 13, fontWeight: '600', color: '#1B2714', marginBottom: 3, lineHeight: 17 },
-  productUnit: { fontSize: 11, color: '#9E9E9E', marginBottom: 8 },
-  productUnit1: { fontSize: 11, color: '#1fa326', marginBottom: 8 },
+  productName: { fontSize: 13, fontWeight: '600', color: '#1B2714', marginBottom: 4, lineHeight: 17 },
+  campusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#E8F5E9',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  campusPillText: { fontSize: 10, fontWeight: '600', color: '#2E7D32' },
   productFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   productPrice: { fontSize: 14, fontWeight: '800', color: '#1B5E20' },
   addBtn: {
@@ -1445,27 +1389,57 @@ const styles = StyleSheet.create({
   },
   addBtnActive: { backgroundColor: '#1B5E20' },
 
+  // ── Condition badge ──
+  conditionBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  conditionBadgeText: { fontSize: 9, fontWeight: '700' },
+
   // ── Deal card (horizontal) ──
+  horizontalScroll: { paddingHorizontal: 16, gap: 12 },
   dealCard: {
-    width: 158,
-    height: 185,
+    width: 160,
+    height: 200,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#E8F5E9',
   },
   dealImg: { width: '100%', height: '100%', position: 'absolute' },
-  dealImgPlaceholder: { width: '100%', height: '100%', backgroundColor: '#C8E6C9' },
+  dealImgPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  urgentBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FF5252',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  urgentBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
   dealOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.52)',
     padding: 12,
+    gap: 5,
   },
-  dealName: { fontSize: 13, fontWeight: '700', color: '#fff', marginBottom: 6 },
+  dealName: { fontSize: 13, fontWeight: '700', color: '#fff' },
   dealBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   dealPrice: { fontSize: 14, fontWeight: '800', color: '#A5D6A7' },
+  dealNeg: { fontSize: 9, color: '#81C784', fontWeight: '600', marginTop: 1 },
   dealAddBtn: {
     width: 28,
     height: 28,
@@ -1476,17 +1450,17 @@ const styles = StyleSheet.create({
   },
   dealAddBtnActive: { backgroundColor: '#1B5E20' },
 
-  // ── Banner ──
+  // ── Sell Banner ──
   bannerSection: { paddingHorizontal: 16, marginTop: 10 },
-  banner: {
+  sellBanner: {
     backgroundColor: '#1B5E20',
     borderRadius: 20,
     flexDirection: 'row',
     overflow: 'hidden',
-    minHeight: 140,
+    minHeight: 150,
   },
-  bannerLeft: { flex: 1, padding: 18, justifyContent: 'center' },
-  bannerTag: {
+  sellBannerContent: { flex: 1, padding: 18, justifyContent: 'center' },
+  sellBannerTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -1497,10 +1471,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 8,
   },
-  bannerTagText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  bannerTitle: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  bannerSub: { fontSize: 12, color: '#A5D6A7', marginBottom: 14, lineHeight: 16 },
-  bannerBtn: {
+  sellBannerTagText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  sellBannerTitle: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 4, lineHeight: 26 },
+  sellBannerSub: { fontSize: 12, color: '#A5D6A7', marginBottom: 14, lineHeight: 17 },
+  sellBannerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -1510,8 +1484,40 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
-  bannerBtnText: { fontSize: 13, fontWeight: '700', color: '#1B5E20' },
-  bannerImage: { width: '38%', opacity: 0.22 },
+  sellBannerBtnText: { fontSize: 13, fontWeight: '700', color: '#1B5E20' },
+  sellBannerIllustration: {
+    width: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ── Safety section ──
+  safetySection: {
+    backgroundColor: '#fff',
+    marginTop: 10,
+    paddingTop: 18,
+    paddingBottom: 20,
+  },
+  safetySectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1B2714',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  safetyScroll: { paddingHorizontal: 16, gap: 10 },
+  safetyCard: {
+    width: 140,
+    backgroundColor: '#F8FFF8',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E8F5E9',
+    gap: 5,
+  },
+  safetyCardIcon: { fontSize: 22 },
+  safetyCardTitle: { fontSize: 12, fontWeight: '700', color: '#1B2714' },
+  safetyCardDesc: { fontSize: 11, color: '#757575', lineHeight: 15 },
 
   // ── Modal ──
   modalOverlay: {
@@ -1549,47 +1555,6 @@ const styles = StyleSheet.create({
     borderColor: '#C8E6C9',
   },
   continueBtnText: { color: '#2E7D32', fontSize: 15, fontWeight: '600' },
-  marketsScrollContent: {
-  paddingLeft: 16,
-  paddingRight: 16,
-  gap: 10,
-},
-// Modify the marketCard to have a fixed width (instead of (width-42)/2)
-marketCard: {
-  width: 158,             // fixed width for horizontal scroll
-  borderRadius: 16,
-  padding: 14,
-  borderWidth: 1,
-  gap: 8,
-},
-marketSeeAllCard: {
-  width: 110,
-  backgroundColor: '#fff',
-  borderRadius: 16,
-  justifyContent: 'center',
-  alignItems: 'center',
-  gap: 8,
-  padding: 16,
-  borderWidth: 1.5,
-  borderColor: '#E8E8E8',
-  borderStyle: 'dashed',
-  minHeight: 165,
-},
-marketSeeAllIcon: {
-  width: 48,
-  height: 48,
-  borderRadius: 24,
-  backgroundColor: '#E8F5E9',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-marketSeeAllText: {
-  fontSize: 12,
-  fontWeight: '700',
-  color: '#2E7D32',
-  textAlign: 'center',
-  lineHeight: 17,
-},
 });
 
 export default HomeScreen;

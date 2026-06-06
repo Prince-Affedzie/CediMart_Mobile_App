@@ -23,7 +23,36 @@ import { useAuth } from '../context/AuthContext';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
-// ── Palette ──────────────────────────────────────────────────────────────────
+const CAMPUS_LABELS = {
+  UG: 'University of Ghana',
+  KNUST: 'KNUST',
+  UCC: 'University of Cape Coast',
+  UEW: 'University of Education, Winneba',
+  UPSA: 'UPSA',
+  GIMPA: 'GIMPA',
+  ASHESI: 'Ashesi University',
+  ATU: 'Accra Technical University',
+  OTHER: 'Other',
+};
+
+const CATEGORY_LABELS = {
+  'electronics': 'Electronics',
+  'phones and tablets': 'Phones & Tablets',
+  'computers and laptops': 'Computers & Laptops',
+  'gaming': 'Gaming',
+  'fashion': 'Fashion',
+  'books-course-materials': 'Books & Course Materials',
+  'hostel-items': 'Hostel Items',
+  'appliances': 'Appliances',
+  'furniture': 'Furniture',
+  'beauty and grooming': 'Beauty & Grooming',
+  'sports and fitness': 'Sports & Fitness',
+  'accessories': 'Accessories',
+  'food and drinks': 'Food & Drinks',
+  'services': 'Services',
+  'other': 'Other',
+};
+
 const C = {
   forest:     '#1A3C2A',
   pine:       '#2E7D32',
@@ -37,20 +66,7 @@ const C = {
   textMid:    '#444444',
   textLight:  '#888888',
   border:     '#EBEBEB',
-  shadow:     '#1A3C2A',
 };
-
-const CATEGORY_ICONS = {
-  'Tubers and Roots':          'leaf-outline',
-  'Fruits':                    'nutrition-outline',
-  'Vegetables':                'flower-outline',
-  'Grains, Cereals & Legumes': 'ellipse-outline',
-  'Meat':                      'fast-food-outline',
-  'Cold Store':                'snow-outline',
-  'Super Market':              'storefront-outline',
-};
-
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 const SectionLabel = ({ title, count }) => (
   <View style={s.sectionHeader}>
@@ -64,9 +80,11 @@ const SectionLabel = ({ title, count }) => (
   </View>
 );
 
-const StatPill = ({  label, value }) => (
+const StatPill = ({ icon, label, value }) => (
   <View style={s.statPill}>
-    
+    <View style={s.statIconWrap}>
+      <Ionicons name={icon} size={15} color={C.pine} />
+    </View>
     <View style={{ flex: 1 }}>
       <Text style={s.statLabel}>{label}</Text>
       <Text style={s.statValue} numberOfLines={1}>{value}</Text>
@@ -74,19 +92,17 @@ const StatPill = ({  label, value }) => (
   </View>
 );
 
-// ── Main Screen ───────────────────────────────────────────────────────────────
-
 const VendorDetailScreen = ({ route, navigation }) => {
   const { vendorId } = route.params;
   const { addToCart, cartItems } = useCart();
   const { isAuthenticated } = useAuth();
 
-  const [vendor, setVendor]                     = useState(null);
-  const [loading, setLoading]                   = useState(true);
-  const [refreshing, setRefreshing]             = useState(false);
-  const [error, setError]                       = useState(null);
-  const [addingProductId, setAddingProductId]   = useState(null);
-  const [modalVisible, setModalVisible]         = useState(false);
+  const [vendor, setVendor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const [addingProductId, setAddingProductId] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const [addedProductName, setAddedProductName] = useState('');
 
   const fetchVendor = async () => {
@@ -122,14 +138,15 @@ const VendorDetailScreen = ({ route, navigation }) => {
       ]);
       return;
     }
-    if (product.stock <= 0 || product.countInStock <= 0) {
-      Alert.alert('Out of Stock', `${product.name} is currently out of stock.`);
+    const stock = product.countInStock ?? 0;
+    if (!product.isAvailable || stock <= 0) {
+      Alert.alert('Unavailable', `${product.name} is no longer available.`);
       return;
     }
     try {
-      setAddingProductId(product.id || product._id);
+      setAddingProductId(product._id);
       setAddedProductName(product.name);
-      await addToCart(product.id || product._id, 1);
+      await addToCart(product._id, 1);
       setModalVisible(true);
       setTimeout(() => setModalVisible(false), 2200);
     } catch {
@@ -142,10 +159,9 @@ const VendorDetailScreen = ({ route, navigation }) => {
   const isValidImage = (url) =>
     url && !url.includes('default_banner') && !url.includes('default_profile');
 
-  const products   = vendor?.products   || [];
+  const products = vendor?.products || [];
   const categories = vendor?.categories || [];
 
-  // ── Loading ──────────────────────────────────────────────────────────────
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={[s.container, s.centered]} edges={['top']}>
@@ -155,7 +171,6 @@ const VendorDetailScreen = ({ route, navigation }) => {
     );
   }
 
-  // ── Error ────────────────────────────────────────────────────────────────
   if (error || !vendor) {
     return (
       <SafeAreaView style={[s.container, s.centered, { padding: 32 }]} edges={['top']}>
@@ -170,8 +185,6 @@ const VendorDetailScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-
-      {/* ── Success Modal ──────────────────────────────────────────────────── */}
       <Modal animationType="fade" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={s.modalOverlay}>
           <View style={s.successModal}>
@@ -180,15 +193,12 @@ const VendorDetailScreen = ({ route, navigation }) => {
             </View>
             <Text style={s.successTitle}>Added to Cart</Text>
             <Text style={s.successMsg}>{addedProductName}</Text>
-            <TouchableOpacity
-              style={s.modalPrimaryBtn}
-              onPress={() => { setModalVisible(false); navigation.navigate('Cart'); }}
-            >
+            <TouchableOpacity style={s.modalPrimaryBtn} onPress={() => { setModalVisible(false); navigation.navigate('Cart'); }}>
               <Ionicons name="cart-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
               <Text style={s.modalPrimaryBtnText}>View Cart</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.modalSecondaryBtn} onPress={() => setModalVisible(false)}>
-              <Text style={s.modalSecondaryText}>Continue Shopping</Text>
+              <Text style={s.modalSecondaryText}>Continue Browsing</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -199,36 +209,30 @@ const VendorDetailScreen = ({ route, navigation }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.scrollContent}
       >
-        {/* ── Hero Banner ──────────────────────────────────────────────────── */}
+        {/* Hero Banner */}
         <View style={s.heroBanner}>
-          {isValidImage(vendor.store_banner) ? (
-            <Image source={{ uri: vendor.store_banner }} style={s.bannerImage} />
+          {isValidImage(vendor.storeBanner) ? (
+            <Image source={{ uri: vendor.storeBanner }} style={s.bannerImage} />
           ) : (
             <View style={s.bannerFallback} />
           )}
-          {/* Dark scrim for legibility — pure RN View with opacity */}
           <View style={s.bannerScrim} />
 
           <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
 
-          <View style={[s.heroBadge, { backgroundColor: vendor.is_verified ? C.pine : '#E65100' }]}>
-            <Ionicons
-              name={vendor.is_verified ? 'shield-checkmark' : 'time'}
-              size={11}
-              color="#fff"
-              style={{ marginRight: 4 }}
-            />
-            <Text style={s.heroBadgeText}>{vendor.is_verified ? 'Verified' : 'Pending'}</Text>
+          <View style={[s.heroBadge, { backgroundColor: vendor.isVerified ? C.pine : '#E65100' }]}>
+            <Ionicons name={vendor.isVerified ? 'shield-checkmark' : 'time'} size={11} color="#fff" style={{ marginRight: 4 }} />
+            <Text style={s.heroBadgeText}>{vendor.isVerified ? 'Verified' : 'Pending'}</Text>
           </View>
         </View>
 
-        {/* ── Identity Card ─────────────────────────────────────────────────── */}
+        {/* Identity Card */}
         <View style={s.identityCard}>
           <View style={s.avatarRing}>
-            {isValidImage(vendor.profile_image) ? (
-              <Image source={{ uri: vendor.profile_image }} style={s.avatar} />
+            {isValidImage(vendor.profileImage) ? (
+              <Image source={{ uri: vendor.profileImage }} style={s.avatar} />
             ) : (
               <View style={s.avatarFallback}>
                 <Text style={s.avatarInitial}>{vendor.name?.charAt(0).toUpperCase() || '?'}</Text>
@@ -236,37 +240,38 @@ const VendorDetailScreen = ({ route, navigation }) => {
             )}
           </View>
           <Text style={s.vendorName}>{vendor.name}</Text>
-          <View style={s.marketRow}>
-            <Ionicons name="storefront-outline" size={13} color={C.gold} />
-            <Text style={s.marketName}>{vendor.market_name}</Text>
-          </View>
+          {vendor.storeName && (
+            <Text style={s.storeName}>{vendor.storeName}</Text>
+          )}
+          {vendor.campus && (
+            <View style={s.campusRow}>
+              <Ionicons name="school-outline" size={13} color={C.pine} />
+              <Text style={s.campusText}>{CAMPUS_LABELS[vendor.campus] || vendor.campus}</Text>
+            </View>
+          )}
+          {vendor.location?.campusArea && (
+            <Text style={s.locationText}>{vendor.location.campusArea}{vendor.location.hostel ? ` · ${vendor.location.hostel}` : ''}</Text>
+          )}
+          {vendor.bio && (
+            <Text style={s.bioText} numberOfLines={3}>{vendor.bio}</Text>
+          )}
         </View>
 
-        {/* ── Stats Row ─────────────────────────────────────────────────────── */}
+        {/* Stats Row */}
         <View style={s.statsRow}>
-          {vendor.location && (
-            <StatPill  label="Location" value={vendor.location} />
-          )}
-          <StatPill  label="Products" value={`${products.length} items`} />
-          {categories.length > 0 && (
-            <StatPill  label="Categories" value={`${categories.length} types`} />
-          )}
+          <StatPill icon="cube-outline" label="Listings" value={`${products.length} items`} />
+          <StatPill icon="star-outline" label="Rating" value={vendor.rating?.toFixed(1) || '0.0'} />
+          <StatPill icon="cart-outline" label="Sales" value={`${vendor.totalSales || 0}`} />
         </View>
 
-        {/* ── Categories ────────────────────────────────────────────────────── */}
+        {/* Categories */}
         {categories.length > 0 && (
           <View style={s.section}>
-            <SectionLabel title="Specialties" />
+            <SectionLabel title="Categories" count={categories.length} />
             <View style={s.chipWrap}>
               {categories.map((cat) => (
                 <View key={cat} style={s.chip}>
-                  <Ionicons
-                    name={CATEGORY_ICONS[cat] || 'pricetag-outline'}
-                    size={13}
-                    color={C.pine}
-                    style={{ marginRight: 5 }}
-                  />
-                  <Text style={s.chipText}>{cat}</Text>
+                  <Text style={s.chipText}>{CATEGORY_LABELS[cat] || cat}</Text>
                 </View>
               ))}
             </View>
@@ -275,7 +280,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
 
         <View style={s.divider} />
 
-        {/* ── Products ──────────────────────────────────────────────────────── */}
+        {/* Products */}
         <View style={s.section}>
           <SectionLabel title="Products" count={products.length} />
           {products.length === 0 ? (
@@ -286,66 +291,66 @@ const VendorDetailScreen = ({ route, navigation }) => {
           ) : (
             <View style={s.grid}>
               {products.map((product) => {
-                const isInCart   = getQuantityInCart(product._id) > 0;
-                const isAdding   = addingProductId === (product.id || product._id);
-                const outOfStock = product.stock <= 0 || product.countInStock <= 0;
+                const isInCart = getQuantityInCart(product._id) > 0;
+                const isAdding = addingProductId === product._id;
+                const isAvailable = product.isAvailable && (product.countInStock ?? 0) > 0;
 
                 return (
-  <TouchableOpacity
-    key={product._id}
-    style={s.productCard}
-    onPress={() => navigation.navigate('ProductDetail', { productId: product._id, product })}
-    activeOpacity={0.88}
-  >
-    {/* Image */}
-    <View style={s.productImgWrap}>
-      <Image
-        source={{
-          uri: product.image
-            || product.images?.[0]
-            || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80',
-        }}
-        style={s.productImg}
-      />
-      {outOfStock && (
-        <View style={s.outOfStockOverlay}>
-          <Text style={s.outOfStockText}>Out of Stock</Text>
-        </View>
-      )}
-      {/* Cart button removed from here */}
-    </View>
-
-    {/* Info – now contains the cart button next to the price */}
-    <View style={s.productBody}>
-      <Text style={s.productName} numberOfLines={2}>{product.name}</Text>
-      <View style={s.productFooter}>
-        {product.price != null && (
-          <Text style={s.productPrice}>GH₵ {product.price.toFixed(2)}</Text>
-        )}
-        <TouchableOpacity
-          style={[
-            s.cartBtn,
-            isInCart   && s.cartBtnActive,
-            outOfStock && s.cartBtnDisabled,
-          ]}
-          onPress={() => handleAddToCart(product)}
-          disabled={isAdding || outOfStock}
-          activeOpacity={0.8}
-        >
-          {isAdding ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Ionicons
-              name={isInCart ? 'checkmark' : 'cart-outline'}
-              size={15}
-              color="#fff"
-            />
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
-  </TouchableOpacity>
-);
+                  <TouchableOpacity
+                    key={product._id}
+                    style={s.productCard}
+                    onPress={() => navigation.navigate('ProductDetail', { productId: product._id, product })}
+                    activeOpacity={0.88}
+                  >
+                    <View style={s.productImgWrap}>
+                      <Image
+                        source={{
+                          uri: product.images?.[0] || product.image || 'https://via.placeholder.com/300/F5F5F5/BDBDBD?text=No+Image',
+                        }}
+                        style={s.productImg}
+                      />
+                      {!isAvailable && (
+                        <View style={s.outOfStockOverlay}>
+                          <Text style={s.outOfStockText}>Sold Out</Text>
+                        </View>
+                      )}
+                      {product.condition && (
+                        <View style={s.conditionBadge}>
+                          <Text style={s.conditionBadgeText}>
+                            {product.condition === 'new' ? 'New' :
+                             product.condition === 'like-new' ? 'Like New' :
+                             product.condition.replace(/-/g, ' ')}
+                          </Text>
+                        </View>
+                      )}
+                      {product.negotiable && (
+                        <View style={s.negotiableTag}>
+                          <Text style={s.negotiableTagText}>Negotiable</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={s.productBody}>
+                      <Text style={s.productName} numberOfLines={2}>{product.name}</Text>
+                      <View style={s.productFooter}>
+                        {product.price != null && (
+                          <Text style={s.productPrice}>GH₵ {product.price.toFixed(2)}</Text>
+                        )}
+                        <TouchableOpacity
+                          style={[s.cartBtn, isInCart && s.cartBtnActive, !isAvailable && s.cartBtnDisabled]}
+                          onPress={() => handleAddToCart(product)}
+                          disabled={isAdding || !isAvailable}
+                          activeOpacity={0.8}
+                        >
+                          {isAdding ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                            <Ionicons name={isInCart ? 'checkmark' : 'add'} size={15} color="#fff" />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
               })}
             </View>
           )}
@@ -355,28 +360,24 @@ const VendorDetailScreen = ({ route, navigation }) => {
   );
 };
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const shadow = (opacity = 0.08, radius = 10, y = 4) =>
   Platform.select({
-    ios:     { shadowColor: '#000', shadowOffset: { width: 0, height: y }, shadowOpacity: opacity, shadowRadius: radius },
+    ios: { shadowColor: '#000', shadowOffset: { width: 0, height: y }, shadowOpacity: opacity, shadowRadius: radius },
     android: { elevation: Math.round(radius * 0.6) },
   });
 
 const s = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: C.cream },
-  centered:      { justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: C.cream },
+  centered: { justifyContent: 'center', alignItems: 'center' },
   scrollContent: { paddingBottom: 52 },
-
-  loadingText:  { marginTop: 12, fontSize: 15, color: C.textLight, fontWeight: '500' },
-  retryBtn:     { marginTop: 20, backgroundColor: C.pine, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 14 },
+  loadingText: { marginTop: 12, fontSize: 15, color: C.textLight, fontWeight: '500' },
+  retryBtn: { marginTop: 20, backgroundColor: C.pine, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 14 },
   retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 
-  // ── Hero
-  heroBanner:    { height: 210, backgroundColor: C.forest, position: 'relative' },
-  bannerImage:   { width: '100%', height: '100%', resizeMode: 'cover' },
-  bannerFallback:{ ...StyleSheet.absoluteFillObject, backgroundColor: C.forest },
-  bannerScrim:   { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,30,18,0.45)' },
-
+  heroBanner: { height: 210, backgroundColor: C.forest, position: 'relative' },
+  bannerImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  bannerFallback: { ...StyleSheet.absoluteFillObject, backgroundColor: C.forest },
+  bannerScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,30,18,0.45)' },
   backBtn: {
     position: 'absolute', top: 16, left: 16, zIndex: 20,
     width: 38, height: 38, borderRadius: 19,
@@ -391,7 +392,6 @@ const s = StyleSheet.create({
   },
   heroBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
 
-  // ── Identity
   identityCard: { alignItems: 'center', marginTop: -44, paddingBottom: 20, paddingHorizontal: 20 },
   avatarRing: {
     width: 90, height: 90, borderRadius: 45,
@@ -400,134 +400,105 @@ const s = StyleSheet.create({
     marginBottom: 12,
     ...shadow(0.18, 14, 6),
   },
-  avatar:         { width: '100%', height: '100%' },
+  avatar: { width: '100%', height: '100%' },
   avatarFallback: { flex: 1, backgroundColor: C.pine, justifyContent: 'center', alignItems: 'center' },
-  avatarInitial:  { fontSize: 36, fontWeight: '800', color: '#fff' },
-  vendorName:     { fontSize: 22, fontWeight: '800', color: C.textDark, textAlign: 'center', letterSpacing: -0.4 },
-  marketRow:      { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 5 },
-  marketName:     { fontSize: 13, color: C.textMid, fontWeight: '500' },
+  avatarInitial: { fontSize: 36, fontWeight: '800', color: '#fff' },
+  vendorName: { fontSize: 22, fontWeight: '800', color: C.textDark, textAlign: 'center', letterSpacing: -0.4 },
+  storeName: { fontSize: 14, color: C.textMid, fontWeight: '500', marginTop: 2, textAlign: 'center' },
+  campusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 5 },
+  campusText: { fontSize: 13, color: C.pine, fontWeight: '600' },
+  locationText: { fontSize: 12, color: C.textLight, marginTop: 4, textAlign: 'center' },
+  bioText: { fontSize: 13, color: C.textMid, marginTop: 10, textAlign: 'center', lineHeight: 19, paddingHorizontal: 10 },
 
-  // ── Stats
-  statsRow: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: 16, gap: 10,
-    marginTop: 2, marginBottom: 24,
-  },
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 10, marginTop: 2, marginBottom: 24 },
   statPill: {
-    flex: 1, minWidth: 108,
+    flex: 1, minWidth: 100,
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: C.card,
-    borderRadius: 14, borderWidth: 1, borderColor: C.border,
+    backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: C.border,
     paddingHorizontal: 13, paddingVertical: 11,
     ...shadow(0.05, 8, 3),
   },
-  statIconWrap: {
-    width: 32, height: 32, borderRadius: 10,
-    backgroundColor: C.mint,
-    justifyContent: 'center', alignItems: 'center',
-  },
+  statIconWrap: { width: 32, height: 32, borderRadius: 10, backgroundColor: C.mint, justifyContent: 'center', alignItems: 'center' },
   statLabel: { fontSize: 11, color: C.textLight, fontWeight: '500' },
   statValue: { fontSize: 13, color: C.textDark, fontWeight: '700', marginTop: 1 },
 
-  // ── Section
-  section:       { paddingHorizontal: 16, marginBottom: 6 },
+  section: { paddingHorizontal: 16, marginBottom: 6 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 8 },
   sectionAccent: { width: 3, height: 17, borderRadius: 2, backgroundColor: C.gold },
-  sectionTitle:  { fontSize: 16, fontWeight: '800', color: C.forest, flex: 1, letterSpacing: -0.2 },
-  sectionBadge:  { backgroundColor: C.mint, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: C.forest, flex: 1, letterSpacing: -0.2 },
+  sectionBadge: { backgroundColor: C.mint, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
   sectionBadgeText: { fontSize: 12, fontWeight: '700', color: C.pine },
 
   divider: { height: 1, backgroundColor: C.border, marginHorizontal: 16, marginVertical: 20 },
 
-  // ── Chips
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.mint,
-    borderWidth: 1, borderColor: C.mintBorder,
+    backgroundColor: C.mint, borderWidth: 1, borderColor: C.mintBorder,
     borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
   },
   chipText: { fontSize: 12, fontWeight: '700', color: C.pine },
 
-  // ── Products
   emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyText:  { marginTop: 10, fontSize: 15, color: C.textLight },
-  grid:       { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  emptyText: { marginTop: 10, fontSize: 15, color: C.textLight },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
 
   productCard: {
-    width: CARD_WIDTH,
-    backgroundColor: C.card,
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: C.border,
+    width: CARD_WIDTH, backgroundColor: C.card, borderRadius: 16,
+    overflow: 'hidden', borderWidth: 1, borderColor: C.border,
     ...shadow(0.07, 10, 4),
   },
   productImgWrap: { width: '100%', height: 138, position: 'relative' },
-  productImg:     { width: '100%', height: '100%', resizeMode: 'cover' },
-
+  productImg: { width: '100%', height: '100%', resizeMode: 'cover' },
   outOfStockOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.42)',
+    ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.42)',
     justifyContent: 'center', alignItems: 'center',
   },
   outOfStockText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.6 },
-
-  // Icon-only floating cart FAB — no text
- productBody:  { padding: 11 },
-productFooter: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: 8,
-},
-cartBtn: {
-  width: 34,
-  height: 34,
-  borderRadius: 17,
-  backgroundColor: C.pine,
-  justifyContent: 'center',
-  alignItems: 'center',
-  ...shadow(0.18, 5, 3),
-},
-cartBtnActive:   { backgroundColor: C.forest },
-cartBtnDisabled: { backgroundColor: '#BDBDBD' },
-  productBody:  { padding: 11 },
-  productName:  { fontSize: 13, fontWeight: '600', color: C.textDark, lineHeight: 18, marginBottom: 5 },
+  conditionBadge: {
+    position: 'absolute', top: 6, left: 6,
+    backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5,
+  },
+  conditionBadgeText: { fontSize: 9, fontWeight: '700', color: C.pine, textTransform: 'capitalize' },
+  negotiableTag: {
+    position: 'absolute', top: 6, right: 6,
+    backgroundColor: C.pine, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5,
+  },
+  negotiableTagText: { color: '#fff', fontSize: 9, fontWeight: '700' },
+  productBody: { padding: 11 },
+  productName: { fontSize: 13, fontWeight: '600', color: C.textDark, lineHeight: 18, marginBottom: 5 },
+  productFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   productPrice: { fontSize: 15, fontWeight: '800', color: C.forest },
+  cartBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: C.pine, justifyContent: 'center', alignItems: 'center',
+    ...shadow(0.18, 5, 3),
+  },
+  cartBtnActive: { backgroundColor: C.forest },
+  cartBtnDisabled: { backgroundColor: '#BDBDBD' },
 
-  // ── Modal
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.48)',
     justifyContent: 'center', alignItems: 'center', padding: 24,
   },
   successModal: {
-    backgroundColor: C.card,
-    borderRadius: 22, padding: 30,
-    alignItems: 'center',
-    width: '100%', maxWidth: 340,
+    backgroundColor: C.card, borderRadius: 22, padding: 30,
+    alignItems: 'center', width: '100%', maxWidth: 340,
     ...shadow(0.14, 20, 8),
   },
   modalIconRing: {
     width: 60, height: 60, borderRadius: 30,
-    backgroundColor: C.pine,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: C.pine, justifyContent: 'center', alignItems: 'center', marginBottom: 16,
   },
-  successTitle:       { fontSize: 19, fontWeight: '800', color: C.forest, marginBottom: 6 },
-  successMsg:         { fontSize: 14, color: C.textMid, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  modalPrimaryBtn:    {
-    width: '100%', flexDirection: 'row',
-    backgroundColor: C.pine,
-    paddingVertical: 14, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 10,
+  successTitle: { fontSize: 19, fontWeight: '800', color: C.forest, marginBottom: 6 },
+  successMsg: { fontSize: 14, color: C.textMid, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+  modalPrimaryBtn: {
+    width: '100%', flexDirection: 'row', backgroundColor: C.pine,
+    paddingVertical: 14, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginBottom: 10,
   },
-  modalPrimaryBtnText:{ color: '#fff', fontSize: 15, fontWeight: '700' },
-  modalSecondaryBtn:  {
-    width: '100%', paddingVertical: 13,
-    borderRadius: 13, borderWidth: 1.5, borderColor: C.mintBorder,
-    alignItems: 'center',
+  modalPrimaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  modalSecondaryBtn: {
+    width: '100%', paddingVertical: 13, borderRadius: 13,
+    borderWidth: 1.5, borderColor: C.mintBorder, alignItems: 'center',
   },
   modalSecondaryText: { color: C.pine, fontSize: 14, fontWeight: '600' },
 });

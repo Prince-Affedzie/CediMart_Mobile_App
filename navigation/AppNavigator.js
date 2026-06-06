@@ -37,9 +37,12 @@ import VendorDetailScreen from '../screens/VendorDetailScreen';
 import MarketsScreen from '../screens/MarketsScreen';
 import GuestProductDetailScreen from '../screens/GuestProductDetail'
 import GuestMarketDetailScreen from '../screens/GuestMarketDetail';
+import CampusProductsScreen from '../screens/CampusProductsScreen'
+import TagProductsScreen from '../screens/TagProductsScreen'
 
 
 // ── Vendor screens ──
+import VendorSignUpScreen from '../vendorscreens/VendorSignUp'
 import VendorLoginScreen from '../vendorscreens/VendorLogin';
 import VendorDashboardScreen from '../vendorscreens/vendordashboard';
 import MyProductsScreen from '../vendorscreens/VendorProducts';         // you'll create these
@@ -48,6 +51,8 @@ import VendorAccountScreen from '../vendorscreens/EditProfile';       // or use 
 import VendorProductDetailScreen from '../vendorscreens/ProductDetail'; 
 import VendorOrdersScreen from '../vendorscreens/VendorOrders'      // future
 import VendorOrderDetailScreen from '../vendorscreens/OrderDetail'
+import UpdateProductScreen from '../vendorscreens/EditProduct'
+import VendorSupportScreen from '../vendorscreens/VendorSupport'
      
 // future (reuse edit vendor)
 /*import VendorOrdersScreen from '../vendorscreens/VendorOrdersScreen'; */    // placeholder for now
@@ -66,8 +71,13 @@ function AuthNavigator() {
       <AuthStack.Screen name="GuestHome" component={GuestHomeScreen} />
       <AuthStack.Screen name="GuestProductDetail" component={GuestProductDetailScreen} />
       <AuthStack.Screen name="GuestMarketDetail" component={GuestMarketDetailScreen} />
+      <AuthStack.Screen name="Category" component={CategoryScreen} options={{ animation: 'slide_from_right' }} />
+      <AuthStack.Screen name="Campus" component={CampusProductsScreen} options={{ animation: 'slide_from_right' }} />
+      <AuthStack.Screen name="VendorDetail" component={VendorDetailScreen} options={{ headerShown: false }} />
+      <AuthStack.Screen name="TagProducts" component={TagProductsScreen} options={{ animation: 'slide_from_right' }} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="VendorLogin" component={VendorLoginScreen} />
+      <AuthStack.Screen name="VendorSignUp" component={VendorSignUpScreen} />
       <AuthStack.Screen name="SignUp" component={SignUpScreen} />
       <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <AuthStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
@@ -213,13 +223,16 @@ function MainStackNavigator() {
       ) : (
          // Authenticated flow – show vendor or customer tabs
         <>
-          {role ==='vendor'? (
+          {user.role ==='vendor'? (
             <>
               <Stack.Screen name="VendorMainTabs" component={VendorTabNavigator} />
               <Stack.Screen name="AddProduct" component={AddProductScreen} options={{ headerShown: false }} />
               <Stack.Screen name="ProductDetail" component={VendorProductDetailScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="UpdateProduct" component={UpdateProductScreen} options={{ headerShown: false }} />
               <Stack.Screen name="VendorOrderDetail" component={VendorOrderDetailScreen} options={{ headerShown: false }} />
-             
+              <Stack.Screen name="Notification" component={NotificationScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="VendorSupport" component={VendorSupportScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
             
               </>
           ) : (
@@ -228,6 +241,8 @@ function MainStackNavigator() {
               {/* Customer extra screens */}
               <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Category" component={CategoryScreen} options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="Campus" component={CampusProductsScreen} options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="TagProducts" component={TagProductsScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="Cart" component={CartScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Order" component={OrderScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Orders" component={OrdersScreen} options={{ headerShown: false }} />

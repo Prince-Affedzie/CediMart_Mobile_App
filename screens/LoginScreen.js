@@ -307,7 +307,7 @@ const LoginScreen = ({ navigation }) => {
               style={styles.brandLogo}
               resizeMode="contain"
             />
-            <Text style={styles.logoText}>CediMart</Text>
+           
           </View>
           
           <Text style={styles.title}>Welcome Back</Text>
@@ -531,8 +531,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   brandLogo: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     marginRight: 8,
   },
   logoText: {

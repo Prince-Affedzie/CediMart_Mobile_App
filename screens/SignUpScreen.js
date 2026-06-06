@@ -370,7 +370,7 @@ const SignUpScreen = ({ navigation }) => {
                 style={styles.brandLogo}
                 resizeMode="contain"
               />
-              <Text style={styles.logoText}>CediMart</Text>
+             
             </View>
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>Join our community</Text>
@@ -641,6 +641,19 @@ const SignUpScreen = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
             </View>
+            <TouchableOpacity 
+              style={styles.vendorLinkContainer}
+              onPress={() => navigation.navigate('VendorSignUp')} 
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              <View style={styles.vendorLinkContent}>
+                <Ionicons name="storefront-outline" size={20} color="#4E342E" />
+                <Text style={[styles.vendorLinkText, isLoading && styles.disabledText]}>
+                  Are you a vendor? <Text style={styles.vendorLinkBold}>SignUp here</Text>
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </Animated.View>
@@ -701,8 +714,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   brandLogo: {
-    width: 40,
-    height: 40,
+    width: 60,
+    height: 60,
     marginRight: 8,
   },
   logoText: {
@@ -959,6 +972,35 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 12,
   },
+  vendorLinkContainer: {
+  marginTop: 12,
+  marginHorizontal: 20,
+  paddingVertical: 14,
+  paddingHorizontal: 16,
+  backgroundColor: '#FFF8E1',
+  borderRadius: 12,
+  borderWidth: 1,
+  borderColor: '#FFE082',
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: 16,
+},
+vendorLinkContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+},
+vendorLinkText: {
+  fontSize: 15,
+  color: '#4E342E',
+  fontWeight: '500',
+},
+vendorLinkBold: {
+  fontWeight: '700',
+  color: '#2E7D32',
+  textDecorationLine: 'underline',
+},
 });
 
 export default SignUpScreen;

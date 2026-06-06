@@ -2,6 +2,28 @@
 
 import API from "./apiClient";
 
+export const createVendorProfile = async (data) => {
+  try {
+    // CRITICAL: For FormData with images, do NOT set Content-Type manually
+    const response = await API.post('/api/vendor', data, {
+      headers: {
+        'Content-Type': 'multipart/form-data',  
+      },
+    });
+
+    console.log('✅ Profile Created successfully:', response.data);
+    return response;
+  } catch (error) {
+    console.error('Profile Update Failed:', {
+      message: error.message,
+      status: error?.response?.status,
+      data: error?.response?.data,
+      url: error?.config?.url,
+    });
+    throw error;
+  }
+};
+
 export const getVendorsByMarket = ()=>API.get('/api/vendors/by_market')
 export const getVendors =(params = {}) => API.get('/api/vendor', { params });
 export const getVendorById =(id)=>API.get(`/api/vendor/${id}`)
@@ -34,7 +56,7 @@ export const updateProfile = async (data) => {
 export const createProduct = async (data) => {
   try {
     // CRITICAL: For FormData with images, do NOT set Content-Type manually
-    const response = await API.post('/api/product-add', data, {
+    const response = await API.post('/api/product', data, {
       headers: {
         'Content-Type': 'multipart/form-data',   // Let Axios set this automatically
       },
@@ -64,7 +86,7 @@ export const getProductById = async (identifier) => {
 
 export const updateProduct = async (id, formData) => {
   try {
-    const response = await API.put(`/api/product-update/${id}`, formData, {
+    const response = await API.put(`/api/product/${id}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -90,7 +112,7 @@ export const getMyOrders =async() => {
 
 export const deleteProduct = async (id) => {
   try {
-    const response = await API.delete(`/api/product-delete/${id}`);
+    const response = await API.delete(`/api/product/${id}`);
     return response;
   } catch (error) {
     throw error;

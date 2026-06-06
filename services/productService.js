@@ -5,67 +5,112 @@ class ProductService {
  // Update the getProducts method to handle category mapping better
 async getProducts(filters = {}) {
   try {
-    // Map frontend category names to backend category values
-    let categoryParam = filters.category;
-    
-    if (categoryParam && categoryParam !== 'all') {
-      // Map frontend plural categories to backend singular
-      const categoryMap = {
-        'vegetables': 'vegetable',
-        'fruits': 'fruit',
-        'staples': 'staple',
-        'herb': 'herb',
-        'tuber': 'tuber',
-        'other': 'other',
-        'vegetable': 'vegetable',
-        'fruit': 'fruit',
-        'staple': 'staple',
-      };
-      
-      categoryParam = categoryMap[categoryParam] || categoryParam;
-    }
-
-    const params = {
-      category: categoryParam !== 'all' ? categoryParam : undefined,
-      search: filters.search || undefined,
-      minPrice: filters.minPrice || undefined,
-      maxPrice: filters.maxPrice || undefined,
-      market: filters.market || undefined,
-      isAvailable: filters.inStockOnly ? 'true' : undefined,
-      sort: this.mapSortToBackend(filters.sortBy),
-      page: filters.page || 1,
-      limit: filters.limit || 20
+    // ── 1. Category ──────────────────────────────────────────────────────────
+    // Pass through as-is; backend validates against its enum.
+    // Only strip 'all' — that means "no category filter".
+    const category =
+      filters.category && filters.category !== 'all'
+        ? filters.category
+        : undefined;
+ 
+    // ── 2. Subcategory ───────────────────────────────────────────────────────
+    // Only meaningful when a parent category is also set.
+    const subcategory =
+      category && filters.subcategory
+        ? filters.subcategory
+        : undefined;
+ 
+    // ── 3. Sort ──────────────────────────────────────────────────────────────
+    // Accept the backend key directly (from the new ProductsScreen), but also
+    // keep backward-compat with legacy `sortBy` values from older screens.
+    const SORT_MAP = {
+      // legacy UI keys → backend keys
+      'name':        'newest',   // was alphabetical sort; fall back gracefully
+      'name-desc':   'newest',
+      'price':       'price-asc',
+      'price-desc':  'price-desc',
+      'newest':      'newest',
+      'oldest':      'oldest',
+      'price-asc':   'price-asc',
+      'popular':     'popular',
+      'rating':      'rating',
     };
-
-    // Remove undefined params
+ 
+    // Prefer explicit `sort`, fall back to mapped `sortBy`, default to 'newest'
+    const rawSort = filters.sort || filters.sortBy || 'newest';
+    const sort = SORT_MAP[rawSort] ?? 'newest';
+ 
+    // ── 4. Negotiable ────────────────────────────────────────────────────────
+    // Accept boolean true/false or string 'true'/'false'; omit when falsy so
+    // the backend doesn't filter unnecessarily.
+    let negotiable;
+    if (filters.negotiable === true || filters.negotiable === 'true') {
+      negotiable = 'true';
+    } else if (filters.negotiable === false || filters.negotiable === 'false') {
+      // Only send explicit false if the caller really wants non-negotiable items
+      negotiable = undefined;
+    }
+ 
+    // ── 5. Price range ───────────────────────────────────────────────────────
+    const minPrice = filters.minPrice !== '' && filters.minPrice != null
+      ? Number(filters.minPrice)
+      : undefined;
+ 
+    const maxPrice = filters.maxPrice !== '' && filters.maxPrice != null
+      ? Number(filters.maxPrice)
+      : undefined;
+ 
+    // Guard: if either price is NaN after coercion, discard it
+    const safeMinPrice = !isNaN(minPrice) ? minPrice : undefined;
+    const safeMaxPrice = !isNaN(maxPrice) ? maxPrice : undefined;
+ 
+    // ── 6. Pagination ────────────────────────────────────────────────────────
+    const page  = Math.max(parseInt(filters.page)  || 1, 1);
+    const limit = Math.min(parseInt(filters.limit) || 20, 50);
+ 
+    // ── 7. Assemble params ───────────────────────────────────────────────────
+    const params = {
+      category,
+      subcategory,
+      campus:     filters.campus     || undefined,
+      condition:  filters.condition  || undefined,
+      negotiable,
+      search:     filters.search?.trim() || undefined,
+      minPrice:   safeMinPrice,
+      maxPrice:   safeMaxPrice,
+      sort,
+      page,
+      limit,
+    };
+ 
+    // Strip undefined / empty-string keys so Axios doesn't send empty query params
     Object.keys(params).forEach(key => {
       if (params[key] === undefined || params[key] === '') {
         delete params[key];
       }
     });
-
+ 
+    // ── 8. Request ───────────────────────────────────────────────────────────
     const response = await API.get('/api/products', { params });
-
+ 
     return {
-      success: response.data.success,
-      data: response.data.data || [],
-      total: response.data.total || 0,
+      success:    response.data.success || response.success,
+      data:       response.data.data       || response.data || [],
+      total:      response.data.total      || 0,
       pagination: response.data.pagination || {},
-      filters: response.data.filters || {},
-      error: response.data.message,
+      error:      response.data.message,
     };
-
+ 
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error('getProducts error:', error);
     return {
       success: false,
-      error: error.message || 'Failed to fetch products',
-      data: [],
-      total: 0,
+      error:   error.response?.data?.message || error.message || 'Failed to fetch products',
+      data:    [],
+      total:   0,
     };
   }
 }
-
 ///products/tag/:tag
 
  async getProductByTag(tag) {
