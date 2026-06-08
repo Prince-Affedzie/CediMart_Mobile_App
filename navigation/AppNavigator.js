@@ -70,6 +70,7 @@ function AuthNavigator() {
     <AuthStack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: '#FFFFFF' } }}>
       <AuthStack.Screen name="GuestHome" component={GuestHomeScreen} />
       <AuthStack.Screen name="GuestProductDetail" component={GuestProductDetailScreen} />
+      <AuthStack.Screen name="Products" component={ProductsScreen} options={{ title: 'Products' }} />
       <AuthStack.Screen name="GuestMarketDetail" component={GuestMarketDetailScreen} />
       <AuthStack.Screen name="Category" component={CategoryScreen} options={{ animation: 'slide_from_right' }} />
       <AuthStack.Screen name="Campus" component={CampusProductsScreen} options={{ animation: 'slide_from_right' }} />

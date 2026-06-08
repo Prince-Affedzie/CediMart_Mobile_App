@@ -67,7 +67,7 @@ const HERO_SLIDES = [
     btnText: 'Shop Books',
     accentColor: '#FFCC80',
     overlayColor: 'rgba(60,30,0,0.46)',
-    nav: { screen: 'Products', params: { category: 'books' } },
+    nav: { screen: 'Products', params: { category: 'books-course-materials' } },
   },
   {
     id: '4',
@@ -329,7 +329,7 @@ const GuestHomeScreen = () => {
   const goToSignIn = () => navigation.navigate('Login');
   const goToSignUp = () => navigation.navigate('SignUp');
 
-  const handleSlidePress = (slide) => { navigation.navigate('GuestProducts', slide.nav.params); };
+  const handleSlidePress = (slide) => { navigation.navigate('Products', slide.nav.params); };
   const handleCampusPress = (campusId) => { navigation.navigate('Campus', { campus: campusId }); };
   const handleCategoryPress = (category) => { navigation.navigate('Category', { category, categoryName: CATEGORY_CONFIG[category]?.label }); };
   const handleProductPress = (product) => { navigation.navigate('GuestProductDetail', { productId: product._id, product }); };

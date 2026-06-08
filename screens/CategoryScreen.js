@@ -417,11 +417,11 @@ const CategoryScreen = () => {
     navigation.navigate('ProductDetail', { productId: item._id || item.id, product: item });
   }, [navigation]);
 
-  const handleClearFilters = () => {
-    setSelectedSubcategory('');
-    setSelectedCampus('');
-    setSortby('newest');
-  };
+ const handleClearFilters = () => {
+  setSelectedSubcategory('');
+  setSelectedCampus('');
+  setSort('newest');  
+};
 
   // Client-side search filter over currently loaded products
   const filteredProducts = searchQuery.trim()
@@ -469,32 +469,38 @@ const CategoryScreen = () => {
   };
 
   const renderEmptyState = () => {
-    if (loading) return null;
-    const isFiltered = selectedSubcategory || selectedCampus || searchQuery;
-    return (
-      <View style={styles.emptyWrap}>
-        <View style={styles.emptyIconBg}>
-          <Ionicons name={isFiltered ? 'filter-outline' : 'storefront-outline'} size={36} color="#A5D6A7" />
-        </View>
-        <Text style={styles.emptyTitle}>
-          {searchQuery ? 'No results found' : isFiltered ? 'No matches' : 'No listings yet'}
-        </Text>
-        <Text style={styles.emptySubtitle}>
-          {searchQuery
-            ? `Nothing matched "${searchQuery}". Try different keywords.`
-            : isFiltered
-              ? 'Try removing some filters to see more listings.'
-              : 'Be the first to list something in this category!'}
-        </Text>
-        {isFiltered && (
-          <TouchableOpacity style={styles.emptyBtn} onPress={() => { clearSearch(); handleClearFilters(); }}>
-            <Ionicons name="refresh-outline" size={16} color="#fff" />
-            <Text style={styles.emptyBtnText}>Clear All Filters</Text>
-          </TouchableOpacity>
-        )}
+  if (loading) return null;
+  const isFiltered = selectedSubcategory || selectedCampus || searchQuery;
+  return (
+    <View style={styles.emptyWrap}>
+      <View style={styles.emptyIconBg}>
+        <Ionicons name={isFiltered ? 'filter-outline' : 'storefront-outline'} size={36} color="#A5D6A7" />
       </View>
-    );
-  };
+      <Text style={styles.emptyTitle}>
+        {searchQuery ? 'No results found' : isFiltered ? 'No matches' : 'No listings yet'}
+      </Text>
+      <Text style={styles.emptySubtitle}>
+        {searchQuery
+          ? `Nothing matched "${searchQuery}". Try different keywords.`
+          : isFiltered
+            ? 'Try removing some filters to see more listings.'
+            : 'Be the first to list something in this category!'}
+      </Text>
+      {isFiltered && (
+        <TouchableOpacity 
+          style={styles.emptyBtn} 
+          onPress={() => { 
+            clearSearch(); 
+            handleClearFilters(); 
+          }}
+        >
+          <Ionicons name="refresh-outline" size={16} color="#fff" />
+          <Text style={styles.emptyBtnText}>Clear All Filters</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+};
 
   const renderListHeader = () => (
     <>
@@ -527,7 +533,8 @@ const CategoryScreen = () => {
             style={styles.heroIconBtn}
             onPress={() => navigation.navigate('MainTabs', { screen: 'Cart' })}
           >
-            <Ionicons name="bag-outline" size={20} color="#fff" />
+           <Ionicons name="cart-outline" size={20} color="#E8F5E9" />
+
           </TouchableOpacity>
         </SafeAreaView>
 

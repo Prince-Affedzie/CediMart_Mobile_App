@@ -439,10 +439,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     if (!product) return;
     if (!isAvailable) return Alert.alert('Sold Out', 'This item is no longer available.');
     if (!isAuthenticated) {
-      return Alert.alert('Login Recommended', 'Sign in to sync your cart?', [
-        { text: 'Continue as guest', onPress: () => performAddToCart() },
-        { text: 'Sign In', onPress: () => navigation.navigate('Login') },
-      ]);
+      return Alert.alert('Login Recommended', 'Sign in to add and sync your cart?',  [{ text: 'Okay' }]);
     }
     await performAddToCart();
   };

@@ -1,3 +1,4 @@
+// src/screens/OrderDetailScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -34,6 +35,16 @@ const STATUS_META = {
 };
 
 const STEPS = ['Pending', 'Processing', 'Out for Delivery', 'Delivered'];
+
+// ─── Helper to get product image from array ───────────────────────────────────
+const getProductImage = (item) => {
+  // Check images array first, then image field, then placeholder
+  if (item?.images?.length > 0) return item.images[0];
+  if (item?.image) return item.image;
+  if (item?.product?.images?.length > 0) return item.product.images[0];
+  if (item?.product?.image) return item.product.image;
+  return 'https://via.placeholder.com/64';
+};
 
 // ─── Collapsible Section ──────────────────────────────────────────────────────
 const Section = ({ icon, title, expanded, onToggle, children }) => (
@@ -245,7 +256,7 @@ const OrderDetailScreen = () => {
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" backgroundColor="#F7F8F7" />
 
-      {/* ── Cancellation Modal ── */}
+      {/* ── Cancellation Modal (unchanged) ── */}
       <Modal
         animationType="slide"
         transparent
@@ -272,7 +283,6 @@ const OrderDetailScreen = () => {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
-            {/* Order summary strip */}
             <View style={styles.modalOrderStrip}>
               <Text style={styles.modalOrderNum}>
                 Order #{order.orderNumber || order._id?.slice(-8).toUpperCase()}
@@ -370,11 +380,8 @@ const OrderDetailScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ════════════════════════
-            STATUS HERO CARD
-            ════════════════════════ */}
+        {/* STATUS HERO CARD (unchanged) */}
         <View style={[styles.statusHero, { backgroundColor: meta.bg, borderColor: meta.border }]}>
-          {/* Order ID + status */}
           <View style={styles.statusHeroTop}>
             <View style={[styles.statusIconBg, { backgroundColor: meta.text }]}>
               <Ionicons name={meta.icon} size={22} color="#fff" />
@@ -390,7 +397,6 @@ const OrderDetailScreen = () => {
             </View>
           </View>
 
-          {/* Progress stepper */}
           {status !== 'Cancelled' && (
             <View style={styles.progressRow}>
               {STEPS.map((s, i) => {
@@ -423,7 +429,6 @@ const OrderDetailScreen = () => {
             </View>
           )}
 
-          {/* Tracking nudge */}
           {status === 'Out for Delivery' && (
             <TouchableOpacity style={styles.trackNudge} onPress={handleTrackOrder} activeOpacity={0.8}>
               <Ionicons name="location" size={15} color="#2E7D32" />
@@ -432,7 +437,6 @@ const OrderDetailScreen = () => {
             </TouchableOpacity>
           )}
 
-          {/* Delivered confirmation */}
           {status === 'Delivered' && (
             <View style={styles.deliveredBanner}>
               <Ionicons name="checkmark-circle" size={16} color="#1B5E20" />
@@ -442,16 +446,13 @@ const OrderDetailScreen = () => {
             </View>
           )}
 
-          {/* Order placed date */}
           <View style={styles.placedRow}>
             <Ionicons name="calendar-outline" size={13} color="#9E9E9E" />
             <Text style={styles.placedText}>Placed {formatDate(order.createdAt)}</Text>
           </View>
         </View>
 
-        {/* ════════════════════════
-            ORDER ITEMS
-            ════════════════════════ */}
+        {/* ORDER ITEMS — ✅ Updated with getProductImage */}
         <Section
           icon="basket-outline"
           title={`Items (${order.orderItems?.length || 0})`}
@@ -464,12 +465,12 @@ const OrderDetailScreen = () => {
               style={[styles.itemRow, idx === (order.orderItems.length - 1) && { borderBottomWidth: 0 }]}
             >
               <Image
-                source={{ uri: item.image || 'https://via.placeholder.com/64' }}
+                source={{ uri: getProductImage(item) }}
                 style={styles.itemThumb}
               />
               <View style={styles.itemBody}>
                 <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
-                <Text style={styles.itemMeta}>{item.quantity} × {item.unit || 'unit'} · GH₵{item.price}</Text>
+                <Text style={styles.itemMeta}>{item.quantity} × {item.unit || 'unit'} · GH₵ {item.price}</Text>
               </View>
               <Text style={styles.itemTotal}>
                 GH₵ {(item.quantity * item.price).toFixed(2)}
@@ -478,9 +479,7 @@ const OrderDetailScreen = () => {
           ))}
         </Section>
 
-        {/* ════════════════════════
-            DELIVERY
-            ════════════════════════ */}
+        {/* DELIVERY (unchanged) */}
         <Section
           icon="location-outline"
           title="Delivery"
@@ -498,9 +497,7 @@ const OrderDetailScreen = () => {
           )}
         </Section>
 
-        {/* ════════════════════════
-            PAYMENT
-            ════════════════════════ */}
+        {/* PAYMENT (unchanged) */}
         <Section
           icon="card-outline"
           title="Payment"
@@ -519,9 +516,7 @@ const OrderDetailScreen = () => {
           )}
         </Section>
 
-        {/* ════════════════════════
-            PRICE SUMMARY
-            ════════════════════════ */}
+        {/* PRICE SUMMARY (unchanged) */}
         <Section
           icon="receipt-outline"
           title="Price Summary"
@@ -548,9 +543,7 @@ const OrderDetailScreen = () => {
           </View>
         </Section>
 
-        {/* ════════════════════════
-            TIMELINE
-            ════════════════════════ */}
+        {/* TIMELINE (unchanged) */}
         <Section
           icon="time-outline"
           title="Order Timeline"
@@ -585,11 +578,8 @@ const OrderDetailScreen = () => {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* ════════════════════════
-          BOTTOM ACTION BAR
-          ════════════════════════ */}
+      {/* BOTTOM ACTION BAR (unchanged) */}
       <View style={styles.bottomBar}>
-        {/* Support — always shown */}
         <TouchableOpacity style={[styles.actionBtn, styles.actionBtnBlue]} onPress={handleContactSupport} activeOpacity={0.85}>
           <Ionicons name="help-circle-outline" size={17} color="#fff" />
           <Text style={styles.actionBtnText}>Support</Text>
@@ -631,178 +621,58 @@ const OrderDetailScreen = () => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles (unchanged from original) ─────────────────────────────────────────
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F7F8F7' },
-
-  // ── NAV ────────────────────────────────────────────────────────────────────
-  navRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 10,
-  },
-  navBtn: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: '#fff',
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07, shadowRadius: 6, elevation: 3,
-  },
+  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 },
+  navBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6, elevation: 3 },
   navTitle: { fontSize: 17, fontWeight: '800', color: '#1A1A1A', letterSpacing: 0.1 },
-
-  // ── LOADING / ERROR ─────────────────────────────────────────────────────────
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  loadingIconWrap: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#F1F8E9',
-    justifyContent: 'center', alignItems: 'center', marginBottom: 18,
-  },
+  loadingIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F8E9', justifyContent: 'center', alignItems: 'center', marginBottom: 18 },
   loadingTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A', marginBottom: 6 },
   loadingSub: { fontSize: 13, color: '#9E9E9E', textAlign: 'center' },
-  goBackBtn: {
-    marginTop: 20, backgroundColor: '#4CAF50',
-    paddingVertical: 13, paddingHorizontal: 28, borderRadius: 14,
-  },
+  goBackBtn: { marginTop: 20, backgroundColor: '#4CAF50', paddingVertical: 13, paddingHorizontal: 28, borderRadius: 14 },
   goBackBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-
   scrollContent: { paddingBottom: 24 },
-
-  // ── STATUS HERO ─────────────────────────────────────────────────────────────
-  statusHero: {
-    marginHorizontal: 14,
-    marginTop: 4,
-    marginBottom: 10,
-    borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  statusHeroTop: {
-    flexDirection: 'row', alignItems: 'center',
-    marginBottom: 18,
-  },
-  statusIconBg: {
-    width: 46, height: 46, borderRadius: 23,
-    justifyContent: 'center', alignItems: 'center',
-    marginRight: 12,
-  },
+  statusHero: { marginHorizontal: 14, marginTop: 4, marginBottom: 10, borderRadius: 20, padding: 18, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
+  statusHeroTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
+  statusIconBg: { width: 46, height: 46, borderRadius: 23, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   statusHeroInfo: { flex: 1 },
   statusText: { fontSize: 18, fontWeight: '800' },
   orderNumText: { fontSize: 13, color: '#9E9E9E', marginTop: 2, fontWeight: '500' },
-  statusPill: {
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 20,
-  },
+  statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusPillText: { fontSize: 11, color: '#fff', fontWeight: '700' },
-
-  // Progress stepper
-  progressRow: {
-    flexDirection: 'row', alignItems: 'center',
-    marginBottom: 14,
-  },
+  progressRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   stepWrap: { alignItems: 'center', flex: 1 },
-  stepBubble: {
-    width: 24, height: 24, borderRadius: 12,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 5,
-  },
+  stepBubble: { width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
   stepBubbleInactive: { backgroundColor: '#E8E8E8' },
   stepInnerDot: { width: 8, height: 8, borderRadius: 4 },
-  stepConnector: {
-    flex: 1, height: 2, backgroundColor: '#E8E8E8',
-    marginHorizontal: 2, marginBottom: 20,
-  },
+  stepConnector: { flex: 1, height: 2, backgroundColor: '#E8E8E8', marginHorizontal: 2, marginBottom: 20 },
   stepLabel: { fontSize: 10, color: '#9E9E9E', fontWeight: '500', textAlign: 'center' },
-
-  trackNudge: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
-    gap: 6, marginBottom: 10,
-  },
+  trackNudge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, gap: 6, marginBottom: 10 },
   trackNudgeText: { flex: 1, fontSize: 13, color: '#2E7D32', fontWeight: '600' },
-
-  deliveredBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9,
-    marginBottom: 10,
-  },
+  deliveredBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 10 },
   deliveredBannerText: { fontSize: 13, color: '#1B5E20', fontWeight: '600' },
-
   placedRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   placedText: { fontSize: 12, color: '#9E9E9E', fontWeight: '500' },
-
-  // ── SECTIONS ─────────────────────────────────────────────────────────────────
-  section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 14,
-    marginVertical: 5,
-    borderRadius: 18,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 18, paddingVertical: 16,
-  },
+  section: { backgroundColor: '#fff', marginHorizontal: 14, marginVertical: 5, borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 16 },
   sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sectionIconWrap: {
-    width: 32, height: 32, borderRadius: 9,
-    backgroundColor: '#E8F5E9',
-    justifyContent: 'center', alignItems: 'center',
-  },
+  sectionIconWrap: { width: 32, height: 32, borderRadius: 9, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
-  sectionBody: {
-    paddingHorizontal: 18, paddingBottom: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#F0F0F0',
-    paddingTop: 14,
-  },
-
-  // ── ITEMS ────────────────────────────────────────────────────────────────────
-  itemRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F5F5F5',
-    gap: 12,
-  },
+  sectionBody: { paddingHorizontal: 18, paddingBottom: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#F0F0F0', paddingTop: 14 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F5F5F5', gap: 12 },
   itemThumb: { width: 58, height: 58, borderRadius: 12, backgroundColor: '#F5F5F5' },
   itemBody: { flex: 1 },
   itemName: { fontSize: 14, fontWeight: '600', color: '#1A1A1A', marginBottom: 4 },
   itemMeta: { fontSize: 12, color: '#9E9E9E', fontWeight: '500' },
   itemTotal: { fontSize: 15, fontWeight: '800', color: '#2E7D32' },
-
-  // ── INFO ROWS ────────────────────────────────────────────────────────────────
-  infoRow: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    gap: 12, marginBottom: 14,
-  },
-  infoRowIcon: {
-    width: 30, height: 30, borderRadius: 8,
-    backgroundColor: '#F7F8F7',
-    justifyContent: 'center', alignItems: 'center',
-    flexShrink: 0,
-  },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 14 },
+  infoRowIcon: { width: 30, height: 30, borderRadius: 8, backgroundColor: '#F7F8F7', justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   infoRowBody: { flex: 1 },
   infoRowLabel: { fontSize: 11, color: '#9E9E9E', fontWeight: '600', marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.4 },
   infoRowValue: { fontSize: 14, color: '#1A1A1A', fontWeight: '600', lineHeight: 20 },
-
-  // ── PRICE SUMMARY ────────────────────────────────────────────────────────────
-  priceLine: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 10,
-  },
+  priceLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   priceLineLabel: { fontSize: 14, color: '#757575' },
   priceLineLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   priceLineValue: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
@@ -810,149 +680,49 @@ const styles = StyleSheet.create({
   priceGrandRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   priceGrandLabel: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
   priceGrandValue: { fontSize: 22, fontWeight: '900', color: '#2E7D32' },
-
-  // ── TIMELINE ────────────────────────────────────────────────────────────────
   tlRow: { flexDirection: 'row', gap: 12 },
   tlLeft: { width: 20, alignItems: 'center' },
-  tlDot: {
-    width: 12, height: 12, borderRadius: 6,
-    backgroundColor: '#D0D0D0', flexShrink: 0,
-  },
+  tlDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#D0D0D0', flexShrink: 0 },
   tlLine: { flex: 1, width: 2, backgroundColor: '#EEEEEE', marginTop: 3 },
   tlContent: { flex: 1, paddingBottom: 4 },
   tlLabel: { fontSize: 14, color: '#9E9E9E', fontWeight: '500', marginBottom: 2 },
   tlSub: { fontSize: 12, color: '#BDBDBD' },
-
-  // ── BOTTOM BAR ───────────────────────────────────────────────────────────────
-  bottomBar: {
-    position: 'absolute', bottom: 36, left: 0, right: 0,
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    paddingHorizontal: 14, paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#EBEBEB',
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    elevation: 14,
-  },
-  actionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', paddingVertical: 13,
-    borderRadius: 13, gap: 5,
-  },
-  actionBtnBlue:  { backgroundColor: '#1565C0' },
-  actionBtnGreen: {
-    backgroundColor: '#2E7D32',
-    shadowColor: '#2E7D32', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25, shadowRadius: 6, elevation: 3,
-  },
+  bottomBar: { position: 'absolute', bottom: 36, left: 0, right: 0, backgroundColor: '#fff', flexDirection: 'row', paddingHorizontal: 14, paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 30 : 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EBEBEB', gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 14 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 13, borderRadius: 13, gap: 5 },
+  actionBtnBlue: { backgroundColor: '#1565C0' },
+  actionBtnGreen: { backgroundColor: '#2E7D32', shadowColor: '#2E7D32', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 3 },
   actionBtnAmber: { backgroundColor: '#F57F17' },
-  actionBtnRed:   { backgroundColor: '#B71C1C' },
+  actionBtnRed: { backgroundColor: '#B71C1C' },
   actionBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-
-  // ── CANCEL MODAL ─────────────────────────────────────────────────────────────
-  modalBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 26, borderTopRightRadius: 26,
-    paddingHorizontal: 20, paddingTop: 12,
-    maxHeight: '85%',
-    shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1, shadowRadius: 14, elevation: 20,
-  },
-  modalHandle: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: '#E0E0E0',
-    alignSelf: 'center', marginBottom: 16,
-  },
-  modalHead: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 18,
-  },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
+  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 20, paddingTop: 12, maxHeight: '85%', shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 20 },
+  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E0E0E0', alignSelf: 'center', marginBottom: 16 },
+  modalHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
   modalHeadLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  modalHeadIcon: {
-    width: 38, height: 38, borderRadius: 19,
-    justifyContent: 'center', alignItems: 'center',
-  },
+  modalHeadIcon: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
   modalTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A' },
-  modalCloseBtn: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  modalOrderStrip: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    backgroundColor: '#F7F8F7', borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 12, marginBottom: 18,
-  },
+  modalCloseBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
+  modalOrderStrip: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#F7F8F7', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 18 },
   modalOrderNum: { fontSize: 14, fontWeight: '700', color: '#1A1A1A' },
   modalOrderTotal: { fontSize: 16, fontWeight: '800', color: '#2E7D32' },
   modalSubtitle: { fontSize: 14, color: '#757575', marginBottom: 14, fontWeight: '500' },
-
   reasonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
-  reasonCard: {
-    width: '47%',
-    backgroundColor: '#F7F8F7',
-    borderRadius: 14, padding: 14,
-    borderWidth: 1.5, borderColor: '#EEEEEE',
-    position: 'relative',
-  },
+  reasonCard: { width: '47%', backgroundColor: '#F7F8F7', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: '#EEEEEE', position: 'relative' },
   reasonCardActive: { borderColor: '#4CAF50', backgroundColor: '#F1F8E9' },
-  reasonIconBg: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: '#fff',
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 10, borderWidth: 1, borderColor: '#EEEEEE',
-  },
+  reasonIconBg: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#EEEEEE' },
   reasonIconBgActive: { backgroundColor: '#E8F5E9', borderColor: '#4CAF50' },
   reasonLabel: { fontSize: 13, fontWeight: '600', color: '#757575', lineHeight: 17 },
   reasonLabelActive: { color: '#2E7D32' },
-  reasonCheck: {
-    position: 'absolute', top: 10, right: 10,
-    width: 18, height: 18, borderRadius: 9, backgroundColor: '#4CAF50',
-    justifyContent: 'center', alignItems: 'center',
-  },
-
+  reasonCheck: { position: 'absolute', top: 10, right: 10, width: 18, height: 18, borderRadius: 9, backgroundColor: '#4CAF50', justifyContent: 'center', alignItems: 'center' },
   customReasonWrap: { marginBottom: 16 },
   customReasonLabel: { fontSize: 13, fontWeight: '700', color: '#1A1A1A', marginBottom: 8 },
-  customReasonInput: {
-    backgroundColor: '#F7F8F7', borderRadius: 14,
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: '#1A1A1A',
-    borderWidth: 1.5, borderColor: '#EEEEEE',
-    minHeight: 90, textAlignVertical: 'top',
-  },
-
-  policyBanner: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: '#E3F2FD', borderRadius: 12,
-    padding: 12, marginBottom: 8,
-  },
+  customReasonInput: { backgroundColor: '#F7F8F7', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#1A1A1A', borderWidth: 1.5, borderColor: '#EEEEEE', minHeight: 90, textAlignVertical: 'top' },
+  policyBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#E3F2FD', borderRadius: 12, padding: 12, marginBottom: 8 },
   policyText: { flex: 1, fontSize: 12, color: '#1565C0', lineHeight: 17 },
-
-  modalFooter: {
-    flexDirection: 'row', gap: 10,
-    bottom:36,
-    paddingVertical: 14,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EBEBEB',
-  },
-  keepBtn: {
-    flex: 1, backgroundColor: '#F5F5F5',
-    paddingVertical: 14, borderRadius: 13, alignItems: 'center',
-  },
+  modalFooter: { flexDirection: 'row', gap: 10, bottom: 36, paddingVertical: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EBEBEB' },
+  keepBtn: { flex: 1, backgroundColor: '#F5F5F5', paddingVertical: 14, borderRadius: 13, alignItems: 'center' },
   keepBtnText: { color: '#757575', fontWeight: '700', fontSize: 14 },
-  confirmCancelBtn: {
-    flex: 1, backgroundColor: '#B71C1C',
-    paddingVertical: 14, borderRadius: 13,
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 6,
-  },
+  confirmCancelBtn: { flex: 1, backgroundColor: '#B71C1C', paddingVertical: 14, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   confirmCancelBtnDisabled: { backgroundColor: '#BDBDBD' },
   confirmCancelBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });

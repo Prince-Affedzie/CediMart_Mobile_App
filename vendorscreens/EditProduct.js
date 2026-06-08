@@ -445,10 +445,10 @@ const UpdateProductScreen = ({ route, navigation }) => {
       newImages.forEach((img) => { formData.append('productImages', { uri: Platform.OS === 'ios' ? img.uri.replace('file://', '') : img.uri, type: img.type, name: img.name }); });
 
       const response = await updateProduct(productId, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      if (response?.data?.success || response?.status === 200) {
+      if (response.success || response.status === 200 || response?.data?.success  ) {
         Alert.alert( 'success',  `${name} has been updated.` );
         navigation.goBack();
-      } else throw new Error('Failed to update product');
+      } 
     } catch (error) {
       Alert.alert( 'error', error?.response?.data?.message || error?.message || 'Something went wrong.' );
     } finally { setLoading(false); }
