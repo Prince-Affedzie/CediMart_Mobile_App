@@ -314,6 +314,21 @@ const LoginScreen = ({ navigation }) => {
           <Text style={styles.subtitle}>Sign in to continue your experince convenient shopping </Text>
         </View>
 
+        {/* ── Vendor Login Link ── */}
+        <TouchableOpacity 
+          style={styles.vendorLinkContainer}
+          onPress={() => navigation.navigate('VendorLogin')} 
+          disabled={isLoading}
+          activeOpacity={0.8}
+        >
+          <View style={styles.vendorLinkContent}>
+            <Ionicons name="storefront-outline" size={20} color="#4E342E" />
+            <Text style={[styles.vendorLinkText, isLoading && styles.disabledText]}>
+              Are you a vendor? <Text style={styles.vendorLinkBold}>Login here</Text>
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Social Login */}
         <View style={styles.socialContainer}>
           {/* Google Button */}
@@ -479,20 +494,7 @@ const LoginScreen = ({ navigation }) => {
   </TouchableOpacity>
 </View>
 
-{/* ── Vendor Login Link ── */}
-<TouchableOpacity 
-  style={styles.vendorLinkContainer}
-  onPress={() => navigation.navigate('VendorLogin')} 
-  disabled={isLoading}
-  activeOpacity={0.8}
->
-  <View style={styles.vendorLinkContent}>
-    <Ionicons name="storefront-outline" size={20} color="#4E342E" />
-    <Text style={[styles.vendorLinkText, isLoading && styles.disabledText]}>
-      Are you a vendor? <Text style={styles.vendorLinkBold}>Login here</Text>
-    </Text>
-  </View>
-</TouchableOpacity>
+
         </View>
       </ScrollView>
 

@@ -427,7 +427,7 @@ const VendorSignUpScreen = ({ navigation }) => {
           {loading ? <ActivityIndicator size="small" color="#fff" /> : <><Text style={styles.primaryButtonText}>Send Verification Code</Text><Ionicons name="arrow-forward" size={20} color="#fff" /></>}
         </TouchableOpacity>
         <View style={styles.linkRow}>
-          <Text style={styles.linkText}>Already have an account? </Text>
+          <Text style={styles.linkText}>Already have vendor account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('VendorLogin')} disabled={loading}>
             <Text style={[styles.linkAction, loading && styles.disabledText]}>Sign In</Text>
           </TouchableOpacity>

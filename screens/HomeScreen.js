@@ -49,7 +49,7 @@ const HERO_SLIDES = [
     id: '1',
     image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780782982/flyer13_1_fyp0xj.png',
     tag: '🎓  Campus Marketplace',
-    title: 'Buy & Sell on\nYour Campus',
+    title: 'Buy & Sell on\n Campus',
     subtitle: "Connect with students across Ghana's top universities",
     btnText: 'Start Shopping',
     accentColor: '#fff',

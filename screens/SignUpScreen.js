@@ -376,6 +376,20 @@ const SignUpScreen = ({ navigation }) => {
             <Text style={styles.subtitle}>Join our community</Text>
           </View>
 
+           <TouchableOpacity 
+              style={styles.vendorLinkContainer}
+              onPress={() => navigation.navigate('VendorSignUp')} 
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              <View style={styles.vendorLinkContent}>
+                <Ionicons name="storefront-outline" size={20} color="#4E342E" />
+                <Text style={[styles.vendorLinkText, isLoading && styles.disabledText]}>
+                  Are you a vendor? <Text style={styles.vendorLinkBold}>SignUp here</Text>
+                </Text>
+              </View>
+            </TouchableOpacity>
+
           {/* Social Sign Up */}
           <View style={styles.socialContainer}>
             {/* Google Button */}
@@ -641,19 +655,7 @@ const SignUpScreen = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity 
-              style={styles.vendorLinkContainer}
-              onPress={() => navigation.navigate('VendorSignUp')} 
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <View style={styles.vendorLinkContent}>
-                <Ionicons name="storefront-outline" size={20} color="#4E342E" />
-                <Text style={[styles.vendorLinkText, isLoading && styles.disabledText]}>
-                  Are you a vendor? <Text style={styles.vendorLinkBold}>SignUp here</Text>
-                </Text>
-              </View>
-            </TouchableOpacity>
+           
           </View>
         </ScrollView>
       </Animated.View>
