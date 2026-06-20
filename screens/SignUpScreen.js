@@ -44,7 +44,7 @@ const SignUpScreen = ({ navigation }) => {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { login: authLogin, google_signUp,signUpByApple } = useAuth();
+  const { login: authLogin, google_signUp, signUpByApple } = useAuth();
   
   // Refs
   const scrollViewRef = useRef(null);
@@ -53,6 +53,8 @@ const SignUpScreen = ({ navigation }) => {
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+  const vendorPulseAnim = useRef(new Animated.Value(1)).current;
+  const vendorArrowAnim = useRef(new Animated.Value(0)).current;
   
   // Spinner animation ref
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -78,6 +80,42 @@ const SignUpScreen = ({ navigation }) => {
         useNativeDriver: true,
       })
     ]).start();
+
+    // Pulse animation for vendor card
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(vendorPulseAnim, {
+          toValue: 1.02,
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(vendorPulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Arrow bounce animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(vendorArrowAnim, {
+          toValue: -8,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(vendorArrowAnim, {
+          toValue: 0,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   }, []);
 
   useEffect(() => {
@@ -138,26 +176,23 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   const handleGoogleSignUp = async () => {
-    if (isLoading) return; // Prevent multiple clicks
+    if (isLoading) return;
     
     setGoogleLoading(true);
     
     try {
-      // Check if Google Play Services are available (Android only)
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices({
           showPlayServicesUpdateDialog: true,
         });
       }
 
-      // Sign out first to clear any previous session
       try {
         await GoogleSignin.signOut();
       } catch (signOutError) {
         console.log('Sign out error:', signOutError);
       }
 
-      // Sign in with Google
       const res = await GoogleSignin.signIn();
       const idToken = res.data.idToken;
       
@@ -208,80 +243,75 @@ const SignUpScreen = ({ navigation }) => {
     }
   };
 
- const handleAppleSignUp = async () => {
-  if (isLoading) return;
-  setAppleLoading(true);
+  const handleAppleSignUp = async () => {
+    if (isLoading) return;
+    setAppleLoading(true);
 
-  try {
-    const isAvailable = await AppleAuthentication.isAvailableAsync();
-    if (!isAvailable) {
-      Alert.alert('Not Available', 'Apple Sign-In is only available on iOS.');
-      setAppleLoading(false); // Important to reset here
-      return;
-    }
+    try {
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Not Available', 'Apple Sign-In is only available on iOS.');
+        setAppleLoading(false);
+        return;
+      }
 
-    const credential = await AppleAuthentication.signInAsync({
-      requestedScopes: [
-        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-        AppleAuthentication.AppleAuthenticationScope.EMAIL,
-      ],
-    });
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
 
-    const { identityToken, email, fullName, user: appleUserId } = credential;
+      const { identityToken, email, fullName, user: appleUserId } = credential;
 
-    if (!identityToken) {
-      throw new Error('No identity token received.');
-    }
+      if (!identityToken) {
+        throw new Error('No identity token received.');
+      }
 
+      const appleAuthData = {
+        token: identityToken,
+        appleUserId,
+        email: email || undefined, 
+        firstName: fullName?.givenName || "",
+        lastName: fullName?.familyName || "",
+      };
 
-    const appleAuthData = {
-      token: identityToken,
-      appleUserId,
-      email: email || undefined, 
-      firstName: fullName?.givenName || "",
-      lastName: fullName?.familyName || "",
-    };
+      const response = await signUpByApple(appleAuthData);
 
-    const response = await signUpByApple(appleAuthData);
+      if (response?.success) {
+        const userId = response.data.user?._id;
+        await syncTokenWithBackend(userId, expoPushToken);
+        
+        setAppleLoading(false);
 
-    if (response?.success) {
-      const userId = response.data.user?._id;
-      await syncTokenWithBackend(userId, expoPushToken);
-      
+        setTimeout(() => {
+          Alert.alert(
+            'Welcome!',
+            `Successfully signed in with Apple 🎉`
+          );
+          navigation.navigate('MainTabs');
+        }, 500);
+        
+      } else {
+        Alert.alert('Sign In Failed', response.message || 'Check your connection.');
+      }
+
+    } catch (error) {
+      if (error.code === 'ERR_REQUEST_CANCELED') {
+        console.log('User cancelled Apple Sign-In');
+      } else {
+        Alert.alert('Apple Auth Error', error.message);
+      }
+    } finally {
       setAppleLoading(false);
-
-      setTimeout(() => {
-         Alert.alert(
-        'Welcome!',
-        `Successfully signed in with Apple 🎉`
-      );
-       navigation.navigate('MainTabs');
-       },500)
-      
-    } else {
-      Alert.alert('Sign In Failed', response.message || 'Check your connection.');
     }
+  };
 
-  } catch (error) {
-    // Correct error code for cancellation is 'ERR_REQUEST_CANCELED'
-    if (error.code === 'ERR_REQUEST_CANCELED') {
-      // Typically we don't show an alert for a user-initiated cancel
-      console.log('User cancelled Apple Sign-In');
-    } else {
-      Alert.alert('Apple Auth Error', error.message);
-    }
-  } finally {
-    setAppleLoading(false);
-  }
-};
   const handleSignUp = async () => {
-    // Prevent multiple clicks while loading
     if (isLoading) return;
     
-    // Dismiss keyboard to prevent any focus issues
     Keyboard.dismiss();
     
-    // Small delay to ensure keyboard is dismissed
     setTimeout(async () => {
       if (!validateForm()) return;
 
@@ -297,7 +327,6 @@ const SignUpScreen = ({ navigation }) => {
         const response = await SignUp(signUpData);
 
         if (response.status === 200 || response.success) {
-          // Auto-login after successful signup
           const loginResponse = await authLogin({
             phone: formData.phone.trim(),
             password: formData.password,
@@ -337,7 +366,6 @@ const SignUpScreen = ({ navigation }) => {
     }
   };
 
-  // Combined loading state
   const isLoading = loading || googleLoading || appleLoading;
 
   return (
@@ -370,25 +398,66 @@ const SignUpScreen = ({ navigation }) => {
                 style={styles.brandLogo}
                 resizeMode="contain"
               />
-             
             </View>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join our community</Text>
+            <Text style={styles.subtitle}>Join our community of buyers and sellers</Text>
           </View>
 
-           <TouchableOpacity 
-              style={styles.vendorLinkContainer}
-              onPress={() => navigation.navigate('VendorSignUp')} 
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <View style={styles.vendorLinkContent}>
-                <Ionicons name="storefront-outline" size={20} color="#4E342E" />
-                <Text style={[styles.vendorLinkText, isLoading && styles.disabledText]}>
-                  Are you a vendor? <Text style={styles.vendorLinkBold}>SignUp here</Text>
-                </Text>
+          {/* ─── PROMINENT VENDOR SIGNUP CARD ──────────────────────────────── */}
+          <TouchableOpacity 
+            style={styles.vendorBannerWrapper}
+            onPress={() => navigation.navigate('VendorSignUp')} 
+            disabled={isLoading}
+            activeOpacity={0.9}
+          >
+            <Animated.View style={[
+              styles.vendorBanner,
+              { transform: [{ scale: vendorPulseAnim }] }
+            ]}>
+              {/* Top accent bar */}
+              <View style={styles.vendorBannerAccent} />
+              
+              {/* Main content */}
+              <View style={styles.vendorBannerContent}>
+                {/* Icon section 
+                <View style={styles.vendorIconContainer}>
+                  <View style={styles.vendorIconRing}>
+                    <View style={styles.vendorIconInner}>
+                      <Ionicons name="storefront" size={28} color="#FFFFFF" />
+                    </View>
+                  </View>
+                </View>*/}
+                
+                {/* Text section */}
+                <View style={styles.vendorTextSection}>
+                  <View style={styles.vendorTitleRow}>
+                    <Text style={styles.vendorBannerTitle}>Wants to sell on CediMart?</Text>
+                    <View style={styles.vendorBadge}>
+                      <Text style={styles.vendorBadgeText}>NEW</Text>
+                    </View>
+                  </View>
+                  {/*<Text style={styles.vendorBannerSubtitle}>
+                    Create a <Text style={styles.vendorBannerHighlight}>Vendor Account</Text> to start selling to thousands of students
+                  </Text>*/}
+                  
+                 
+                </View>
               </View>
-            </TouchableOpacity>
+              
+              {/* Bottom CTA */}
+              <View style={styles.vendorCTAContainer}>
+                <View style={styles.vendorCTALeft}>
+                  <Text style={styles.vendorCTAText}>Create Vendor Account Here</Text>
+                  <Animated.View style={{ transform: [{ translateX: vendorArrowAnim }] }}>
+                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                  </Animated.View>
+                </View>
+                <View style={styles.vendorCTARight}>
+                  <Text style={styles.vendorCTASubtext}>It's free!</Text>
+                </View>
+              </View>
+            </Animated.View>
+          </TouchableOpacity>
 
           {/* Social Sign Up */}
           <View style={styles.socialContainer}>
@@ -489,7 +558,6 @@ const SignUpScreen = ({ navigation }) => {
                     editable={!isLoading}
                     maxLength={30}
                     returnKeyType="next"
-                  
                   />
                 </View>
                 {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
@@ -637,7 +705,7 @@ const SignUpScreen = ({ navigation }) => {
                 </View>
               ) : (
                 <>
-                  <Text style={styles.signUpButtonText}>Create Account</Text>
+                  <Text style={styles.signUpButtonText}>Create Buyer Account</Text>
                   <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
                 </>
               )}
@@ -706,14 +774,14 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 30,
+    paddingTop: 40,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   brandLogo: {
     width: 60,
@@ -737,6 +805,140 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
+
+  // ─── PROMINENT VENDOR BANNER STYLES ──────────────────────────────────────
+  vendorBannerWrapper: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 20,
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  vendorBanner: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#2E7D32',
+  },
+  vendorBannerAccent: {
+    height: 4,
+    backgroundColor: '#2E7D32',
+  },
+  vendorBannerContent: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 14,
+  },
+  vendorIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vendorIconRing: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#C8E6C9',
+  },
+  vendorIconInner: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2E7D32',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  vendorTextSection: {
+    flex: 1,
+  },
+  vendorTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  vendorBannerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1A1A1A',
+  },
+  vendorBadge: {
+    backgroundColor: '#FF6D00',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  vendorBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  vendorBannerSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  vendorBannerHighlight: {
+    color: '#2E7D32',
+    fontWeight: '700',
+  },
+  vendorBenefitsList: {
+    gap: 6,
+  },
+  vendorBenefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vendorBenefitText: {
+    fontSize: 12,
+    color: '#555',
+    fontWeight: '500',
+  },
+  vendorCTAContainer: {
+    backgroundColor: '#2E7D32',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  vendorCTALeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  vendorCTAText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  vendorCTASubtext: {
+    color: '#A5D6A7',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  vendorCTARight: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+
   form: {
     paddingHorizontal: 20,
   },
@@ -948,61 +1150,6 @@ const styles = StyleSheet.create({
   disabledText: {
     color: '#999',
   },
-  benefitsContainer: {
-    marginTop: 24,
-    padding: 20,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  benefitsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1B5E20',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  benefitItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingLeft: 8,
-  },
-  benefitText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 12,
-  },
-  vendorLinkContainer: {
-  marginTop: 12,
-  marginHorizontal: 20,
-  paddingVertical: 14,
-  paddingHorizontal: 16,
-  backgroundColor: '#FFF8E1',
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: '#FFE082',
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 16,
-},
-vendorLinkContent: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-},
-vendorLinkText: {
-  fontSize: 15,
-  color: '#4E342E',
-  fontWeight: '500',
-},
-vendorLinkBold: {
-  fontWeight: '700',
-  color: '#2E7D32',
-  textDecorationLine: 'underline',
-},
 });
 
 export default SignUpScreen;

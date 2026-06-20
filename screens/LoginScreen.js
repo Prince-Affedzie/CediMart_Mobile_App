@@ -14,15 +14,17 @@ import {
   Animated,
   ActivityIndicator,
   Modal,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
 import * as AppleAuthentication from 'expo-apple-authentication';
-//import {apple_signUp } from '../apis/userApi';
 
 const GoogleLogo = require('../assets/Google-logo.png');
 const BrandLogo = require('../assets/cedimart_logo.png');
+
+const { width } = Dimensions.get('window');
 
 // Improved Loading Component with proper animation
 const LoadingOverlay = ({ visible, message = 'Loading...' }) => {
@@ -30,14 +32,12 @@ const LoadingOverlay = ({ visible, message = 'Loading...' }) => {
   const spinValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Fade animation
     Animated.timing(fadeAnim, {
       toValue: visible ? 1 : 0,
       duration: 200,
       useNativeDriver: true,
     }).start();
 
-    // Spin animation when visible
     if (visible) {
       Animated.loop(
         Animated.timing(spinValue, {
@@ -88,13 +88,67 @@ const LoginScreen = ({ navigation }) => {
   const [appleLoading, setAppleLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-  const { login: authLogin, google_login,signUpByApple } = useAuth();
+  const { login: authLogin, google_login, signUpByApple } = useAuth();
+
+  // Animation refs
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const vendorPulseAnim = useRef(new Animated.Value(1)).current;
+  const vendorArrowAnim = useRef(new Animated.Value(0)).current;
 
   // Configure Google Sign-In on component mount
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: '34872065423-88pioj4h26bguflctfpub95mt0830an6.apps.googleusercontent.com',
     });
+  }, []);
+
+  useEffect(() => {
+    // Animate screen entrance
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      })
+    ]).start();
+
+    // Pulse animation for vendor card
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(vendorPulseAnim, {
+          toValue: 1.02,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(vendorPulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Arrow bounce animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(vendorArrowAnim, {
+          toValue: -8,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(vendorArrowAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   }, []);
 
   const validateForm = () => {
@@ -120,22 +174,18 @@ const LoginScreen = ({ navigation }) => {
     setGoogleLoading(true);
     
     try {
-      // Check if Google Play Services are available (Android only)
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices({
           showPlayServicesUpdateDialog: true,
         });
       }
 
-      // Sign out first to clear any previous session
       try {
         await GoogleSignin.signOut();
       } catch (signOutError) {
-        // Ignore sign out errors
         console.log('Sign out error:', signOutError);
       }
 
-      // Sign in with Google
       const res = await GoogleSignin.signIn();
       const idToken = res.data.idToken;
     
@@ -159,7 +209,6 @@ const LoginScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Google Login Error:', error);
       
-      // Handle specific Google Sign-In errors
       switch (error.code) {
         case statusCodes.SIGN_IN_CANCELLED:
           Alert.alert('Google Sign-In Cancelled', 'You cancelled the sign-in process.');
@@ -185,62 +234,60 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleAppleLogin = async () => {
-  if (isLoading) return;
-  setAppleLoading(true);
+    if (isLoading) return;
+    setAppleLoading(true);
   
-  try {
-    const isAvailable = await AppleAuthentication.isAvailableAsync();
+    try {
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
     
-    if (!isAvailable) {
-      Alert.alert('Not Available', 'Apple Sign-In is only available on iOS devices.');
-      setAppleLoading(false); 
-      return;
-    }
+      if (!isAvailable) {
+        Alert.alert('Not Available', 'Apple Sign-In is only available on iOS devices.');
+        setAppleLoading(false); 
+        return;
+      }
 
-    const credential = await AppleAuthentication.signInAsync({
-      requestedScopes: [
-        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-        AppleAuthentication.AppleAuthenticationScope.EMAIL,
-      ],
-    });
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
 
-    const { identityToken, email, fullName, user: appleUserId } = credential;
+      const { identityToken, email, fullName, user: appleUserId } = credential;
     
-    if (!identityToken) throw new Error('No identity token received from Apple');
+      if (!identityToken) throw new Error('No identity token received from Apple');
 
-    const appleLoginData = {
-      token: identityToken,
-      appleUserId,
-      email: email || undefined,
-      firstName: fullName?.givenName || "",
-      lastName: fullName?.familyName || "",
-    };
+      const appleLoginData = {
+        token: identityToken,
+        appleUserId,
+        email: email || undefined,
+        firstName: fullName?.givenName || "",
+        lastName: fullName?.familyName || "",
+      };
 
-    const response = await signUpByApple(appleLoginData);
+      const response = await signUpByApple(appleLoginData);
 
-    if (response?.success) {
-      // No Alert here makes the flow feel faster/native
+      if (response?.success) {
+        setAppleLoading(false);
+        navigation.navigate('MainTabs');
+      } else {
+        Alert.alert('Sign In Failed', response.message || 'We could not sign you in.');
+      }
+    
+    } catch (error) {
+      if (error.code === 'ERR_REQUEST_CANCELED') {
+        console.log('User cancelled the flow');
+      } else {
+        console.error('Apple Login Error:', error);
+        Alert.alert(
+          'Apple Login Failed',
+          error.message || 'An unexpected error occurred.'
+        );
+      }
+    } finally {
       setAppleLoading(false);
-     
-    } else {
-      Alert.alert('Sign In Failed', response.message || 'We could not sign you in.');
     }
-    
-  } catch (error) {
-    // Check for the specific Apple Cancel code
-    if (error.code === 'ERR_REQUEST_CANCELED') {
-      console.log('User cancelled the flow');
-    } else {
-      console.error('Apple Login Error:', error);
-      Alert.alert(
-        'Apple Login Failed',
-        error.message || 'An unexpected error occurred.'
-      );
-    }
-  } finally {
-    setAppleLoading(false);
-  }
-};
+  };
 
   const handleLogin = async () => {
     if (!validateForm()) return;
@@ -255,14 +302,12 @@ const LoginScreen = ({ navigation }) => {
       const response = await authLogin(loginData);
 
       if (response?.success) {
-        // Add a small delay to show loading state (optional)
         setTimeout(() => {
-          
           Alert.alert(
-          'Welcome to CediMart!',
-          `Welcome back! 🎉`,
-          [{ text: 'Continue' }]
-        );
+            'Welcome to CediMart!',
+            `Welcome back! 🎉`,
+            [{ text: 'Continue' }]
+          );
         }, 100);
       } else {
         Alert.alert('Login Failed', response?.error || response?.message || "Issues maybe Internet connectivity or you haven't created an account with Us.");
@@ -286,7 +331,6 @@ const LoginScreen = ({ navigation }) => {
     navigation.navigate('ForgotPassword');
   };
 
-  // Combined loading state
   const isLoading = loading || googleLoading || appleLoading;
 
   return (
@@ -294,220 +338,258 @@ const LoginScreen = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header with Brand Logo */}
-        <View style={styles.header}> 
-          <View style={styles.logoContainer}>
-            <Image 
-              source={BrandLogo}
-              style={styles.brandLogo}
-              resizeMode="contain"
-            />
-           
-          </View>
-          
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue your experince convenient shopping </Text>
-        </View>
-
-        {/* ── Vendor Login Link ── */}
-        <TouchableOpacity 
-          style={styles.vendorLinkContainer}
-          onPress={() => navigation.navigate('VendorLogin')} 
-          disabled={isLoading}
-          activeOpacity={0.8}
+      <Animated.View style={[
+        styles.animatedContainer,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }
+      ]}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.vendorLinkContent}>
-            <Ionicons name="storefront-outline" size={20} color="#4E342E" />
-            <Text style={[styles.vendorLinkText, isLoading && styles.disabledText]}>
-              Are you a vendor? <Text style={styles.vendorLinkBold}>Login here</Text>
-            </Text>
+          {/* Header with Brand Logo */}
+          <View style={styles.header}> 
+            <View style={styles.logoContainer}>
+              <Image 
+                source={BrandLogo}
+                style={styles.brandLogo}
+                resizeMode="contain"
+              />
+            </View>
+            
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Sign in to your account to continue</Text>
           </View>
-        </TouchableOpacity>
 
-        {/* Social Login */}
-        <View style={styles.socialContainer}>
-          {/* Google Button */}
+          {/* ─── PROMINENT VENDOR LOGIN CARD ──────────────────────────────── */}
           <TouchableOpacity 
-            style={[styles.socialButton, googleLoading && styles.socialButtonDisabled]}
-            onPress={handleGoogleLogin}
+            style={styles.vendorBannerWrapper}
+            onPress={() => navigation.navigate('VendorLogin')} 
             disabled={isLoading}
-            activeOpacity={0.7}
+            activeOpacity={0.9}
           >
-            {googleLoading ? (
-              <View style={styles.socialButtonLoading}>
-                <ActivityIndicator size="small" color="#DB4437" />
-                <Text style={[styles.socialButtonText, { marginLeft: 8 }]}>Connecting...</Text>
+            <Animated.View style={[
+              styles.vendorBanner,
+              { transform: [{ scale: vendorPulseAnim }] }
+            ]}>
+              {/* Top accent bar */}
+              <View style={styles.vendorBannerAccent} />
+              
+              {/* Main content */}
+              <View style={styles.vendorBannerContent}>
+                {/* Icon section */}
+                <View style={styles.vendorIconContainer}>
+                  
+                </View>
+                
+                {/* Text section */}
+                <View style={styles.vendorTextSection}>
+                  <View style={styles.vendorTitleRow}>
+                    <Text style={styles.vendorBannerTitle}>Selling on CediMart?</Text>
+                    <View style={styles.vendorBadge}>
+                      <Text style={styles.vendorBadgeText}>VENDOR</Text>
+                    </View>
+                  </View>
+                 
+                    
+                </View>
               </View>
-            ) : (
-              <>
-                <Image 
-                  source={GoogleLogo}
-                  style={styles.googleLogo}
-                />
-                <Text style={styles.socialButtonText}>Continue with Google</Text>
-              </>
-            )}
+              
+              {/* Bottom CTA */}
+              <View style={styles.vendorCTAContainer}>
+                <View style={styles.vendorCTALeft}>
+                  <Text style={styles.vendorCTAText}>Login as Vendor Here</Text>
+                  <Animated.View style={{ transform: [{ translateX: vendorArrowAnim }] }}>
+                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                  </Animated.View>
+                </View>
+                <View style={styles.vendorCTARight}>
+                  <Text style={styles.vendorCTASubtext}>It's free!</Text>
+                </View>
+              </View>
+            </Animated.View>
           </TouchableOpacity>
 
-          {/* Apple Sign-In Button - iOS only */}
-          {Platform.OS === 'ios' && (
+          {/* Social Login */}
+          <View style={styles.socialContainer}>
+            {/* Google Button */}
             <TouchableOpacity 
-              style={[styles.socialButton, styles.appleButton, appleLoading && styles.socialButtonDisabled]}
-              onPress={handleAppleLogin}
+              style={[styles.socialButton, googleLoading && styles.socialButtonDisabled]}
+              onPress={handleGoogleLogin}
               disabled={isLoading}
               activeOpacity={0.7}
             >
-              {appleLoading ? (
+              {googleLoading ? (
                 <View style={styles.socialButtonLoading}>
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                  <Text style={[styles.socialButtonText, styles.appleButtonText, { marginLeft: 8 }]}>
-                    Connecting...
-                  </Text>
+                  <ActivityIndicator size="small" color="#DB4437" />
+                  <Text style={[styles.socialButtonText, { marginLeft: 8 }]}>Connecting...</Text>
                 </View>
               ) : (
                 <>
-                  <Ionicons name="logo-apple" size={22} color="#FFFFFF" style={styles.appleIcon} />
-                  <Text style={[styles.socialButtonText, styles.appleButtonText]}>
-                    Continue with Apple
-                  </Text>
+                  <Image 
+                    source={GoogleLogo}
+                    style={styles.googleLogo}
+                  />
+                  <Text style={styles.socialButtonText}>Continue with Google</Text>
                 </>
               )}
             </TouchableOpacity>
-          )}
-        </View>
 
-        {/* Divider */}
-        <View style={styles.dividerContainer}>
-          <View style={styles.divider} />
-          <Text style={styles.dividerText}>OR</Text>
-          <View style={styles.divider} />
-        </View>
-
-        {/* Form */}
-        <View style={styles.form}>
-          {/* Phone Number */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={[styles.inputContainer, errors.phone && styles.inputError]}>
-              <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your phone number"
-                value={formData.phone}
-                onChangeText={(text) => handleInputChange('phone', text.replace(/[^0-9]/g, ''))}
-                keyboardType="phone-pad"
-                maxLength={15}
-                editable={!isLoading}
-                autoCapitalize="none"
-              />
-            </View>
-            {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+            {/* Apple Sign-In Button - iOS only */}
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity 
+                style={[styles.socialButton, styles.appleButton, appleLoading && styles.socialButtonDisabled]}
+                onPress={handleAppleLogin}
+                disabled={isLoading}
+                activeOpacity={0.7}
+              >
+                {appleLoading ? (
+                  <View style={styles.socialButtonLoading}>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Text style={[styles.socialButtonText, styles.appleButtonText, { marginLeft: 8 }]}>
+                      Connecting...
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <Ionicons name="logo-apple" size={22} color="#FFFFFF" style={styles.appleIcon} />
+                    <Text style={[styles.socialButtonText, styles.appleButtonText]}>
+                      Continue with Apple
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Password */}
-          <View style={styles.inputGroup}>
-            <View style={styles.passwordHeader}>
-              <Text style={styles.label}>Password</Text>
-              <TouchableOpacity onPress={handleForgotPassword} disabled={isLoading}>
-                <Text style={[styles.forgotPassword, isLoading && styles.disabledText]}>
-                  Forgot Password?
+          {/* Divider */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.divider} />
+          </View>
+
+          {/* Form */}
+          <View style={styles.form}>
+            {/* Phone Number */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone Number</Text>
+              <View style={[styles.inputContainer, errors.phone && styles.inputError]}>
+                <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your phone number"
+                  value={formData.phone}
+                  onChangeText={(text) => handleInputChange('phone', text.replace(/[^0-9]/g, ''))}
+                  keyboardType="phone-pad"
+                  maxLength={15}
+                  editable={!isLoading}
+                  autoCapitalize="none"
+                />
+              </View>
+              {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+            </View>
+
+            {/* Password */}
+            <View style={styles.inputGroup}>
+              <View style={styles.passwordHeader}>
+                <Text style={styles.label}>Password</Text>
+                <TouchableOpacity onPress={handleForgotPassword} disabled={isLoading}>
+                  <Text style={[styles.forgotPassword, isLoading && styles.disabledText]}>
+                    Forgot Password?
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.inputContainer, errors.password && styles.inputError]}>
+                <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, styles.passwordInput]}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChangeText={(text) => handleInputChange('password', text)}
+                  secureTextEntry={!showPassword}
+                  editable={!isLoading}
+                  autoCapitalize="none"
+                  onSubmitEditing={handleLogin}
+                  returnKeyType="go"
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={isLoading ? "#999" : "#666"}
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            </View>
+
+            {/* Remember Me */}
+            <TouchableOpacity 
+              style={styles.rememberContainer} 
+              disabled={isLoading}
+            >
+              <View style={[styles.checkbox, isLoading && styles.checkboxDisabled]}>
+                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+              </View>
+              <Text style={[styles.rememberText, isLoading && styles.disabledText]}>
+                Remember me
+              </Text>
+            </TouchableOpacity>
+
+            {/* Login Button */}
+            <TouchableOpacity
+              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+              onPress={handleLogin}
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <View style={styles.buttonLoadingContent}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={[styles.loginButtonText, { marginLeft: 8 }]}>Signing In...</Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={styles.loginButtonText}>Sign In as Buyer</Text>
+                  <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Sign Up Link */}
+            <View style={styles.signupLinkContainer}>
+              <Text style={styles.signupLinkText}>Don't have an account? </Text>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('SignUp')} 
+                disabled={isLoading}
+              >
+                <Text style={[styles.signupLink, isLoading && styles.disabledText]}>
+                  Sign Up
                 </Text>
               </TouchableOpacity>
             </View>
-            <View style={[styles.inputContainer, errors.password && styles.inputError]}>
-              <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="Enter your password"
-                value={formData.password}
-                onChangeText={(text) => handleInputChange('password', text)}
-                secureTextEntry={!showPassword}
-                editable={!isLoading}
-                autoCapitalize="none"
-                onSubmitEditing={handleLogin}
-                returnKeyType="go"
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color={isLoading ? "#999" : "#666"}
-                />
-              </TouchableOpacity>
-            </View>
-            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
           </View>
+        </ScrollView>
 
-          {/* Remember Me (Optional) */}
-          <TouchableOpacity 
-            style={styles.rememberContainer} 
-            disabled={isLoading}
-          >
-            <View style={[styles.checkbox, isLoading && styles.checkboxDisabled]}>
-              <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-            </View>
-            <Text style={[styles.rememberText, isLoading && styles.disabledText]}>
-              Remember me
-            </Text>
-          </TouchableOpacity>
-
-          {/* Login Button */}
-          <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={isLoading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <View style={styles.buttonLoadingContent}>
-                <ActivityIndicator size="small" color="#FFFFFF" />
-                <Text style={[styles.loginButtonText, { marginLeft: 8 }]}>Signing In...</Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.loginButtonText}>Sign In</Text>
-                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* Sign Up Link */}
-         {/* ── Sign Up Link ── */}
-<View style={styles.signupLinkContainer}>
-  <Text style={styles.signupLinkText}>Don't have an account? </Text>
-  <TouchableOpacity 
-    onPress={() => navigation.navigate('SignUp')} 
-    disabled={isLoading}
-  >
-    <Text style={[styles.signupLink, isLoading && styles.disabledText]}>
-      Sign Up
-    </Text>
-  </TouchableOpacity>
-</View>
-
-
-        </View>
-      </ScrollView>
-
-      {/* Improved Loading Overlay */}
-      <LoadingOverlay 
-        visible={isLoading}
-        message={
-          googleLoading ? "Signing in with Google..." : 
-          appleLoading ? "Signing in with Apple..." :
-          loading ? "Logging in..." : 
-          "Please wait..."
-        }
-      />
+        {/* Improved Loading Overlay */}
+        <LoadingOverlay 
+          visible={isLoading}
+          message={
+            googleLoading ? "Signing in with Google..." : 
+            appleLoading ? "Signing in with Apple..." :
+            loading ? "Logging in..." : 
+            "Please wait..."
+          }
+        />
+      </Animated.View>
     </KeyboardAvoidingView>
   );
 };
@@ -517,20 +599,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  animatedContainer: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 40,
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingTop: 40,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   brandLogo: {
     width: 60,
@@ -553,6 +638,140 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
+
+  // ─── PROMINENT VENDOR BANNER STYLES ──────────────────────────────────────
+  vendorBannerWrapper: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    borderRadius: 20,
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  vendorBanner: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#2E7D32',
+  },
+  vendorBannerAccent: {
+    height: 4,
+    backgroundColor: '#2E7D32',
+  },
+  vendorBannerContent: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 14,
+  },
+  vendorIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vendorIconRing: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#C8E6C9',
+  },
+  vendorIconInner: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2E7D32',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  vendorTextSection: {
+    flex: 1,
+  },
+  vendorTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  vendorBannerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1A1A1A',
+  },
+  vendorBadge: {
+    backgroundColor: '#FF6D00',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  vendorBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  vendorBannerSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  vendorBannerHighlight: {
+    color: '#2E7D32',
+    fontWeight: '700',
+  },
+  vendorBenefitsList: {
+    gap: 6,
+  },
+  vendorBenefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vendorBenefitText: {
+    fontSize: 12,
+    color: '#555',
+    fontWeight: '500',
+  },
+  vendorCTAContainer: {
+    backgroundColor: '#2E7D32',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  vendorCTALeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  vendorCTAText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  vendorCTASubtext: {
+    color: '#A5D6A7',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  vendorCTARight: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+
   form: {
     paddingHorizontal: 20,
   },
@@ -682,7 +901,7 @@ const styles = StyleSheet.create({
   },
   socialContainer: {
     paddingHorizontal: 20,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   socialButton: {
     flexDirection: 'row',
@@ -724,8 +943,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
-    marginBottom:16,
-    paddingBottom:8,
+    marginBottom: 16,
+    paddingBottom: 8,
   },
   signupLinkText: {
     fontSize: 16,
@@ -767,36 +986,6 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
   },
-  // Vendor link styles
-vendorLinkContainer: {
-  marginTop: 12,
-  marginHorizontal: 20,
-  paddingVertical: 14,
-  paddingHorizontal: 16,
-  backgroundColor: '#FFF8E1',
-  borderRadius: 12,
-  borderWidth: 1,
-  borderColor: '#FFE082',
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 16,
-},
-vendorLinkContent: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-},
-vendorLinkText: {
-  fontSize: 15,
-  color: '#4E342E',
-  fontWeight: '500',
-},
-vendorLinkBold: {
-  fontWeight: '700',
-  color: '#2E7D32',
-  textDecorationLine: 'underline',
-},
 });
 
 export default LoginScreen;

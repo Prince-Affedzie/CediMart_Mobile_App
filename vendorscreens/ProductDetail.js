@@ -12,6 +12,9 @@ import {
   Dimensions,
   Animated,
   FlatList,
+  Platform,
+  StatusBar,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,35 +36,285 @@ const CAMPUS_LABELS = {
   OTHER: 'Other',
 };
 
-const CONDITION_COLORS = {
-  'new':           { bg: '#E8F5E9', text: '#2E7D32', label: 'Brand New' },
-  'like-new':      { bg: '#E8F5E9', text: '#2E7D32', label: 'Like New' },
-  'excellent':     { bg: '#E8F5E9', text: '#2E7D32', label: 'Excellent' },
-  'good':          { bg: '#FFF8E1', text: '#F9A825', label: 'Good' },
-  'fair':          { bg: '#FFF3E0', text: '#E65100', label: 'Fair' },
-  'slightly-used': { bg: '#FFF3E0', text: '#E65100', label: 'Slightly Used' },
-  'for-parts':     { bg: '#FFEBEE', text: '#C62828', label: 'For Parts' },
+const CONDITION_CONFIG = {
+  'new':           { label: 'New',           bg: '#E8F5E9', text: '#2E7D32', icon: 'sparkles' },
+  'like-new':      { label: 'Like New',      bg: '#E8F5E9', text: '#2E7D32', icon: 'star' },
+  'excellent':     { label: 'Excellent',     bg: '#E3F2FD', text: '#1565C0', icon: 'thumbs-up' },
+  'good':          { label: 'Good',          bg: '#FFF8E1', text: '#F57F17', icon: 'checkmark-circle' },
+  'fair':          { label: 'Fair',          bg: '#FFF3E0', text: '#E65100', icon: 'alert-circle' },
+  'slightly-used': { label: 'Slightly Used', bg: '#FFF3E0', text: '#E65100', icon: 'time' },
+  'for-parts':     { label: 'For Parts',     bg: '#FFEBEE', text: '#C62828', icon: 'construct' },
 };
 
-const TAG_LABELS = {
-  'featured':         '⭐ Featured',
-  'urgent-sale':      '⚡ Urgent Sale',
-  'popular':          '🔥 Popular',
-  'discounted':       '🏷️ Discounted',
-  'new-arrival':      '🆕 New Arrival',
-  'student-favorite': '❤️ Student Favorite',
+const TAG_CONFIG = {
+  'featured':         { label: 'Featured',         bg: '#FFF8E1', text: '#F57F17', icon: 'star' },
+  'urgent-sale':      { label: 'Urgent Sale',       bg: '#FFEBEE', text: '#C62828', icon: 'flash' },
+  'popular':          { label: 'Popular',           bg: '#F3E5F5', text: '#6A1B9A', icon: 'trending-up' },
+  'discounted':       { label: 'Discounted',        bg: '#E8F5E9', text: '#2E7D32', icon: 'pricetag' },
+  'new-arrival':      { label: 'New Arrival',       bg: '#E3F2FD', text: '#1565C0', icon: 'sparkles' },
+  'student-favorite': { label: 'Student Favorite',  bg: '#FFF3E0', text: '#E65100', icon: 'heart' },
 };
 
-const InfoGridItem = ({ icon, label, value }) => (
-  <View style={styles.infoItem}>
-    <View style={styles.infoIcon}>
-      <Ionicons name={icon} size={18} color="#2E7D32" />
+const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/400x400/F5F5F5/BDBDBD?text=No+Image';
+
+// ─── Collapsible Section ─────────────────────────────────────────────────────
+const CollapsibleSection = ({ title, children, defaultOpen = false, badge }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  const rotateAnim = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
+
+  const toggle = () => {
+    Animated.timing(rotateAnim, { toValue: open ? 0 : 1, duration: 200, useNativeDriver: true }).start();
+    setOpen(o => !o);
+  };
+
+  const rotate = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+
+  return (
+    <View style={colStyles.wrap}>
+      <TouchableOpacity style={colStyles.header} onPress={toggle} activeOpacity={0.7}>
+        <View style={colStyles.headerLeft}>
+          <Text style={colStyles.title}>{title}</Text>
+          {badge != null && <View style={colStyles.badge}><Text style={colStyles.badgeText}>{badge}</Text></View>}
+        </View>
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <Ionicons name="chevron-down" size={20} color="#424242" />
+        </Animated.View>
+      </TouchableOpacity>
+      {open && <View style={colStyles.body}>{children}</View>}
     </View>
-    <Text style={styles.infoLabel}>{label}</Text>
-    <Text style={styles.infoValue} numberOfLines={2}>{value}</Text>
+  );
+};
+
+const colStyles = StyleSheet.create({
+  wrap: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EBEBEB' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 24 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  title: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
+  body: { paddingHorizontal: 24, paddingBottom: 20 },
+  badge: { backgroundColor: '#2E7D32', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+});
+
+// ─── Star Row ────────────────────────────────────────────────────────────────
+const StarRow = ({ rating = 0, count = 0, size = 16 }) => {
+  const filled = Math.floor(rating);
+  const half = rating % 1 >= 0.5;
+  return (
+    <View style={starStyles.row}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <Ionicons key={i} name={i <= filled ? 'star' : half && i === filled + 1 ? 'star-half' : 'star-outline'} size={size} color="#F9A825" style={{ marginRight: 2 }} />
+      ))}
+      {count > 0 && <Text style={[starStyles.label, { fontSize: size - 3 }]}>{rating.toFixed(1)} ({count})</Text>}
+    </View>
+  );
+};
+
+const starStyles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  label: { marginLeft: 6, color: '#757575', fontWeight: '500' },
+});
+
+// ─── Info Row ────────────────────────────────────────────────────────────────
+const InfoRow = ({ icon, label, value, isLast }) => (
+  <View style={[styles.infoRow, isLast && styles.infoRowLast]}>
+    <View style={styles.infoRowLeft}>
+      <Ionicons name={icon} size={15} color="#9E9E9E" />
+      <Text style={styles.infoRowLabel}>{label}</Text>
+    </View>
+    <Text style={styles.infoRowValue} numberOfLines={2}>{value || '—'}</Text>
   </View>
 );
 
+// ─── Review Card ─────────────────────────────────────────────────────────────
+const ReviewCard = ({ review }) => {
+  const filled = Math.floor(review.rating);
+  return (
+    <View style={reviewStyles.card}>
+      <View style={reviewStyles.header}>
+        <View style={reviewStyles.avatar}><Text style={reviewStyles.avatarText}>{review.name?.charAt(0).toUpperCase()}</Text></View>
+        <View style={reviewStyles.meta}>
+          <Text style={reviewStyles.name}>{review.name}</Text>
+          <View style={reviewStyles.starsRow}>
+            {[1, 2, 3, 4, 5].map(i => <Ionicons key={i} name={i <= filled ? 'star' : 'star-outline'} size={12} color="#F9A825" style={{ marginRight: 1 }} />)}
+          </View>
+        </View>
+        <Text style={reviewStyles.date}>{new Date(review.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+      </View>
+      {!!review.comment && <Text style={reviewStyles.comment}>{review.comment}</Text>}
+    </View>
+  );
+};
+
+const reviewStyles = StyleSheet.create({
+  card: { backgroundColor: '#FAFAFA', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#F0F0F0' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 14, fontWeight: '700', color: '#2E7D32' },
+  meta: { flex: 1 },
+  name: { fontSize: 13, fontWeight: '700', color: '#1A1A1A', marginBottom: 2 },
+  starsRow: { flexDirection: 'row' },
+  date: { fontSize: 11, color: '#BDBDBD', fontWeight: '500' },
+  comment: { fontSize: 13, color: '#555', lineHeight: 20 },
+});
+
+// ─── Specifications Table ────────────────────────────────────────────────────
+const SpecsTable = ({ specifications }) => {
+  const entries = specifications ? Object.entries(specifications).filter(([, v]) => v) : [];
+  if (entries.length === 0) return null;
+
+  return (
+    <View style={spS.table}>
+      {entries.map(([key, value], i) => (
+        <View key={key} style={[spS.row, i % 2 === 1 && spS.rowAlt]}>
+          <Text style={spS.key}>{key}</Text>
+          <Text style={spS.value} numberOfLines={3}>{value}</Text>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+const spS = StyleSheet.create({
+  table: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#F0F0F0' },
+  row: {
+    flexDirection: 'row', paddingVertical: 11, paddingHorizontal: 14,
+    backgroundColor: '#fff',
+  },
+  rowAlt: { backgroundColor: '#FAFAFA' },
+  key:   { width: '40%', fontSize: 12.5, color: '#9E9E9E', fontWeight: '600' },
+  value: { flex: 1, fontSize: 12.5, color: '#1A1A1A', fontWeight: '600' },
+});
+
+// ─── Discount Helpers ────────────────────────────────────────────────────────
+const isDiscountActive = (discountInfo) => {
+  if (!discountInfo?.isOnSale) return false;
+  const now = Date.now();
+  const startsOk = !discountInfo.discountStartDate || new Date(discountInfo.discountStartDate).getTime() <= now;
+  const endsOk   = !discountInfo.discountEndDate   || new Date(discountInfo.discountEndDate).getTime()   >= now;
+  return startsOk && endsOk;
+};
+
+const DiscountCountdown = ({ endDate }) => {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    if (!endDate) return;
+    const tick = () => {
+      const diff = new Date(endDate).getTime() - Date.now();
+      if (diff <= 0) { setTimeLeft(null); return; }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setTimeLeft(d > 0 ? `${d}d ${h}h left` : h > 0 ? `${h}h ${m}m left` : `${m}m left`);
+    };
+    tick();
+    const interval = setInterval(tick, 60000);
+    return () => clearInterval(interval);
+  }, [endDate]);
+
+  if (!timeLeft) return null;
+  return (
+    <View style={dS.countdown}>
+      <Ionicons name="time-outline" size={11} color="#C62828" />
+      <Text style={dS.countdownText}>Deal ends in {timeLeft}</Text>
+    </View>
+  );
+};
+
+const dS = StyleSheet.create({
+  countdown: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#FFEBEE', alignSelf: 'flex-start',
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, marginTop: 6,
+  },
+  countdownText: { fontSize: 11, fontWeight: '700', color: '#C62828' },
+});
+
+// ─── Image Gallery ───────────────────────────────────────────────────────────
+const ImageGallery = ({ images, activeIndex, onScroll }) => {
+  const flatListRef = useRef(null);
+  const IMG_H = width * 0.88;
+
+  return (
+    <View style={galS.wrapper}>
+      <FlatList
+        ref={flatListRef}
+        data={images}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(_, i) => String(i)}
+        onMomentumScrollEnd={onScroll}
+        scrollEventThrottle={16}
+        getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+        renderItem={({ item }) => (
+          <Image source={{ uri: item }} style={{ width, height: IMG_H }} resizeMode="cover" />
+        )}
+      />
+
+      {images.length > 1 && activeIndex > 0 && (
+        <TouchableOpacity style={[galS.arrowBtn, galS.arrowLeft]} onPress={() => flatListRef.current?.scrollToIndex({ index: activeIndex - 1, animated: true })} activeOpacity={0.8}>
+          <Ionicons name="chevron-back" size={20} color="#fff" />
+        </TouchableOpacity>
+      )}
+      {images.length > 1 && activeIndex < images.length - 1 && (
+        <TouchableOpacity style={[galS.arrowBtn, galS.arrowRight]} onPress={() => flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true })} activeOpacity={0.8}>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+      )}
+
+      {images.length > 1 && (
+        <View style={galS.counterPill}>
+          <Ionicons name="images-outline" size={11} color="#fff" style={{ marginRight: 4 }} />
+          <Text style={galS.counterText}>{activeIndex + 1} / {images.length}</Text>
+        </View>
+      )}
+
+      {images.length > 1 && (
+        <View style={galS.dotsRow}>
+          {images.map((_, i) => (
+            <TouchableOpacity key={i} onPress={() => flatListRef.current?.scrollToIndex({ index: i, animated: true })} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+              <View style={[galS.dot, i === activeIndex && galS.dotActive]} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {images.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={galS.thumbStrip} style={galS.thumbStripWrap}>
+          {images.map((uri, i) => (
+            <TouchableOpacity key={i} onPress={() => flatListRef.current?.scrollToIndex({ index: i, animated: true })} activeOpacity={0.8}>
+              <View style={[galS.thumb, i === activeIndex && galS.thumbActive]}>
+                <Image source={{ uri }} style={galS.thumbImg} resizeMode="cover" />
+                {i === activeIndex && <View style={galS.thumbActiveBorder} />}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+};
+
+const galS = StyleSheet.create({
+  wrapper: { backgroundColor: '#E8E8E8' },
+  arrowBtn: { position: 'absolute', top: '40%', width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.38)', justifyContent: 'center', alignItems: 'center' },
+  arrowLeft:  { left: 12 },
+  arrowRight: { right: 12 },
+  counterPill: { position: 'absolute', top: Platform.OS === 'ios' ? 54 : 44, right: 16, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.42)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
+  counterText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  dotsRow: { position: 'absolute', bottom: 58, alignSelf: 'center', flexDirection: 'row', gap: 5 },
+  dot:       { width: 7,  height: 7,  borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.45)' },
+  dotActive: { width: 22, height: 7,  borderRadius: 4, backgroundColor: '#fff' },
+  thumbStripWrap: { backgroundColor: 'rgba(0,0,0,0.55)', position: 'absolute', bottom: 0, left: 0, right: 0 },
+  thumbStrip: { paddingHorizontal: 14, paddingVertical: 8, gap: 8, flexDirection: 'row', alignItems: 'center' },
+  thumb: { width: 48, height: 48, borderRadius: 10, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent', opacity: 0.65 },
+  thumbActive: { opacity: 1, borderColor: '#fff' },
+  thumbImg: { width: '100%', height: '100%' },
+  thumbActiveBorder: { ...StyleSheet.absoluteFillObject, borderRadius: 8, borderWidth: 2, borderColor: '#fff' },
+});
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 const VendorProductDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -71,6 +324,7 @@ const VendorProductDetailScreen = () => {
   const [loading, setLoading] = useState(!initialProduct);
   const [deleting, setDeleting] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -132,367 +386,395 @@ const VendorProductDetailScreen = () => {
     );
   };
 
+  const handleShare = async () => {
+    try {
+      await Share.share({ 
+        message: `Check out "${product?.name}" on CampusMart — GH₵ ${product?.price?.toFixed(2)}`, 
+        title: product?.name 
+      });
+    } catch {}
+  };
+
+  const onImageScroll = (e) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+    if (idx !== activeImageIndex) setActiveImageIndex(idx);
+  };
+
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+      <View style={styles.fullScreen}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <SafeAreaView style={styles.minimalNav} edges={['top']}>
+          <TouchableOpacity style={styles.navIconBtn} onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Product Details</Text>
-          <View style={{ width: 36 }} />
-        </View>
+        </SafeAreaView>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2E7D32" />
+          <Text style={styles.loadingText}>Loading listing…</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!product) return null;
 
-  const images = product.images?.length ? product.images : (product.image ? [product.image] : []);
-  const conditionInfo = CONDITION_COLORS[product.condition] || CONDITION_COLORS['good'];
+  const images = product.images?.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
+  const conditionInfo = CONDITION_CONFIG[product.condition] || CONDITION_CONFIG['good'];
+  const isAvailable = product.isAvailable && (product.countInStock ?? 0) > 0;
+  const stockCount = product.countInStock ?? 0;
+  const isLowStock = isAvailable && stockCount > 0 && stockCount <= 3;
+  const reviews = product.reviews || [];
+  const visibleReviews = showAllReviews ? reviews : reviews.slice(0, 3);
+
+  // Discount calculations
+  const discount = product.discountInfo;
+  const discountActive = isDiscountActive(discount);
+  const originalPrice = discount?.originalPrice;
+  const currentPrice = Number(product.price);
+  const savingsAmount = discountActive && originalPrice ? (originalPrice - currentPrice) : 0;
+  const savingsPct = discountActive
+    ? (discount?.discountPercentage ?? (originalPrice ? Math.round((savingsAmount / originalPrice) * 100) : 0))
+    : 0;
+
+  // Specifications
+  const specifications = product.specifications && Object.keys(product.specifications).length > 0
+    ? product.specifications
+    : null;
 
   const infoItems = [
-    { icon: 'grid-outline', label: 'Category', value: product.category?.replace(/-/g, ' ') },
-    { icon: 'school-outline', label: 'Campus', value: CAMPUS_LABELS[product.campus] || product.campus },
-    { icon: 'location-outline', label: 'Location', value: product.location?.campusArea || '—' },
-    ...(product.location?.hostel ? [{ icon: 'home-outline', label: 'Hostel / Hall', value: product.location.hostel }] : []),
-  ];
+    { icon: 'grid-outline',       label: 'Category',    value: product.category?.replace(/-/g, ' ').replace(/ and /g, ' & ') },
+    product.subcategory && { icon: 'layers-outline', label: 'Subcategory', value: product.subcategory?.replace(/-/g, ' ') },
+    { icon: 'school-outline',     label: 'Campus',      value: CAMPUS_LABELS[product.campus] || product.campus },
+    { icon: 'location-outline',   label: 'Area',        value: product.location?.campusArea },
+    product.location?.hostel && { icon: 'home-outline', label: 'Hostel / Hall', value: product.location.hostel },
+    product.brand && { icon: 'bookmark-outline', label: 'Brand', value: product.brand },
+  ].filter(Boolean);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+    <View style={styles.fullScreen}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      <SafeAreaView style={styles.floatingNav} edges={['top']}>
+        <TouchableOpacity style={styles.navIconBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Product Details</Text>
+        <View style={styles.navRight}>
+          <TouchableOpacity style={styles.navIconBtn} onPress={handleShare}>
+            <Ionicons name="share-social-outline" size={20} color="#1A1A1A" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.navIconBtn}
+            onPress={() => navigation.navigate('UpdateProduct', { productId: product._id || productId })}
+          >
+            <Ionicons name="create-outline" size={20} color="#1A1A1A" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('UpdateProduct', { productId: product._id || productId })}
-          style={styles.headerEditBtn}
-        >
-          <Ionicons name="create-outline" size={18} color="#1A1A1A" />
-        </TouchableOpacity>
-      </Animated.View>
+      </SafeAreaView>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {images.length > 0 && (
-          <View style={styles.imageGallery}>
-            <View style={styles.mainImageWrap}>
-              <Image
-                source={{ uri: images[activeImageIndex] }}
-                style={styles.mainImage}
-                resizeMode="cover"
-              />
-              {product.negotiable && (
-                <View style={styles.negotiableBadge}>
-                  <Ionicons name="pricetag" size={12} color="#fff" />
-                  <Text style={styles.negotiableText}>Negotiable</Text>
-                </View>
-              )}
-              {images.length > 1 && (
-                <View style={styles.imageCounter}>
-                  <Text style={styles.imageCounterText}>{activeImageIndex + 1}/{images.length}</Text>
-                </View>
-              )}
-            </View>
+      <Animated.ScrollView
+        style={{ opacity: fadeAnim }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View>
+          <ImageGallery images={images} activeIndex={activeImageIndex} onScroll={onImageScroll} />
 
-            {images.length > 1 && (
-              <FlatList
-                horizontal
-                data={images}
-                keyExtractor={(_, i) => i.toString()}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.thumbStrip}
-                renderItem={({ item, index }) => (
-                  <TouchableOpacity
-                    onPress={() => setActiveImageIndex(index)}
-                    style={[styles.thumbWrap, activeImageIndex === index && styles.thumbActive]}
-                  >
-                    <Image source={{ uri: item }} style={styles.thumb} resizeMode="cover" />
-                  </TouchableOpacity>
-                )}
-              />
-            )}
+          <View style={[styles.conditionOverlay, { backgroundColor: conditionInfo.bg }]}>
+            <Ionicons name={conditionInfo.icon} size={11} color={conditionInfo.text} />
+            <Text style={[styles.conditionOverlayText, { color: conditionInfo.text }]}>{conditionInfo.label}</Text>
           </View>
-        )}
 
-        <View style={styles.titleSection}>
-          <View style={styles.titleRow}>
-            <Text style={styles.productName}>{product.name}</Text>
-            <View style={[styles.conditionBadge, { backgroundColor: conditionInfo.bg }]}>
-              <Text style={[styles.conditionText, { color: conditionInfo.text }]}>{conditionInfo.label}</Text>
+          {/* Discount ribbon takes priority if active, else urgent tag */}
+          {discountActive ? (
+            <View style={styles.discountRibbon}>
+              <Ionicons name="pricetags" size={11} color="#fff" />
+              <Text style={styles.discountRibbonText}>{savingsPct}% OFF</Text>
             </View>
-          </View>
-          {product.brand ? (
-            <Text style={styles.brandText}>{product.brand}</Text>
+          ) : product.tags?.includes('urgent-sale') ? (
+            <View style={styles.urgentTag}>
+              <Ionicons name="flash" size={11} color="#fff" />
+              <Text style={styles.urgentTagText}>Urgent Sale</Text>
+            </View>
           ) : null}
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>GH₵ {product.price?.toFixed(2)}</Text>
-            {product.negotiable && (
-              <View style={styles.negotiableChip}>
-                <Text style={styles.negotiableChipText}>Price negotiable</Text>
+
+          {!isAvailable && (
+            <View style={styles.oosOverlay}>
+              <View style={styles.oosBadge}>
+                <Ionicons name="close-circle-outline" size={28} color="#fff" />
+                <Text style={styles.oosText}>Sold Out</Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* ── Info Panel ── */}
+        <View style={styles.infoPanel}>
+          {product.tags?.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagsScroll}>
+              {product.tags.map(tag => {
+                const cfg = TAG_CONFIG[tag] || { label: tag, bg: '#F1F8F3', text: '#2E7D32' };
+                return (
+                  <View key={tag} style={[styles.tag, { backgroundColor: cfg.bg }]}>
+                    {cfg.icon && <Ionicons name={cfg.icon} size={11} color={cfg.text} />}
+                    <Text style={[styles.tagText, { color: cfg.text }]}>{cfg.label}</Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {/* ── Title block ── */}
+          <View style={styles.titleSection}>
+            <Text style={styles.productName}>{product.name}</Text>
+            {product.brand && <Text style={styles.brandText}>by {product.brand}</Text>}
+
+            {/* Price Block */}
+            {discountActive ? (
+              <View style={styles.priceBlockDiscount}>
+                <View style={styles.priceRowDiscount}>
+                  <Text style={styles.price}>GH₵ {currentPrice.toFixed(2)}</Text>
+                  {savingsPct > 0 && (
+                    <View style={styles.savingsBadge}>
+                      <Text style={styles.savingsBadgeText}>-{savingsPct}%</Text>
+                    </View>
+                  )}
+                </View>
+                {originalPrice && (
+                  <View style={styles.wasRow}>
+                    <Text style={styles.wasPrice}>GH₵ {originalPrice.toFixed(2)}</Text>
+                    {savingsAmount > 0 && (
+                      <Text style={styles.youSave}>You save GH₵ {savingsAmount.toFixed(2)}</Text>
+                    )}
+                  </View>
+                )}
+                <DiscountCountdown endDate={discount?.discountEndDate} />
+              </View>
+            ) : (
+              <View style={styles.priceRow}>
+                <Text style={styles.price}>GH₵ {currentPrice.toFixed(2)}</Text>
+                {product.negotiable && (
+                  <View style={styles.negotiableChip}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={11} color="#E65100" />
+                    <Text style={styles.negotiableChipText}>Negotiable</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Negotiable chip alongside discount */}
+            {discountActive && product.negotiable && (
+              <View style={[styles.negotiableChip, { marginTop: 10, alignSelf: 'flex-start' }]}>
+                <Ionicons name="chatbubble-ellipses-outline" size={11} color="#E65100" />
+                <Text style={styles.negotiableChipText}>Negotiable</Text>
+              </View>
+            )}
+
+            {(product.numReviews ?? 0) > 0 && (
+              <View style={{ marginTop: 10 }}>
+                <StarRow rating={product.rating || 0} count={product.numReviews || 0} />
+              </View>
+            )}
+
+            {/* Views/saved meta line */}
+            {((product.views ?? 0) > 0 || (product.favorites ?? 0) > 0) && (
+              <View style={styles.metaCaptionRow}>
+                {(product.views ?? 0) > 0 && (
+                  <View style={styles.metaCaptionItem}>
+                    <Ionicons name="eye-outline" size={12} color="#BDBDBD" />
+                    <Text style={styles.metaCaptionText}>{product.views} views</Text>
+                  </View>
+                )}
+                {(product.favorites ?? 0) > 0 && (
+                  <View style={styles.metaCaptionItem}>
+                    <Ionicons name="heart-outline" size={12} color="#BDBDBD" />
+                    <Text style={styles.metaCaptionText}>{product.favorites} saved</Text>
+                  </View>
+                )}
               </View>
             )}
           </View>
-        </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Product Info</Text>
-          <View style={styles.infoGrid}>
-            {infoItems.map((item, index) => (
-              <InfoGridItem
-                key={index}
-                icon={item.icon}
-                label={item.label}
-                value={item.value}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{product.countInStock ?? 0}</Text>
-              <Text style={styles.statLabel}>In Stock</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{product.views || 0}</Text>
-              <Text style={styles.statLabel}>Views</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{product.favorites || 0}</Text>
-              <Text style={styles.statLabel}>Favorites</Text>
-            </View>
-          </View>
-          <View style={[styles.statusBar, { backgroundColor: product.isAvailable ? '#E8F5E9' : '#FFEBEE' }]}>
-            <View style={[styles.statusDot, { backgroundColor: product.isAvailable ? '#4CAF50' : '#E53935' }]} />
-            <Text style={[styles.statusText, { color: product.isAvailable ? '#2E7D32' : '#C62828' }]}>
-              {product.isAvailable ? 'Available for sale' : 'Sold Out'}
+          {/* ── Stock availability banner ── */}
+          <View style={[styles.availBanner, !isAvailable && styles.availBannerOos, isLowStock && styles.availBannerLow]}>
+            <View style={[styles.availDot, { backgroundColor: isAvailable ? (isLowStock ? '#FF8F00' : '#4CAF50') : '#E53935' }]} />
+            <Text style={[styles.availText, { color: isAvailable ? (isLowStock ? '#FF6F00' : '#2E7D32') : '#C62828' }]}>
+              {!isAvailable ? 'Currently unavailable' : isLowStock ? `Only ${stockCount} left` : `${stockCount} in stock`}
             </Text>
           </View>
-        </View>
 
-        {product.description ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{product.description}</Text>
-          </View>
-        ) : null}
-
-        {product.tags?.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Tags</Text>
-            <View style={styles.tagsRow}>
-              {product.tags.map(tag => (
-                <View key={tag} style={styles.tag}>
-                  <Text style={styles.tagText}>{TAG_LABELS[tag] || tag}</Text>
-                </View>
+          {/* ── Product Details (minimal label/value rows) ── */}
+          <CollapsibleSection title="Product Details" defaultOpen>
+            <View style={styles.infoRowsWrap}>
+              {infoItems.map((item, i) => (
+                <InfoRow
+                  key={i}
+                  icon={item.icon}
+                  label={item.label}
+                  value={item.value}
+                  isLast={i === infoItems.length - 1}
+                />
               ))}
             </View>
+          </CollapsibleSection>
+
+          {/* ── Specifications table ── */}
+          {specifications && (
+            <CollapsibleSection title="Specifications" defaultOpen>
+              <SpecsTable specifications={specifications} />
+            </CollapsibleSection>
+          )}
+
+          {/* ── Description ── */}
+          {!!product.description && (
+            <CollapsibleSection title="Description" defaultOpen>
+              <Text style={styles.descText}>{product.description}</Text>
+            </CollapsibleSection>
+          )}
+
+          {/* ── Reviews ── */}
+          {reviews.length > 0 && (
+            <CollapsibleSection title="Reviews" badge={reviews.length} defaultOpen={reviews.length <= 3}>
+              <View style={styles.ratingOverview}>
+                <View style={styles.ratingBig}>
+                  <Text style={styles.ratingBigNum}>{(product.rating || 0).toFixed(1)}</Text>
+                  <StarRow rating={product.rating || 0} size={14} />
+                  <Text style={styles.ratingBigSub}>{reviews.length} review{reviews.length !== 1 ? 's' : ''}</Text>
+                </View>
+              </View>
+              {visibleReviews.map((review, idx) => <ReviewCard key={review._id || idx} review={review} />)}
+              {reviews.length > 3 && (
+                <TouchableOpacity style={styles.showMoreBtn} onPress={() => setShowAllReviews(v => !v)}>
+                  <Text style={styles.showMoreBtnText}>{showAllReviews ? 'Show less' : `Show all ${reviews.length} reviews`}</Text>
+                </TouchableOpacity>
+              )}
+            </CollapsibleSection>
+          )}
+
+          {/* ── Vendor Actions ── */}
+          <View style={styles.actionsSection}>
+            <TouchableOpacity
+              style={styles.editListingBtn}
+              onPress={() => navigation.navigate('UpdateProduct', { productId: product._id || productId })}
+              activeOpacity={0.88}
+            >
+              <Ionicons name="create-outline" size={20} color="#fff" />
+              <Text style={styles.editListingBtnText}>Edit Listing</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.deleteListingBtn}
+              onPress={handleDelete}
+              disabled={deleting}
+              activeOpacity={0.85}
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color="#E53935" />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={20} color="#E53935" />
+                  <Text style={styles.deleteListingBtnText}>Delete</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
-        )}
-
-        {product.numReviews > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Reviews</Text>
-            <View style={styles.reviewSummary}>
-              <Ionicons name="star" size={20} color="#F9A825" />
-              <Text style={styles.ratingText}>{product.rating?.toFixed(1) || '0.0'}</Text>
-              <Text style={styles.reviewCount}>({product.numReviews} review{product.numReviews !== 1 ? 's' : ''})</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.editBtn}
-            onPress={() => navigation.navigate('UpdateProduct', { productId: product._id || productId })}
-            activeOpacity={0.88}
-          >
-            <Ionicons name="create-outline" size={20} color="#fff" />
-            <Text style={styles.editBtnText}>Edit Listing</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={handleDelete}
-            disabled={deleting}
-            activeOpacity={0.85}
-          >
-            {deleting ? (
-              <ActivityIndicator size="small" color="#C62828" />
-            ) : (
-              <>
-                <Ionicons name="trash-outline" size={20} color="#C62828" />
-                <Text style={styles.deleteBtnText}>Delete</Text>
-              </>
-            )}
-          </TouchableOpacity>
         </View>
 
         <View style={{ height: 40 }} />
-      </ScrollView>
-    </SafeAreaView>
+      </Animated.ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F5F2' },
-  header: {
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 14, gap: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
-  },
-  backBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  headerCenter: { flex: 1 },
-  headerTitle: { fontSize: 19, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3 },
-  headerEditBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scroll: { paddingBottom: 20 },
+  fullScreen:  { flex: 1, backgroundColor: '#F7F7F7' },
+  floatingNav: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 },
+  minimalNav:  { paddingHorizontal: 16, paddingVertical: 10 },
+  navRight:    { flexDirection: 'row', gap: 6 },
+  navIconBtn:  { width: 42, height: 42, borderRadius: 21, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 6, elevation: 4 },
+  scrollContent: { paddingBottom: 24 },
 
-  imageGallery: { marginBottom: 4 },
-  mainImageWrap: {
-    width: '100%', height: 280,
-    backgroundColor: '#E0E0E0', position: 'relative',
-  },
-  mainImage: { width: '100%', height: '100%' },
-  negotiableBadge: {
-    position: 'absolute', top: 12, left: 12,
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14 },
+  loadingText: { marginTop: 14, fontSize: 14, color: '#9E9E9E', fontWeight: '500' },
+
+  conditionOverlay: { position: 'absolute', top: Platform.OS === 'ios' ? 54 : 44, left: 16, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  conditionOverlayText: { fontSize: 11, fontWeight: '700' },
+
+  discountRibbon: {
+    position: 'absolute', top: Platform.OS === 'ios' ? 54 : 44, right: 16, zIndex: 5,
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(249,115,22,0.9)',
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+    backgroundColor: '#C62828', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
   },
-  negotiableText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  imageCounter: {
-    position: 'absolute', bottom: 12, right: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
-  },
-  imageCounterText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  thumbStrip: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
-  thumbWrap: {
-    width: 56, height: 56, borderRadius: 10,
-    borderWidth: 2, borderColor: 'transparent', overflow: 'hidden',
-  },
-  thumbActive: { borderColor: '#2E7D32' },
-  thumb: { width: '100%', height: '100%' },
+  discountRibbonText: { color: '#fff', fontSize: 11, fontWeight: '800' },
 
-  titleSection: {
-    backgroundColor: '#fff', marginHorizontal: 12, marginTop: 12,
-    borderRadius: 16, padding: 16,
-  },
-  titleRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'flex-start', gap: 10, marginBottom: 6,
-  },
-  productName: { fontSize: 20, fontWeight: '800', color: '#1A1A1A', flex: 1 },
-  conditionBadge: {
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: 10,
-  },
-  conditionText: { fontSize: 11, fontWeight: '700' },
-  brandText: { fontSize: 13, color: '#888', fontWeight: '500', marginBottom: 8 },
-  priceRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-  },
-  price: { fontSize: 24, fontWeight: '800', color: '#1B5E20' },
-  negotiableChip: {
-    backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 10, borderWidth: 1, borderColor: '#FFB74D',
-  },
+  urgentTag: { position: 'absolute', top: Platform.OS === 'ios' ? 54 : 44, right: 16, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E53935', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  urgentTagText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  oosOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 4, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
+  oosBadge:   { alignItems: 'center', gap: 6 },
+  oosText:    { color: '#fff', fontSize: 18, fontWeight: '800' },
+
+  infoPanel:     { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: 6, paddingBottom: 8 },
+  tagsScroll:    { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 4, gap: 8 },
+  tag:           { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20 },
+  tagText:       { fontSize: 11, fontWeight: '700' },
+  titleSection:  { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 16 },
+  productName:   { fontSize: 22, fontWeight: '800', color: '#1A1A1A', lineHeight: 30, letterSpacing: -0.3, marginBottom: 4 },
+  brandText:     { fontSize: 13, color: '#888', fontWeight: '500', marginBottom: 10 },
+  metaCaptionRow: { flexDirection: 'row', gap: 14, marginTop: 8 },
+  metaCaptionItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaCaptionText: { fontSize: 11.5, color: '#BDBDBD', fontWeight: '500' },
+
+  // Regular price row
+  priceRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6, marginTop: 4 },
+  price:         { fontSize: 28, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.5 },
+  negotiableChip:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: '#FFCC80' },
   negotiableChipText: { fontSize: 11, fontWeight: '700', color: '#E65100' },
 
-  card: {
-    backgroundColor: '#fff', marginHorizontal: 12, marginTop: 10,
-    borderRadius: 16, padding: 16,
+  // Discount price block
+  priceBlockDiscount: { marginTop: 4 },
+  priceRowDiscount: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  savingsBadge: {
+    backgroundColor: '#C62828', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4,
   },
-  sectionTitle: { fontSize: 14, fontWeight: '800', color: '#1A1A1A', marginBottom: 12 },
+  savingsBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  wasRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  wasPrice: { fontSize: 15, color: '#9E9E9E', fontWeight: '600', textDecorationLine: 'line-through' },
+  youSave:  { fontSize: 12.5, color: '#2E7D32', fontWeight: '700' },
 
-  infoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  infoItem: {
-    width: '48%',
-    alignItems: 'center',
-    backgroundColor: '#F8FAF8',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#EEF2EE',
-  },
-  infoIcon: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontSize: 10,
-    color: '#999',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    textAlign: 'center',
-    textTransform: 'capitalize',
-  },
+  availBanner:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 24, marginBottom: 16, backgroundColor: '#F1F8F3', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: '#C8E6C9' },
+  availBannerOos:  { backgroundColor: '#FFEBEE', borderColor: '#FFCDD2' },
+  availBannerLow:  { backgroundColor: '#FFF8E1', borderColor: '#FFE082' },
+  availDot:        { width: 8, height: 8, borderRadius: 4 },
+  availText:       { fontSize: 13, fontWeight: '600', flex: 1 },
 
-  statsRow: {
-    flexDirection: 'row', alignItems: 'center',
-    marginBottom: 12,
+  // Minimal info rows
+  infoRowsWrap: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#F0F0F0' },
+  infoRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 12, paddingHorizontal: 14,
+    borderBottomWidth: 1, borderBottomColor: '#F5F5F5',
   },
-  stat: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 20, fontWeight: '800', color: '#1B5E20' },
-  statLabel: { fontSize: 11, color: '#999', fontWeight: '500', marginTop: 2 },
-  statDivider: { width: 1, height: 30, backgroundColor: '#E8E8E8' },
-  statusBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 10, borderRadius: 10,
-  },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontSize: 13, fontWeight: '700' },
+  infoRowLast: { borderBottomWidth: 0 },
+  infoRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  infoRowLabel: { fontSize: 13, color: '#757575', fontWeight: '500' },
+  infoRowValue: { fontSize: 13, fontWeight: '700', color: '#1A1A1A', textTransform: 'capitalize', maxWidth: '55%', textAlign: 'right' },
 
-  description: { fontSize: 14, color: '#555', lineHeight: 22 },
+  descText: { fontSize: 15, lineHeight: 24, color: '#555' },
 
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: {
-    backgroundColor: '#F1F8F3', paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 20, borderWidth: 1, borderColor: '#C8E6C9',
-  },
-  tagText: { fontSize: 12, fontWeight: '600', color: '#2E7D32' },
+  ratingOverview: { flexDirection: 'row', gap: 20, marginBottom: 16, paddingBottom: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EBEBEB' },
+  ratingBig:      { alignItems: 'center' },
+  ratingBigNum:   { fontSize: 40, fontWeight: '900', color: '#1A1A1A', lineHeight: 46 },
+  ratingBigSub:   { fontSize: 11, color: '#9E9E9E', marginTop: 4 },
+  showMoreBtn:     { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: '#C8E6C9', marginTop: 4 },
+  showMoreBtnText: { fontSize: 13, fontWeight: '700', color: '#2E7D32' },
 
-  reviewSummary: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ratingText: { fontSize: 18, fontWeight: '800', color: '#1A1A1A' },
-  reviewCount: { fontSize: 13, color: '#999', fontWeight: '500' },
-
-  actions: {
+  // Vendor actions
+  actionsSection: {
     flexDirection: 'row', gap: 12,
-    marginHorizontal: 12, marginTop: 20,
+    paddingHorizontal: 24, paddingTop: 20,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EBEBEB',
   },
-  editBtn: {
+  editListingBtn: {
     flex: 1,
     backgroundColor: '#1B5E20', paddingVertical: 16,
     borderRadius: 16, flexDirection: 'row',
@@ -500,13 +782,14 @@ const styles = StyleSheet.create({
     shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
   },
-  editBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
-  deleteBtn: {
+  editListingBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  deleteListingBtn: {
     width: 56, height: 56, borderRadius: 16,
     backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#FFCDD2',
     justifyContent: 'center', alignItems: 'center',
+    gap: 2,
   },
-  deleteBtnText: { fontSize: 11, fontWeight: '700', color: '#C62828', marginTop: 2 },
+  deleteListingBtnText: { fontSize: 10, fontWeight: '700', color: '#C62828' },
 });
 
 export default VendorProductDetailScreen;

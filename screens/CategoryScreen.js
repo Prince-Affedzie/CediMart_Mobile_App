@@ -218,6 +218,19 @@ const ProductCard = React.memo(({ item, onPress }) => {
   const isLowStock = isAvailable && (item.countInStock ?? 0) <= 3;
   const images = item.images?.length > 0 ? item.images : [PLACEHOLDER_IMAGE];
 
+  // ─── Discount calculations ──────────────────────────────────────────────
+  const discountInfo = item.discountInfo;
+  const hasActiveDiscount = discountInfo?.isOnSale && 
+    (!discountInfo.discountStartDate || new Date(discountInfo.discountStartDate) <= Date.now()) &&
+    (!discountInfo.discountEndDate || new Date(discountInfo.discountEndDate) >= Date.now());
+  
+  const currentPrice = Number(item.price);
+  const originalPrice = discountInfo?.originalPrice;
+  const discountPercentage = hasActiveDiscount 
+    ? (discountInfo?.discountPercentage ?? (originalPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0))
+    : 0;
+  const savingsAmount = hasActiveDiscount && originalPrice ? originalPrice - currentPrice : 0;
+
   return (
     <TouchableOpacity
       style={styles.card}
@@ -230,6 +243,14 @@ const ProductCard = React.memo(({ item, onPress }) => {
           style={styles.cardImage}
           resizeMode="cover"
         />
+
+        {/* Discount badge - shows first if active and product is available */}
+        {hasActiveDiscount && isAvailable && (
+          <View style={styles.discountBadge}>
+            <Ionicons name="pricetag" size={9} color="#FFFFFF" />
+            <Text style={styles.discountBadgeText}>-{discountPercentage}% OFF</Text>
+          </View>
+        )}
 
         {/* Condition badge */}
         <View style={[styles.conditionBadge, { backgroundColor: condition.bg }]}>
@@ -283,14 +304,46 @@ const ProductCard = React.memo(({ item, onPress }) => {
         )}
 
         <View style={styles.cardFooter}>
-          <View>
-            <Text style={styles.cardPrice}>GH₵ {item.price?.toFixed(2)}</Text>
+          <View style={styles.cardPriceSection}>
+            {/* Price display with discount treatment */}
+            {hasActiveDiscount ? (
+              <View style={styles.cardPriceStack}>
+                <View style={styles.cardPriceRow}>
+                  <Text style={styles.cardPrice}>GH₵ {currentPrice.toFixed(2)}</Text>
+                  <View style={styles.cardDiscountPill}>
+                    <Text style={styles.cardDiscountPillText}>-{discountPercentage}%</Text>
+                  </View>
+                </View>
+                {originalPrice && (
+                  <Text style={styles.cardOriginalPrice}>
+                    GH₵ {originalPrice.toFixed(2)}
+                  </Text>
+                )}
+                {savingsAmount > 0 && (
+                  <Text style={styles.cardSavingsText}>
+                    Save GH₵ {savingsAmount.toFixed(2)}
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.cardPrice}>GH₵ {currentPrice.toFixed(2)}</Text>
+            )}
+            
             {item.vendor?.name && (
               <Text style={styles.cardVendor} numberOfLines={1}>@{item.vendor.name}</Text>
             )}
           </View>
 
-          
+          {/* Favorite/Save button or rating */}
+          {(item.rating > 0 || item.numReviews > 0) && (
+            <View style={styles.cardRatingRow}>
+              <Ionicons name="star" size={12} color="#F9A825" />
+              <Text style={styles.cardRatingText}>
+                {item.rating?.toFixed(1) || '0.0'}
+                {item.numReviews > 0 && ` (${item.numReviews})`}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -1181,6 +1234,95 @@ const styles = StyleSheet.create({
     maxWidth: width - 60,
   },
   toastText: { fontSize: 13, color: 'rgba(255,255,255,0.92)', flex: 1 },
+  discountBadge: {
+  position: 'absolute',
+  top: 8,
+  left: 8,
+  backgroundColor: '#C62828',
+  paddingHorizontal: 8,
+  paddingVertical: 4,
+  borderRadius: 6,
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 4,
+  zIndex: 3,
+},
+discountBadgeText: {
+  color: '#FFFFFF',
+  fontSize: 10,
+  fontWeight: '800',
+  letterSpacing: 0.3,
+},
+
+// ─── Price section with discount ─────────────────────────────────────────
+cardPriceSection: {
+  flex: 1,
+},
+cardPriceStack: {
+  gap: 3,
+},
+cardPriceRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+},
+cardOriginalPrice: {
+  fontSize: 11,
+  color: '#9E9E9E',
+  fontWeight: '600',
+  textDecorationLine: 'line-through',
+},
+cardDiscountPill: {
+  backgroundColor: '#FFEBEE',
+  paddingHorizontal: 6,
+  paddingVertical: 2,
+  borderRadius: 4,
+  borderWidth: 1,
+  borderColor: '#FFCDD2',
+},
+cardDiscountPillText: {
+  fontSize: 9,
+  fontWeight: '800',
+  color: '#C62828',
+},
+cardSavingsText: {
+  fontSize: 10,
+  color: '#2E7D32',
+  fontWeight: '700',
+},
+
+// ─── Tags row ───────────────────────────────────────────────────────────
+cardTagsRow: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: 4,
+  marginBottom: 8,
+},
+cardTag: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 3,
+  paddingHorizontal: 6,
+  paddingVertical: 2,
+  borderRadius: 4,
+},
+cardTagText: {
+  fontSize: 8.5,
+  fontWeight: '700',
+},
+
+// ─── Rating row ─────────────────────────────────────────────────────────
+cardRatingRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 2,
+  marginTop: 4,
+},
+cardRatingText: {
+  fontSize: 11,
+  color: '#757575',
+  fontWeight: '600',
+},
 });
 
 export default CategoryScreen;

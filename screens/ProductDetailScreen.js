@@ -1,5 +1,5 @@
 // src/screens/main/ProductDetailScreen.js
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -110,12 +110,14 @@ const starStyles = StyleSheet.create({
   label: { marginLeft: 6, color: '#757575', fontWeight: '500' },
 });
 
-// ─── Info Grid Item ──────────────────────────────────────────────────────────
-const InfoGridItem = ({ icon, label, value }) => (
-  <View style={styles.infoItem}>
-    <View style={styles.infoIcon}><Ionicons name={icon} size={18} color="#2E7D32" /></View>
-    <Text style={styles.infoLabel}>{label}</Text>
-    <Text style={styles.infoValue} numberOfLines={2}>{value || '—'}</Text>
+// ─── Info Row (minimal label/value line) ─────────────────────────────────────
+const InfoRow = ({ icon, label, value, isLast }) => (
+  <View style={[styles.infoRow, isLast && styles.infoRowLast]}>
+    <View style={styles.infoRowLeft}>
+      <Ionicons name={icon} size={15} color="#9E9E9E" />
+      <Text style={styles.infoRowLabel}>{label}</Text>
+    </View>
+    <Text style={styles.infoRowValue} numberOfLines={2}>{value || '—'}</Text>
   </View>
 );
 
@@ -151,19 +153,14 @@ const reviewStyles = StyleSheet.create({
   comment: { fontSize: 13, color: '#555', lineHeight: 20 },
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// IMAGE GALLERY  — swiping is unmistakably obvious
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── IMAGE GALLERY (unchanged) ───────────────────────────────────────────────
 const ImageGallery = ({ images, activeIndex, onScroll }) => {
   const flatListRef = useRef(null);
   const IMG_H = width * 0.88;
-
-  // Animated hint: a brief left-right nudge on mount when there are multiple images
   const nudgeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (images.length > 1) {
-      // Wait 900 ms then do a gentle nudge to signal swipeability
       const timer = setTimeout(() => {
         Animated.sequence([
           Animated.timing(nudgeAnim, { toValue: -18, duration: 260, useNativeDriver: true }),
@@ -176,7 +173,6 @@ const ImageGallery = ({ images, activeIndex, onScroll }) => {
 
   return (
     <View style={galS.wrapper}>
-      {/* ── Swipeable FlatList ── */}
       <Animated.View style={{ transform: [{ translateX: nudgeAnim }] }}>
         <FlatList
           ref={flatListRef}
@@ -194,7 +190,6 @@ const ImageGallery = ({ images, activeIndex, onScroll }) => {
         />
       </Animated.View>
 
-      {/* ── "Swipe to see more" label — only shown when > 1 image ── */}
       {images.length > 1 && activeIndex === 0 && (
         <View style={galS.swipeHint}>
           <Ionicons name="swap-horizontal-outline" size={13} color="#fff" />
@@ -202,14 +197,10 @@ const ImageGallery = ({ images, activeIndex, onScroll }) => {
         </View>
       )}
 
-      {/* ── Left / Right edge arrows ── */}
       {images.length > 1 && activeIndex > 0 && (
         <TouchableOpacity
           style={[galS.arrowBtn, galS.arrowLeft]}
-          onPress={() => {
-            const prev = activeIndex - 1;
-            flatListRef.current?.scrollToIndex({ index: prev, animated: true });
-          }}
+          onPress={() => { const prev = activeIndex - 1; flatListRef.current?.scrollToIndex({ index: prev, animated: true }); }}
           activeOpacity={0.8}
         >
           <Ionicons name="chevron-back" size={20} color="#fff" />
@@ -218,17 +209,13 @@ const ImageGallery = ({ images, activeIndex, onScroll }) => {
       {images.length > 1 && activeIndex < images.length - 1 && (
         <TouchableOpacity
           style={[galS.arrowBtn, galS.arrowRight]}
-          onPress={() => {
-            const next = activeIndex + 1;
-            flatListRef.current?.scrollToIndex({ index: next, animated: true });
-          }}
+          onPress={() => { const next = activeIndex + 1; flatListRef.current?.scrollToIndex({ index: next, animated: true }); }}
           activeOpacity={0.8}
         >
           <Ionicons name="chevron-forward" size={20} color="#fff" />
         </TouchableOpacity>
       )}
 
-      {/* ── Counter pill top-right: "2 / 5" ── */}
       {images.length > 1 && (
         <View style={galS.counterPill}>
           <Ionicons name="images-outline" size={11} color="#fff" style={{ marginRight: 4 }} />
@@ -236,35 +223,20 @@ const ImageGallery = ({ images, activeIndex, onScroll }) => {
         </View>
       )}
 
-      {/* ── Dot indicator bottom-centre ── */}
       {images.length > 1 && (
         <View style={galS.dotsRow}>
           {images.map((_, i) => (
-            <TouchableOpacity
-              key={i}
-              onPress={() => flatListRef.current?.scrollToIndex({ index: i, animated: true })}
-              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            >
+            <TouchableOpacity key={i} onPress={() => flatListRef.current?.scrollToIndex({ index: i, animated: true })} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
               <View style={[galS.dot, i === activeIndex && galS.dotActive]} />
             </TouchableOpacity>
           ))}
         </View>
       )}
 
-      {/* ── Thumbnail strip (only when ≥ 2 images) ── */}
       {images.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={galS.thumbStrip}
-          style={galS.thumbStripWrap}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={galS.thumbStrip} style={galS.thumbStripWrap}>
           {images.map((uri, i) => (
-            <TouchableOpacity
-              key={i}
-              onPress={() => flatListRef.current?.scrollToIndex({ index: i, animated: true })}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity key={i} onPress={() => flatListRef.current?.scrollToIndex({ index: i, animated: true })} activeOpacity={0.8}>
               <View style={[galS.thumb, i === activeIndex && galS.thumbActive]}>
                 <Image source={{ uri }} style={galS.thumbImg} resizeMode="cover" />
                 {i === activeIndex && <View style={galS.thumbActiveBorder} />}
@@ -278,97 +250,170 @@ const ImageGallery = ({ images, activeIndex, onScroll }) => {
 };
 
 const galS = StyleSheet.create({
-  wrapper:    { backgroundColor: '#E8E8E8' },
-
-  // Swipe hint
+  wrapper: { backgroundColor: '#E8E8E8' },
   swipeHint: {
-    position: 'absolute',
-    bottom: 76,   // sits just above the dot row
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.48)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    position: 'absolute', bottom: 76, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.48)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
   },
   swipeHintText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-
-  // Arrow buttons
-  arrowBtn: {
-    position: 'absolute',
-    top: '40%',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  arrowBtn: { position: 'absolute', top: '40%', width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.38)', justifyContent: 'center', alignItems: 'center' },
   arrowLeft:  { left: 12 },
   arrowRight: { right: 12 },
-
-  // Counter pill
-  counterPill: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 54 : 44,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.42)',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
+  counterPill: { position: 'absolute', top: Platform.OS === 'ios' ? 54 : 44, right: 16, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.42)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
   counterText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-
-  // Dots
-  dotsRow: {
-    position: 'absolute',
-    bottom: 58,   // just above thumbnails
-    alignSelf: 'center',
-    flexDirection: 'row',
-    gap: 5,
-  },
+  dotsRow: { position: 'absolute', bottom: 58, alignSelf: 'center', flexDirection: 'row', gap: 5 },
   dot:       { width: 7,  height: 7,  borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.45)' },
   dotActive: { width: 22, height: 7,  borderRadius: 4, backgroundColor: '#fff' },
-
-  // Thumbnail strip
-  thumbStripWrap: {
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  thumbStrip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  thumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    opacity: 0.65,
-  },
-  thumbActive: {
-    opacity: 1,
-    borderColor: '#fff',
-  },
+  thumbStripWrap: { backgroundColor: 'rgba(0,0,0,0.55)', position: 'absolute', bottom: 0, left: 0, right: 0 },
+  thumbStrip: { paddingHorizontal: 14, paddingVertical: 8, gap: 8, flexDirection: 'row', alignItems: 'center' },
+  thumb: { width: 48, height: 48, borderRadius: 10, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent', opacity: 0.65 },
+  thumbActive: { opacity: 1, borderColor: '#fff' },
   thumbImg: { width: '100%', height: '100%' },
-  thumbActiveBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#fff',
+  thumbActiveBorder: { ...StyleSheet.absoluteFillObject, borderRadius: 8, borderWidth: 2, borderColor: '#fff' },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DISCOUNT / SAVINGS BLOCK  — Amazon/Jumia style price treatment
+// ─────────────────────────────────────────────────────────────────────────────
+const isDiscountActive = (discountInfo) => {
+  if (!discountInfo?.isOnSale) return false;
+  const now = Date.now();
+  const startsOk = !discountInfo.discountStartDate || new Date(discountInfo.discountStartDate).getTime() <= now;
+  const endsOk   = !discountInfo.discountEndDate   || new Date(discountInfo.discountEndDate).getTime()   >= now;
+  return startsOk && endsOk;
+};
+
+const DiscountCountdown = ({ endDate }) => {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    if (!endDate) return;
+    const tick = () => {
+      const diff = new Date(endDate).getTime() - Date.now();
+      if (diff <= 0) { setTimeLeft(null); return; }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setTimeLeft(d > 0 ? `${d}d ${h}h left` : h > 0 ? `${h}h ${m}m left` : `${m}m left`);
+    };
+    tick();
+    const interval = setInterval(tick, 60000);
+    return () => clearInterval(interval);
+  }, [endDate]);
+
+  if (!timeLeft) return null;
+  return (
+    <View style={dS.countdown}>
+      <Ionicons name="time-outline" size={11} color="#C62828" />
+      <Text style={dS.countdownText}>Deal ends in {timeLeft}</Text>
+    </View>
+  );
+};
+
+const dS = StyleSheet.create({
+  countdown: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#FFEBEE', alignSelf: 'flex-start',
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, marginTop: 6,
   },
+  countdownText: { fontSize: 11, fontWeight: '700', color: '#C62828' },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VARIATION SELECTOR  — e.g. Size, Color, Flavor
+// ─────────────────────────────────────────────────────────────────────────────
+const VariationSelector = ({ variations, selected, onSelect }) => {
+  if (!variations?.length) return null;
+
+  return (
+    <View style={vS.wrap}>
+      {variations.map((variation, vIdx) => (
+        <View key={vIdx} style={vS.group}>
+          <Text style={vS.groupLabel}>
+            {variation.type || 'Option'}
+            {selected[variation.type] ? `:  ${selected[variation.type]}` : ''}
+          </Text>
+          <View style={vS.optionsRow}>
+            {variation.options?.map((opt, oIdx) => {
+              const isActive  = selected[variation.type] === opt.name;
+              const outOfStock = (opt.countInStock ?? 0) <= 0;
+              return (
+                <TouchableOpacity
+                  key={oIdx}
+                  style={[
+                    vS.option,
+                    isActive && vS.optionActive,
+                    outOfStock && vS.optionDisabled,
+                  ]}
+                  onPress={() => !outOfStock && onSelect(variation.type, opt.name)}
+                  disabled={outOfStock}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    vS.optionText,
+                    isActive && vS.optionTextActive,
+                    outOfStock && vS.optionTextDisabled,
+                  ]}>
+                    {opt.name}
+                  </Text>
+                  {outOfStock && <Text style={vS.optionOosText}>Sold out</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+const vS = StyleSheet.create({
+  wrap: { paddingHorizontal: 24, paddingBottom: 16, gap: 14 },
+  group: {},
+  groupLabel: { fontSize: 13, fontWeight: '700', color: '#1A1A1A', marginBottom: 9 },
+  optionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  option: {
+    paddingHorizontal: 15, paddingVertical: 9, borderRadius: 11,
+    backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: '#F0F0F0',
+  },
+  optionActive: { backgroundColor: '#E8F5E9', borderColor: '#2E7D32' },
+  optionDisabled: { backgroundColor: '#FAFAFA', borderColor: '#F0F0F0', opacity: 0.55 },
+  optionText: { fontSize: 13, fontWeight: '600', color: '#424242' },
+  optionTextActive: { color: '#1B5E20', fontWeight: '800' },
+  optionTextDisabled: { color: '#BDBDBD', textDecorationLine: 'line-through' },
+  optionOosText: { fontSize: 9, color: '#BDBDBD', marginTop: 1, textAlign: 'center' },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPECIFICATIONS TABLE  — clean key/value rows like Amazon's "Product information"
+// ─────────────────────────────────────────────────────────────────────────────
+const SpecsTable = ({ specifications }) => {
+  // specifications comes through as a plain object once JSON-serialized from a Mongoose Map
+  const entries = specifications ? Object.entries(specifications).filter(([, v]) => v) : [];
+  if (entries.length === 0) return null;
+
+  return (
+    <View style={spS.table}>
+      {entries.map(([key, value], i) => (
+        <View key={key} style={[spS.row, i % 2 === 1 && spS.rowAlt]}>
+          <Text style={spS.key}>{key}</Text>
+          <Text style={spS.value} numberOfLines={3}>{value}</Text>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+const spS = StyleSheet.create({
+  table: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#F0F0F0' },
+  row: {
+    flexDirection: 'row', paddingVertical: 11, paddingHorizontal: 14,
+    backgroundColor: '#fff',
+  },
+  rowAlt: { backgroundColor: '#FAFAFA' },
+  key:   { width: '40%', fontSize: 12.5, color: '#9E9E9E', fontWeight: '600' },
+  value: { flex: 1, fontSize: 12.5, color: '#1A1A1A', fontWeight: '600' },
 });
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
@@ -376,6 +421,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const { productId, product: initialProduct } = route.params;
   const [product, setProduct] = useState(initialProduct || null);
   const [relatedProducts, setRelatedProducts] = useState([]);
+  const [vendorProducts, setVendorProducts] = useState([]);
   const [loading, setLoading] = useState(!initialProduct);
   const [error, setError] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -385,6 +431,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [selectedVariations, setSelectedVariations] = useState({});
 
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
@@ -393,8 +440,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!initialProduct) { loadProduct(); }
-    else { setProduct(initialProduct); setRelatedProducts(initialProduct.relatedProducts || []); animateIn(); }
+    loadProduct();
     checkIfFavorite();
   }, [productId]);
 
@@ -406,12 +452,40 @@ const ProductDetailScreen = ({ route, navigation }) => {
       const response = await productService.getProductById(productId);
       if (response.status === 200) {
         const data = response.data?.data?.product || response.data?.data || response.data;
+        const related = response.data?.data?.relatedProducts || [];
+        const vendorProds = response.data?.data?.vendorProducts || [];
+
         setProduct(data);
-        setRelatedProducts(data?.relatedProducts || []);
+        setRelatedProducts(related);
+        setVendorProducts(vendorProds);
+        // Pre-select the first option of each variation by default
+        if (data?.variations?.length) {
+          const defaults = {};
+          data.variations.forEach(v => {
+            const firstInStock = v.options?.find(o => (o.countInStock ?? 0) > 0) || v.options?.[0];
+            if (firstInStock) defaults[v.type] = firstInStock.name;
+          });
+          setSelectedVariations(defaults);
+        }
         animateIn();
-      } else setError('Failed to load product');
-    } catch { setError('Failed to load product details'); }
-    finally { setLoading(false); }
+      } else {
+        if (initialProduct) {
+          setProduct(initialProduct);
+          setRelatedProducts(initialProduct.relatedProducts || []);
+          animateIn();
+        } else {
+          setError('Failed to load product');
+        }
+      }
+    } catch (err) {
+      if (initialProduct) {
+        setProduct(initialProduct);
+        setRelatedProducts(initialProduct.relatedProducts || []);
+        animateIn();
+      } else {
+        setError('Failed to load product details');
+      }
+    } finally { setLoading(false); }
   };
 
   const checkIfFavorite = () => {
@@ -439,7 +513,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     if (!product) return;
     if (!isAvailable) return Alert.alert('Sold Out', 'This item is no longer available.');
     if (!isAuthenticated) {
-      return Alert.alert('Login Recommended', 'Sign in to add and sync your cart?',  [{ text: 'Okay' }]);
+      return Alert.alert('Login Recommended', 'Sign in to add and sync your cart?', [{ text: 'Okay' }]);
     }
     await performAddToCart();
   };
@@ -481,6 +555,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
     if (idx !== activeImageIndex) setActiveImageIndex(idx);
   };
 
+  const handleVariationSelect = (type, name) => {
+    setSelectedVariations(prev => ({ ...prev, [type]: name }));
+  };
+
   // ── Loading ──
   if (loading) {
     return (
@@ -520,31 +598,45 @@ const ProductDetailScreen = ({ route, navigation }) => {
     );
   }
 
-  const images       = product.images?.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
-  const conditionInfo = CONDITION_CONFIG[product.condition] || CONDITION_CONFIG['good'];
-  const isAvailable  = product.isAvailable && (product.countInStock ?? 0) > 0;
-  const stockCount   = product.countInStock ?? 0;
-  const isLowStock   = isAvailable && stockCount > 0 && stockCount <= 3;
-  const lineTotal    = (Number(product.price) * quantity).toFixed(2);
-  const reviews      = product.reviews || [];
+  // ── Derived values ───────────────────────────────────────────────────────
+  const images        = product.images?.length > 0 ? product.images : [PLACEHOLDER_IMAGE];
+  const conditionInfo  = CONDITION_CONFIG[product.condition] || CONDITION_CONFIG['good'];
+  const isAvailable    = product.isAvailable && (product.countInStock ?? 0) > 0;
+  const stockCount     = product.countInStock ?? 0;
+  const isLowStock     = isAvailable && stockCount > 0 && stockCount <= 3;
+  const reviews        = product.reviews || [];
   const visibleReviews = showAllReviews ? reviews : reviews.slice(0, 3);
 
+  // Discount calculations
+  const discount       = product.discountInfo;
+  const discountActive = isDiscountActive(discount);
+  const originalPrice  = discount?.originalPrice;
+  const currentPrice   = Number(product.price);
+  const savingsAmount  = discountActive && originalPrice ? (originalPrice - currentPrice) : 0;
+  const savingsPct     = discountActive
+    ? (discount?.discountPercentage ?? (originalPrice ? Math.round((savingsAmount / originalPrice) * 100) : 0))
+    : 0;
+
+  const lineTotal = (currentPrice * quantity).toFixed(2);
+
+  // Specs — Mongoose Map serializes to a plain object over JSON
+  const specifications = product.specifications && Object.keys(product.specifications).length > 0
+    ? product.specifications
+    : null;
+
   const infoItems = [
-    { icon: 'grid-outline',       label: 'Category',    value: product.category?.replace(/-/g, ' ') },
+    { icon: 'grid-outline',       label: 'Category',    value: product.category?.replace(/-/g, ' ').replace(/ and /g, ' & ') },
     product.subcategory && { icon: 'layers-outline', label: 'Subcategory', value: product.subcategory?.replace(/-/g, ' ') },
     { icon: 'school-outline',     label: 'Campus',      value: CAMPUS_LABELS[product.campus] || product.campus },
     { icon: 'location-outline',   label: 'Area',        value: product.location?.campusArea },
     product.location?.hostel && { icon: 'home-outline', label: 'Hostel / Hall', value: product.location.hostel },
     product.brand && { icon: 'bookmark-outline', label: 'Brand', value: product.brand },
-    { icon: 'eye-outline',        label: 'Views',       value: `${product.views ?? 0}` },
-    { icon: 'heart-outline',      label: 'Saved',       value: `${product.favorites ?? 0} people` },
   ].filter(Boolean);
 
   return (
     <View style={styles.fullScreen}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* ── Floating nav ── */}
       <SafeAreaView style={styles.floatingNav} edges={['top']}>
         <TouchableOpacity style={styles.navIconBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
@@ -570,26 +662,27 @@ const ProductDetailScreen = ({ route, navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── IMAGE GALLERY ── */}
+        {/* ── Image gallery (unchanged) ── */}
         <View>
-          <ImageGallery
-            images={images}
-            activeIndex={activeImageIndex}
-            onScroll={onImageScroll}
-          />
+          <ImageGallery images={images} activeIndex={activeImageIndex} onScroll={onImageScroll} />
 
-          {/* Condition badge — lives outside ImageGallery so it overlays the image */}
           <View style={[styles.conditionOverlay, { backgroundColor: conditionInfo.bg }]}>
             <Ionicons name={conditionInfo.icon} size={11} color={conditionInfo.text} />
             <Text style={[styles.conditionOverlayText, { color: conditionInfo.text }]}>{conditionInfo.label}</Text>
           </View>
 
-          {product.tags?.includes('urgent-sale') && (
+          {/* Discount ribbon takes priority position if active, else urgent tag */}
+          {discountActive ? (
+            <View style={styles.discountRibbon}>
+              <Ionicons name="pricetags" size={11} color="#fff" />
+              <Text style={styles.discountRibbonText}>{savingsPct}% OFF</Text>
+            </View>
+          ) : product.tags?.includes('urgent-sale') ? (
             <View style={styles.urgentTag}>
               <Ionicons name="flash" size={11} color="#fff" />
               <Text style={styles.urgentTagText}>Urgent Sale</Text>
             </View>
-          )}
+          ) : null}
 
           {!isAvailable && (
             <View style={styles.oosOverlay}>
@@ -617,22 +710,87 @@ const ProductDetailScreen = ({ route, navigation }) => {
             </ScrollView>
           )}
 
+          {/* ── Title block ── */}
           <View style={styles.titleSection}>
             <Text style={styles.productName}>{product.name}</Text>
             {product.brand && <Text style={styles.brandText}>by {product.brand}</Text>}
-            <View style={styles.priceRow}>
-              <Text style={styles.price}>GH₵ {product.price?.toFixed(2)}</Text>
-              {product.negotiable && (
-                <View style={styles.negotiableChip}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={11} color="#E65100" />
-                  <Text style={styles.negotiableChipText}>Negotiable</Text>
+
+            {/* ───────────────────────────────────────────────────────────────
+                PRICE BLOCK — Amazon/Jumia style
+                Strikethrough original price + current price + savings badge
+                ─────────────────────────────────────────────────────────────── */}
+            {discountActive ? (
+              <View style={styles.priceBlockDiscount}>
+                <View style={styles.priceRowDiscount}>
+                  <Text style={styles.price}>GH₵ {currentPrice.toFixed(2)}</Text>
+                  {savingsPct > 0 && (
+                    <View style={styles.savingsBadge}>
+                      <Text style={styles.savingsBadgeText}>-{savingsPct}%</Text>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-            {(product.numReviews ?? 0) > 0 && <StarRow rating={product.rating || 0} count={product.numReviews || 0} />}
+                {originalPrice && (
+                  <View style={styles.wasRow}>
+                    <Text style={styles.wasPrice}>GH₵ {originalPrice.toFixed(2)}</Text>
+                    {savingsAmount > 0 && (
+                      <Text style={styles.youSave}>You save GH₵ {savingsAmount.toFixed(2)}</Text>
+                    )}
+                  </View>
+                )}
+                <DiscountCountdown endDate={discount?.discountEndDate} />
+                {discount?.couponEligible && (
+                  <View style={styles.couponHint}>
+                    <Ionicons name="ticket-outline" size={12} color="#1565C0" />
+                    <Text style={styles.couponHintText}>Eligible for coupon discounts</Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={styles.priceRow}>
+                <Text style={styles.price}>GH₵ {currentPrice.toFixed(2)}</Text>
+                {product.negotiable && (
+                  <View style={styles.negotiableChip}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={11} color="#E65100" />
+                    <Text style={styles.negotiableChipText}>Negotiable</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Negotiable chip also shown alongside discount, if both apply */}
+            {discountActive && product.negotiable && (
+              <View style={[styles.negotiableChip, { marginTop: 10, alignSelf: 'flex-start' }]}>
+                <Ionicons name="chatbubble-ellipses-outline" size={11} color="#E65100" />
+                <Text style={styles.negotiableChipText}>Negotiable</Text>
+              </View>
+            )}
+
+            {(product.numReviews ?? 0) > 0 && (
+              <View style={{ marginTop: 10 }}>
+                <StarRow rating={product.rating || 0} count={product.numReviews || 0} />
+              </View>
+            )}
+
+            {/* Minimal views/saved meta line */}
+            {((product.views ?? 0) > 0 || (product.favorites ?? 0) > 0) && (
+              <View style={styles.metaCaptionRow}>
+                {(product.views ?? 0) > 0 && (
+                  <View style={styles.metaCaptionItem}>
+                    <Ionicons name="eye-outline" size={12} color="#BDBDBD" />
+                    <Text style={styles.metaCaptionText}>{product.views} views</Text>
+                  </View>
+                )}
+                {(product.favorites ?? 0) > 0 && (
+                  <View style={styles.metaCaptionItem}>
+                    <Ionicons name="heart-outline" size={12} color="#BDBDBD" />
+                    <Text style={styles.metaCaptionText}>{product.favorites} saved</Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
 
-          {/* Stock banner */}
+          {/* ── Stock availability banner ── */}
           <View style={[styles.availBanner, !isAvailable && styles.availBannerOos, isLowStock && styles.availBannerLow]}>
             <View style={[styles.availDot, { backgroundColor: isAvailable ? (isLowStock ? '#FF8F00' : '#4CAF50') : '#E53935' }]} />
             <Text style={[styles.availText, { color: isAvailable ? (isLowStock ? '#FF6F00' : '#2E7D32') : '#C62828' }]}>
@@ -640,7 +798,14 @@ const ProductDetailScreen = ({ route, navigation }) => {
             </Text>
           </View>
 
-          {/* Quantity Stepper */}
+          {/* ── Variation selector (Size / Color / Flavor etc.) ── */}
+          <VariationSelector
+            variations={product.variations}
+            selected={selectedVariations}
+            onSelect={handleVariationSelect}
+          />
+
+          {/* ── Quantity Stepper ── */}
           {isAvailable && (
             <View style={styles.qtyRow}>
               <Text style={styles.qtyLabel}>Quantity</Text>
@@ -657,20 +822,36 @@ const ProductDetailScreen = ({ route, navigation }) => {
             </View>
           )}
 
-          {/* Product details */}
+          {/* ── Product Details (minimal label/value rows) ── */}
           <CollapsibleSection title="Product Details" defaultOpen>
-            <View style={styles.infoGrid}>
-              {infoItems.map((item, i) => <InfoGridItem key={i} icon={item.icon} label={item.label} value={item.value} />)}
+            <View style={styles.infoRowsWrap}>
+              {infoItems.map((item, i) => (
+                <InfoRow
+                  key={i}
+                  icon={item.icon}
+                  label={item.label}
+                  value={item.value}
+                  isLast={i === infoItems.length - 1}
+                />
+              ))}
             </View>
           </CollapsibleSection>
 
+          {/* ── Specifications table (only if present) ── */}
+          {specifications && (
+            <CollapsibleSection title="Specifications" defaultOpen>
+              <SpecsTable specifications={specifications} />
+            </CollapsibleSection>
+          )}
+
+          {/* ── Description ── */}
           {!!product.description && (
             <CollapsibleSection title="Description" defaultOpen>
               <Text style={styles.descText}>{product.description}</Text>
             </CollapsibleSection>
           )}
 
-          {/* Seller info */}
+          {/* ── Seller ── */}
           {product.vendor && (
             <CollapsibleSection title="Seller" defaultOpen>
               <TouchableOpacity
@@ -712,7 +893,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
             </CollapsibleSection>
           )}
 
-          {/* Reviews */}
+          {/* ── Reviews ── */}
           {reviews.length > 0 && (
             <CollapsibleSection title="Reviews" badge={reviews.length} defaultOpen={reviews.length <= 3}>
               <View style={styles.ratingOverview}>
@@ -731,7 +912,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
             </CollapsibleSection>
           )}
 
-          {/* Related listings */}
+          {/* ── Related listings ── */}
           {relatedProducts.length > 0 && (
             <View style={styles.relatedSection}>
               <Text style={styles.relatedTitle}>Similar Listings</Text>
@@ -753,29 +934,37 @@ const ProductDetailScreen = ({ route, navigation }) => {
               />
             </View>
           )}
+
+          {/* ── More from this seller ── */}
+          {vendorProducts.length > 0 && (
+            <View style={styles.relatedSection}>
+              <Text style={styles.relatedTitle}>More from this seller</Text>
+              <FlatList
+                data={vendorProducts}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={item => item._id || item.id || String(Math.random())}
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.relatedCard} onPress={() => handleRelatedProductPress(item)} activeOpacity={0.85}>
+                    <Image source={{ uri: item.images?.[0] || item.image || PLACEHOLDER_IMAGE }} style={styles.relatedImg} resizeMode="cover" />
+                    <View style={styles.relatedInfo}>
+                      <Text style={styles.relatedName} numberOfLines={2}>{item.name}</Text>
+                      <Text style={styles.relatedPrice}>GH₵ {Number(item.price).toFixed(2)}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+                contentContainerStyle={{ paddingLeft: 24, paddingRight: 8 }}
+              />
+            </View>
+          )}
         </View>
 
         <View style={{ height: 150 }} />
       </Animated.ScrollView>
 
-      {/* ──────────────────────────────────────────────────────────────────────
-          BOTTOM ACTION BAR  — Add to Cart + Call Seller only
-          ────────────────────────────────────────────────────────────────────── */}
+      {/* ── Bottom bar ── */}
       <View style={styles.bottomBar}>
         <SafeAreaView edges={['bottom']} style={styles.bottomBarInner}>
-          {/* Call seller button 
-          {product?.vendor?.phone && (
-            <TouchableOpacity
-              style={styles.callBtn}
-              onPress={handleContactSeller}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="call-outline" size={22} color="#2E7D32" />
-            </TouchableOpacity>
-          )}
-            */}
-
-          {/* Add to Cart — primary CTA */}
           <TouchableOpacity
             style={[styles.addToCartBtn, (!isAvailable || addingToCart) && styles.btnDisabled]}
             onPress={handleAddToCart}
@@ -802,25 +991,28 @@ const ProductDetailScreen = ({ route, navigation }) => {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   fullScreen:  { flex: 1, backgroundColor: '#F7F7F7' },
-
-  // Nav
   floatingNav: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 },
   minimalNav:  { paddingHorizontal: 16, paddingVertical: 10 },
   navRight:    { flexDirection: 'row', gap: 6 },
   navIconBtn:  { width: 42, height: 42, borderRadius: 21, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 6, elevation: 4 },
-
   scrollContent: { paddingBottom: 24 },
 
-  // Image overlays (live on top of the ImageGallery component)
   conditionOverlay: { position: 'absolute', top: Platform.OS === 'ios' ? 54 : 44, left: 16, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   conditionOverlayText: { fontSize: 11, fontWeight: '700' },
+
+  discountRibbon: {
+    position: 'absolute', top: Platform.OS === 'ios' ? 54 : 44, right: 16, zIndex: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#C62828', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+  },
+  discountRibbonText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+
   urgentTag: { position: 'absolute', top: Platform.OS === 'ios' ? 54 : 44, right: 16, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E53935', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   urgentTagText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   oosOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 4, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
   oosBadge:   { alignItems: 'center', gap: 6 },
   oosText:    { color: '#fff', fontSize: 18, fontWeight: '800' },
 
-  // Info panel
   infoPanel:     { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: 6, paddingBottom: 8 },
   tagsScroll:    { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 4, gap: 8 },
   tag:           { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20 },
@@ -828,10 +1020,32 @@ const styles = StyleSheet.create({
   titleSection:  { paddingHorizontal: 24, paddingTop: 14, paddingBottom: 16 },
   productName:   { fontSize: 22, fontWeight: '800', color: '#1A1A1A', lineHeight: 30, letterSpacing: -0.3, marginBottom: 4 },
   brandText:     { fontSize: 13, color: '#888', fontWeight: '500', marginBottom: 10 },
+  metaCaptionRow: { flexDirection: 'row', gap: 14, marginTop: 8 },
+  metaCaptionItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaCaptionText: { fontSize: 11.5, color: '#BDBDBD', fontWeight: '500' },
+
+  // Regular (non-discount) price row
   priceRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6, marginTop: 4 },
   price:         { fontSize: 28, fontWeight: '900', color: '#1B5E20', letterSpacing: -0.5 },
   negotiableChip:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: '#FFCC80' },
   negotiableChipText: { fontSize: 11, fontWeight: '700', color: '#E65100' },
+
+  // Discount price block
+  priceBlockDiscount: { marginTop: 4 },
+  priceRowDiscount: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  savingsBadge: {
+    backgroundColor: '#C62828', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4,
+  },
+  savingsBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  wasRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+  wasPrice: { fontSize: 15, color: '#9E9E9E', fontWeight: '600', textDecorationLine: 'line-through' },
+  youSave:  { fontSize: 12.5, color: '#2E7D32', fontWeight: '700' },
+  couponHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#E3F2FD', alignSelf: 'flex-start',
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, marginTop: 8,
+  },
+  couponHintText: { fontSize: 11, fontWeight: '700', color: '#1565C0' },
 
   availBanner:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 24, marginBottom: 16, backgroundColor: '#F1F8F3', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: '#C8E6C9' },
   availBannerOos:  { backgroundColor: '#FFEBEE', borderColor: '#FFCDD2' },
@@ -847,11 +1061,17 @@ const styles = StyleSheet.create({
   qtyValue:      { fontSize: 18, fontWeight: '700', color: '#1A1A1A', marginHorizontal: 14 },
   qtyTotal:      { marginLeft: 'auto', fontSize: 18, fontWeight: '800', color: '#1B5E20' },
 
-  infoGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  infoItem:  { width: '47%', alignItems: 'center', backgroundColor: '#F8FAF8', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#EEF2EE' },
-  infoIcon:  { width: 38, height: 38, borderRadius: 19, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  infoLabel: { fontSize: 10, color: '#9E9E9E', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3 },
-  infoValue: { fontSize: 12, fontWeight: '700', color: '#1A1A1A', textAlign: 'center', textTransform: 'capitalize' },
+  // Minimal info rows (replaces the old square-box grid)
+  infoRowsWrap: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#F0F0F0' },
+  infoRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 12, paddingHorizontal: 14,
+    borderBottomWidth: 1, borderBottomColor: '#F5F5F5',
+  },
+  infoRowLast: { borderBottomWidth: 0 },
+  infoRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  infoRowLabel: { fontSize: 13, color: '#757575', fontWeight: '500' },
+  infoRowValue: { fontSize: 13, fontWeight: '700', color: '#1A1A1A', textTransform: 'capitalize', maxWidth: '55%', textAlign: 'right' },
 
   descText: { fontSize: 15, lineHeight: 24, color: '#555' },
 
@@ -891,7 +1111,6 @@ const styles = StyleSheet.create({
   errorBtn:    { backgroundColor: '#2E7D32', paddingVertical: 14, paddingHorizontal: 36, borderRadius: 14 },
   errorBtnText:{ color: '#fff', fontWeight: '700', fontSize: 15 },
 
-  // ── Bottom bar ──────────────────────────────────────────────────────────────
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: '#fff',
@@ -904,16 +1123,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 8 : 16,
   },
-
-  // Call button — secondary, left side
-  callBtn: {
-    width: 52, height: 52, borderRadius: 16,
-    backgroundColor: '#E8F5E9',
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#C8E6C9',
-  },
-
-  // Add to Cart — primary, flex-fills remaining space
   addToCartBtn: {
     flex: 1,
     backgroundColor: '#1B5E20',

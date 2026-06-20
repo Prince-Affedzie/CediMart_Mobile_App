@@ -62,6 +62,7 @@ const C = {
   cream:      '#F7F5F0',
   card:       '#FFFFFF',
   gold:       '#B8973A',
+  goldLight:  '#FBF3E2',
   textDark:   '#111111',
   textMid:    '#444444',
   textLight:  '#888888',
@@ -80,17 +81,29 @@ const SectionLabel = ({ title, count }) => (
   </View>
 );
 
-const StatPill = ({ icon, label, value }) => (
-  <View style={s.statPill}>
-    <View style={s.statIconWrap}>
-      <Ionicons name={icon} size={15} color={C.pine} />
+// Clean rating display — stars + number, used inline under the vendor name
+const RatingDisplay = ({ rating = 0, size = 14 }) => {
+  const value = Number(rating) || 0;
+  const full = Math.floor(value);
+  const half = value % 1 >= 0.5;
+
+  return (
+    <View style={s.ratingWrap}>
+      <View style={s.ratingStars}>
+        {[1, 2, 3, 4, 5].map(i => (
+          <Ionicons
+            key={i}
+            name={i <= full ? 'star' : half && i === full + 1 ? 'star-half' : 'star-outline'}
+            size={size}
+            color={C.gold}
+            style={{ marginRight: 1 }}
+          />
+        ))}
+      </View>
+      <Text style={s.ratingValue}>{value.toFixed(1)}</Text>
     </View>
-    <View style={{ flex: 1 }}>
-      <Text style={s.statLabel}>{label}</Text>
-      <Text style={s.statValue} numberOfLines={1}>{value}</Text>
-    </View>
-  </View>
-);
+  );
+};
 
 const VendorDetailScreen = ({ route, navigation }) => {
   const { vendorId } = route.params;
@@ -239,29 +252,35 @@ const VendorDetailScreen = ({ route, navigation }) => {
               </View>
             )}
           </View>
+
           <Text style={s.vendorName}>{vendor.name}</Text>
           {vendor.storeName && (
             <Text style={s.storeName}>{vendor.storeName}</Text>
           )}
-          {vendor.campus && (
-            <View style={s.campusRow}>
-              <Ionicons name="school-outline" size={13} color={C.pine} />
-              <Text style={s.campusText}>{CAMPUS_LABELS[vendor.campus] || vendor.campus}</Text>
-            </View>
-          )}
-          {vendor.location?.campusArea && (
-            <Text style={s.locationText}>{vendor.location.campusArea}{vendor.location.hostel ? ` · ${vendor.location.hostel}` : ''}</Text>
-          )}
+
+          {/* Rating — the one trust signal that matters to a buyer */}
+          <RatingDisplay rating={vendor.rating} />
+
+          <View style={s.metaRow}>
+            {vendor.campus && (
+              <View style={s.campusPill}>
+                <Ionicons name="school-outline" size={12} color={C.pine} />
+                <Text style={s.campusPillText}>{CAMPUS_LABELS[vendor.campus] || vendor.campus}</Text>
+              </View>
+            )}
+            {vendor.location?.campusArea && (
+              <View style={s.locationPill}>
+                <Ionicons name="location-outline" size={12} color={C.textLight} />
+                <Text style={s.locationPillText}>
+                  {vendor.location.campusArea}{vendor.location.hostel ? ` · ${vendor.location.hostel}` : ''}
+                </Text>
+              </View>
+            )}
+          </View>
+
           {vendor.bio && (
             <Text style={s.bioText} numberOfLines={3}>{vendor.bio}</Text>
           )}
-        </View>
-
-        {/* Stats Row */}
-        <View style={s.statsRow}>
-          <StatPill icon="cube-outline" label="Listings" value={`${products.length} items`} />
-          <StatPill icon="star-outline" label="Rating" value={vendor.rating?.toFixed(1) || '0.0'} />
-          <StatPill icon="cart-outline" label="Sales" value={`${vendor.totalSales || 0}`} />
         </View>
 
         {/* Categories */}
@@ -392,36 +411,53 @@ const s = StyleSheet.create({
   },
   heroBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
 
-  identityCard: { alignItems: 'center', marginTop: -44, paddingBottom: 20, paddingHorizontal: 20 },
+  // ── Identity card ─────────────────────────────────────────────────────────
+  identityCard: { alignItems: 'center', marginTop: -44, paddingBottom: 28, paddingHorizontal: 24 },
   avatarRing: {
-    width: 90, height: 90, borderRadius: 45,
+    width: 92, height: 92, borderRadius: 46,
     borderWidth: 4, borderColor: C.cream,
     overflow: 'hidden', backgroundColor: C.mint,
-    marginBottom: 12,
+    marginBottom: 14,
     ...shadow(0.18, 14, 6),
   },
   avatar: { width: '100%', height: '100%' },
   avatarFallback: { flex: 1, backgroundColor: C.pine, justifyContent: 'center', alignItems: 'center' },
   avatarInitial: { fontSize: 36, fontWeight: '800', color: '#fff' },
-  vendorName: { fontSize: 22, fontWeight: '800', color: C.textDark, textAlign: 'center', letterSpacing: -0.4 },
-  storeName: { fontSize: 14, color: C.textMid, fontWeight: '500', marginTop: 2, textAlign: 'center' },
-  campusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 5 },
-  campusText: { fontSize: 13, color: C.pine, fontWeight: '600' },
-  locationText: { fontSize: 12, color: C.textLight, marginTop: 4, textAlign: 'center' },
-  bioText: { fontSize: 13, color: C.textMid, marginTop: 10, textAlign: 'center', lineHeight: 19, paddingHorizontal: 10 },
+  vendorName: { fontSize: 23, fontWeight: '800', color: C.textDark, textAlign: 'center', letterSpacing: -0.4 },
+  storeName: { fontSize: 14, color: C.textMid, fontWeight: '500', marginTop: 3, textAlign: 'center' },
 
-  statsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 10, marginTop: 2, marginBottom: 24 },
-  statPill: {
-    flex: 1, minWidth: 100,
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: C.border,
-    paddingHorizontal: 13, paddingVertical: 11,
-    ...shadow(0.05, 8, 3),
+  // Rating — small, elegant, sits right under the identity
+  ratingWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: C.goldLight,
+    borderWidth: 1, borderColor: '#F0DFB3',
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 20,
+    marginTop: 14,
   },
-  statIconWrap: { width: 32, height: 32, borderRadius: 10, backgroundColor: C.mint, justifyContent: 'center', alignItems: 'center' },
-  statLabel: { fontSize: 11, color: C.textLight, fontWeight: '500' },
-  statValue: { fontSize: 13, color: C.textDark, fontWeight: '700', marginTop: 1 },
+  ratingStars: { flexDirection: 'row' },
+  ratingValue: { fontSize: 13, fontWeight: '800', color: '#8A6D1E' },
 
+  metaRow: {
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
+    gap: 8, marginTop: 14,
+  },
+  campusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: C.mint, borderWidth: 1, borderColor: C.mintBorder,
+    paddingHorizontal: 11, paddingVertical: 6, borderRadius: 18,
+  },
+  campusPillText: { fontSize: 12, color: C.pine, fontWeight: '700' },
+  locationPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#F4F4F2', borderWidth: 1, borderColor: '#E9E9E6',
+    paddingHorizontal: 11, paddingVertical: 6, borderRadius: 18,
+  },
+  locationPillText: { fontSize: 12, color: C.textMid, fontWeight: '600' },
+
+  bioText: { fontSize: 13, color: C.textMid, marginTop: 16, textAlign: 'center', lineHeight: 20, paddingHorizontal: 6 },
+
+  // ── Sections ──────────────────────────────────────────────────────────────
   section: { paddingHorizontal: 16, marginBottom: 6 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 8 },
   sectionAccent: { width: 3, height: 17, borderRadius: 2, backgroundColor: C.gold },
@@ -442,6 +478,7 @@ const s = StyleSheet.create({
   emptyText: { marginTop: 10, fontSize: 15, color: C.textLight },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
 
+  // ── Product cards ─────────────────────────────────────────────────────────
   productCard: {
     width: CARD_WIDTH, backgroundColor: C.card, borderRadius: 16,
     overflow: 'hidden', borderWidth: 1, borderColor: C.border,
@@ -476,6 +513,7 @@ const s = StyleSheet.create({
   cartBtnActive: { backgroundColor: C.forest },
   cartBtnDisabled: { backgroundColor: '#BDBDBD' },
 
+  // ── Add-to-cart modal ─────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.48)',
     justifyContent: 'center', alignItems: 'center', padding: 24,

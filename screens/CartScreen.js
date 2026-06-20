@@ -395,8 +395,8 @@ const CartScreen = () => {
           </View>
           <View style={styles.deliveryItems}>
             {[
-              'Delivery fee (GH₵ 20–80) paid to rider on delivery',
-              'Next-day delivery available',
+              'Delivery fee (GH₵ 10–70) paid to rider on delivery',
+              'Same-day delivery available',
               'Flexible delivery scheduling at checkout',
             ].map((txt, i) => (
               <View key={i} style={styles.deliveryItem}>

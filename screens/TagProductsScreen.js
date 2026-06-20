@@ -12,6 +12,7 @@ import {
   Dimensions,
   StatusBar,
   Animated,
+  ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +45,8 @@ const CONDITION_CONFIG = {
   'for-parts':     { label: 'For Parts',     bg: '#FFEBEE', text: '#C62828' },
 };
 
+const HERO_BACKGROUND_IMAGE = 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780782982/flyer13_1_fyp0xj.png';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PRODUCT CARD
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,6 +55,18 @@ const ProductCard = ({ item, onPress, tagConfig, cardAnim }) => {
   const condCfg    = CONDITION_CONFIG[item.condition];
   const isAvail    = item.isAvailable !== false && (item.countInStock ?? 0) > 0;
   const isLowStock = isAvail && (item.countInStock ?? 0) <= 3;
+
+  // ─── Discount calculations ──────────────────────────────────────────────
+  const discountInfo = item.discountInfo;
+  const hasActiveDiscount = discountInfo?.isOnSale && 
+    (!discountInfo.discountStartDate || new Date(discountInfo.discountStartDate) <= Date.now()) &&
+    (!discountInfo.discountEndDate || new Date(discountInfo.discountEndDate) >= Date.now());
+  
+  const currentPrice = Number(item.price);
+  const originalPrice = discountInfo?.originalPrice;
+  const discountPercentage = hasActiveDiscount 
+    ? (discountInfo?.discountPercentage ?? (originalPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0))
+    : 0;
 
   return (
     <Animated.View style={{ opacity: cardAnim, transform: [{ translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}>
@@ -70,9 +85,21 @@ const ProductCard = ({ item, onPress, tagConfig, cardAnim }) => {
           {/* Gradient scrim bottom */}
           <View style={s.imgScrim} />
 
-          {/* Condition badge — top left */}
-          {condCfg && (
+          {/* Discount badge - shows first if active */}
+          {hasActiveDiscount && isAvail && (
+            <View style={s.discountBadge}>
+              <Text style={s.discountBadgeText}>-{discountPercentage}%</Text>
+            </View>
+          )}
+
+          {/* Condition badge — top left (repositioned if discount badge exists) */}
+          {condCfg && !hasActiveDiscount && (
             <View style={[s.condBadge, { backgroundColor: condCfg.bg }]}>
+              <Text style={[s.condBadgeText, { color: condCfg.text }]}>{condCfg.label}</Text>
+            </View>
+          )}
+          {condCfg && hasActiveDiscount && (
+            <View style={[s.condBadgeSecondary, { backgroundColor: condCfg.bg }]}>
               <Text style={[s.condBadgeText, { color: condCfg.text }]}>{condCfg.label}</Text>
             </View>
           )}
@@ -117,7 +144,25 @@ const ProductCard = ({ item, onPress, tagConfig, cardAnim }) => {
 
           {/* Price row */}
           <View style={s.footer}>
-            <Text style={s.price}>GH₵ {item.price?.toFixed(2)}</Text>
+            {/* Price section with discount */}
+            {hasActiveDiscount ? (
+              <View style={s.priceStack}>
+                <View style={s.priceRow}>
+                  <Text style={s.price}>GH₵ {currentPrice.toFixed(2)}</Text>
+                  <View style={s.discountPill}>
+                    <Text style={s.discountPillText}>-{discountPercentage}%</Text>
+                  </View>
+                </View>
+                {originalPrice && (
+                  <Text style={s.originalPrice}>
+                    GH₵ {originalPrice.toFixed(2)}
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <Text style={s.price}>GH₵ {currentPrice.toFixed(2)}</Text>
+            )}
+            
             <TouchableOpacity
               style={[s.viewBtn, { backgroundColor: tagConfig.accentBg }]}
               onPress={() => onPress(item)}
@@ -246,15 +291,22 @@ const TagProductsScreen = () => {
       <View style={s.root}>
         <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
         <Animated.View style={[s.heroHeader, { opacity: headerOpacity, transform: [{ scale: headerScale }] }]}>
-          <SafeAreaView edges={['top']} style={s.heroHeaderInner}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-              <Ionicons name="chevron-back" size={22} color="#fff" />
-            </TouchableOpacity>
-            <View style={s.heroCenter}>
-              <Text style={s.heroTitle}>{tagConfig.label}</Text>
-            </View>
-            <View style={{ width: 42 }} />
-          </SafeAreaView>
+          <ImageBackground
+            source={{ uri: HERO_BACKGROUND_IMAGE }}
+            style={s.heroHeaderBg}
+            resizeMode="cover"
+          >
+            <View style={s.heroHeaderOverlay} />
+            <SafeAreaView edges={['top']} style={s.heroHeaderInner}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+                <Ionicons name="chevron-back" size={22} color="#fff" />
+              </TouchableOpacity>
+              <View style={s.heroCenter}>
+                <Text style={s.heroTitle}>{tagConfig.label}</Text>
+              </View>
+              <View style={{ width: 42 }} />
+            </SafeAreaView>
+          </ImageBackground>
         </Animated.View>
         <View style={s.centered}>
           <ActivityIndicator size="large" color={tagConfig.accent} />
@@ -269,26 +321,33 @@ const TagProductsScreen = () => {
     <View style={s.root}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* ── Hero header (scrolls with content, but anims on scroll) ── */}
+      {/* ── Hero header with background image ── */}
       <Animated.View
         style={[
           s.heroHeader,
           { opacity: headerOpacity, transform: [{ scale: headerScale }] },
         ]}
       >
-        <SafeAreaView edges={['top']} style={s.heroHeaderInner}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-            <Ionicons name="chevron-back" size={22} color="#fff" />
-          </TouchableOpacity>
+        <ImageBackground
+          source={{ uri: HERO_BACKGROUND_IMAGE }}
+          style={s.heroHeaderBg}
+          resizeMode="cover"
+        >
+          <View style={s.heroHeaderOverlay} />
+          <SafeAreaView edges={['top']} style={s.heroHeaderInner}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+              <Ionicons name="chevron-back" size={22} color="#fff" />
+            </TouchableOpacity>
 
-          <View style={s.heroCenter}>
-            
-            <Text style={s.heroTitle}>{tagConfig.label}</Text>
-            <Text style={s.heroSubtitle}>
-              {products.length} listing{products.length !== 1 ? 's' : ''}
-            </Text>
-          </View>
-        </SafeAreaView>
+            <View style={s.heroCenter}>
+              <Text style={s.heroTitle}>{tagConfig.label}</Text>
+              <Text style={s.heroSubtitle}>
+                {products.length} listing{products.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
+            <View style={{ width: 42 }} />
+          </SafeAreaView>
+        </ImageBackground>
 
         {/* Decorative bottom curve */}
         <View style={s.headerCurve} />
@@ -342,9 +401,15 @@ const s = StyleSheet.create({
 
   // ── Hero header ────────────────────────────────────────────────────────────
   heroHeader: {
-    backgroundColor: '#1B5E20',
     paddingBottom: 28,
     zIndex: 10,
+  },
+  heroHeaderBg: {
+    width: '100%',
+  },
+  heroHeaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   heroHeaderInner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -358,9 +423,9 @@ const s = StyleSheet.create({
   heroTitle: {
     fontSize: 22, fontWeight: '900', color: '#fff',
     letterSpacing: -0.4,
-    textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
+    textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
   },
-  heroSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
+  heroSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
   headerCurve: {
     position: 'absolute', bottom: -18, left: 0, right: 0,
     height: 28, backgroundColor: '#F4F6F4',
@@ -416,16 +481,27 @@ const s = StyleSheet.create({
   },
 
   // Badges
+  discountBadge: {
+    position: 'absolute', top: 7, left: 7,
+    backgroundColor: '#C62828',
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 7,
+    zIndex: 3,
+  },
+  discountBadgeText: { fontSize: 9, fontWeight: '800', color: '#FFFFFF' },
   condBadge: {
     position: 'absolute', top: 7, left: 7,
     paddingHorizontal: 7, paddingVertical: 3, borderRadius: 7,
   },
+  condBadgeSecondary: {
+    position: 'absolute', top: 7, right: 7,
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 7,
+  },
   condBadgeText: { fontSize: 9, fontWeight: '800' },
-  negTag: {
+ negTag: {
     position: 'absolute', top: 7, right: 7,
     backgroundColor: '#1B5E20', borderRadius: 7,
     paddingHorizontal: 7, paddingVertical: 3,
-  },
+},
   negTagText: { color: '#fff', fontSize: 9, fontWeight: '800' },
 
   // Low stock ribbon
@@ -455,7 +531,19 @@ const s = StyleSheet.create({
   },
   campusPillText: { fontSize: 10, fontWeight: '700', color: '#2E7D32' },
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  
+  // Price with discount
+  priceStack: { gap: 2 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   price:  { fontSize: 15, fontWeight: '900', color: '#1B5E20' },
+  originalPrice: { fontSize: 10, color: '#9E9E9E', fontWeight: '600', textDecorationLine: 'line-through' },
+  discountPill: {
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 3,
+    borderWidth: 1, borderColor: '#FFCDD2',
+  },
+  discountPillText: { fontSize: 8, fontWeight: '800', color: '#C62828' },
+  
   viewBtn:{
     width: 30, height: 30, borderRadius: 10,
     justifyContent: 'center', alignItems: 'center',

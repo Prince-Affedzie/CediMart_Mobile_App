@@ -54,7 +54,7 @@ const SUBCATEGORIES_MAP = {
     { key: 'cameras', label: 'Cameras' },
     { key: 'other-electronics', label: 'Other Electronics' },
   ],
-  'phones-tablets': [
+  'phones and tablets': [
     { key: 'smartphones', label: 'Smartphones' },
     { key: 'tablets', label: 'Tablets' },
     { key: 'ipads', label: 'iPads' },
@@ -62,7 +62,7 @@ const SUBCATEGORIES_MAP = {
     { key: 'screen-protectors', label: 'Screen Protectors' },
     { key: 'other-phone-accessories', label: 'Other Accessories' },
   ],
-  'computers-laptops': [
+  'computers and laptops': [
     { key: 'laptops', label: 'Laptops' },
     { key: 'desktops', label: 'Desktops' },
     { key: 'monitors', label: 'Monitors' },
@@ -120,7 +120,7 @@ const SUBCATEGORIES_MAP = {
     { key: 'shelves', label: 'Shelves' },
     { key: 'other-furniture', label: 'Other Furniture' },
   ],
-  'beauty-grooming': [
+  'beauty and grooming': [
     { key: 'skincare', label: 'Skincare' },
     { key: 'makeup', label: 'Makeup' },
     { key: 'hair-care', label: 'Hair Care' },
@@ -128,7 +128,7 @@ const SUBCATEGORIES_MAP = {
     { key: 'nail-care', label: 'Nail Care' },
     { key: 'other-beauty', label: 'Other Beauty' },
   ],
-  'sports-fitness': [
+  'sports and fitness': [
     { key: 'sports-equipment', label: 'Sports Equipment' },
     { key: 'gym-gear', label: 'Gym Gear' },
     { key: 'activewear', label: 'Activewear' },
@@ -140,7 +140,7 @@ const SUBCATEGORIES_MAP = {
     { key: 'fashion-accessories', label: 'Fashion Accessories' },
     { key: 'other-accessories', label: 'Other Accessories' },
   ],
-  'food-drinks': [
+  'food and drinks': [
     { key: 'snacks', label: 'Snacks' },
     { key: 'drinks', label: 'Drinks' },
     { key: 'homemade-meals', label: 'Homemade Meals' },
@@ -185,7 +185,6 @@ const CAMPUS_OPTIONS = [
 ];
 
 const AVAILABLE_TAGS = [
-  { key: 'featured', icon: '⭐' },
   { key: 'urgent-sale', icon: '⚡' },
   { key: 'popular', icon: '🔥' },
   { key: 'discounted', icon: '🏷️' },
@@ -196,6 +195,7 @@ const AVAILABLE_TAGS = [
 const formatDisplayName = (str) =>
   str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ').replace(/-/g, ' ');
 
+// ─── DropdownSelector ───────────────────────────────────────────────────────
 const DropdownSelector = ({
   label, placeholder, items, selectedValue, onSelect, required, renderItem, style, disabled,
 }) => {
@@ -314,6 +314,7 @@ const SectionCard = ({ title, accent = '#2E7D32', children, changed }) => (
   </View>
 );
 
+// ─── Main Component ─────────────────────────────────────────────────────────
 const UpdateProductScreen = ({ route, navigation }) => {
   const { productId } = route.params;
 
@@ -339,6 +340,16 @@ const UpdateProductScreen = ({ route, navigation }) => {
   const [newImages, setNewImages] = useState([]);
   const [removedImageUrls, setRemovedImageUrls] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Discount fields
+  const [hasDiscount, setHasDiscount] = useState(false);
+  const [originalPrice, setOriginalPrice] = useState('');
+  const [discountPercent, setDiscountPercent] = useState('');
+  const [discountStartDate, setDiscountStartDate] = useState('');
+  const [discountEndDate, setDiscountEndDate] = useState('');
+
+  // Specifications fields
+  const [specifications, setSpecifications] = useState([{ key: '', value: '' }]);
 
   const subcategoryOptions = useMemo(() => SUBCATEGORIES_MAP[category] || [], [category]);
 
@@ -366,15 +377,62 @@ const UpdateProductScreen = ({ route, navigation }) => {
       setCountInStock(product.countInStock?.toString() || '1');
       setIsAvailable(product.isAvailable !== undefined ? product.isAvailable : true);
       setExistingImages(product.images || []);
+
+      // Populate discount fields
+      if (product.discountInfo) {
+        setHasDiscount(product.discountInfo.isOnSale || !!product.discountInfo.originalPrice || !!product.discountInfo.discountPercentage);
+        setOriginalPrice(product.discountInfo.originalPrice?.toString() || '');
+        setDiscountPercent(product.discountInfo.discountPercentage?.toString() || '');
+        setDiscountStartDate(product.discountInfo.discountStartDate ? product.discountInfo.discountStartDate.slice(0, 10) : '');
+        setDiscountEndDate(product.discountInfo.discountEndDate ? product.discountInfo.discountEndDate.slice(0, 10) : '');
+      }
+
+      // Populate specifications
+      if (product.specifications) {
+        const specs = product.specifications;
+        if (typeof specs === 'object' && !Array.isArray(specs)) {
+          // Convert object to array of key-value pairs
+          const specsArray = Object.entries(specs).map(([key, value]) => ({
+            key,
+            value: String(value),
+          }));
+          setSpecifications(specsArray.length > 0 ? specsArray : [{ key: '', value: '' }]);
+        } else if (Array.isArray(specs)) {
+          setSpecifications(specs.length > 0 ? specs : [{ key: '', value: '' }]);
+        }
+      }
     } catch (error) {
       setFetchError(error?.response?.data?.message || error?.message || 'Failed to load product');
-      Alert.alert( 'error',  error?.response?.data?.message || error?.message );
+      Alert.alert('error', error?.response?.data?.message || error?.message);
     } finally { setFetching(false); }
   };
 
   const handleCategoryChange = (cat) => {
     setCategory(cat);
     setSubcategory('');
+  };
+
+  // Specifications helpers
+  const addSpecField = () => setSpecifications(prev => [...prev, { key: '', value: '' }]);
+  const removeSpecField = (index) => {
+    if (specifications.length <= 1) return;
+    setSpecifications(prev => prev.filter((_, i) => i !== index));
+  };
+  const updateSpecField = (index, field, value) => {
+    setSpecifications(prev => prev.map((spec, i) => 
+      i === index ? { ...spec, [field]: value } : spec
+    ));
+  };
+
+  // Get original specs as array for comparison
+  const getOriginalSpecsArray = () => {
+    if (!originalProduct?.specifications) return [];
+    const specs = originalProduct.specifications;
+    if (typeof specs === 'object' && !Array.isArray(specs)) {
+      return Object.entries(specs).map(([key, value]) => ({ key, value: String(value) }));
+    }
+    if (Array.isArray(specs)) return specs;
+    return [];
   };
 
   const hasChanges = originalProduct && (
@@ -393,7 +451,15 @@ const UpdateProductScreen = ({ route, navigation }) => {
     countInStock !== (originalProduct.countInStock?.toString() || '1') ||
     isAvailable !== (originalProduct.isAvailable !== undefined ? originalProduct.isAvailable : true) ||
     newImages.length > 0 ||
-    removedImageUrls.length > 0
+    removedImageUrls.length > 0 ||
+    // Discount change detection
+    originalPrice !== (originalProduct.discountInfo?.originalPrice?.toString() || '') ||
+    discountPercent !== (originalProduct.discountInfo?.discountPercentage?.toString() || '') ||
+    discountStartDate !== (originalProduct.discountInfo?.discountStartDate?.slice(0, 10) || '') ||
+    discountEndDate !== (originalProduct.discountInfo?.discountEndDate?.slice(0, 10) || '') ||
+    hasDiscount !== (originalProduct.discountInfo?.isOnSale || !!originalProduct.discountInfo?.originalPrice || !!originalProduct.discountInfo?.discountPercentage) ||
+    // Specifications change detection
+    JSON.stringify(specifications.filter(s => s.key.trim() || s.value.trim())) !== JSON.stringify(getOriginalSpecsArray())
   );
 
   const pickNewImages = () => {
@@ -424,6 +490,15 @@ const UpdateProductScreen = ({ route, navigation }) => {
     const totalImages = existingImages.length + newImages.length;
     if (totalImages === 0) return Alert.alert('Missing Info', 'At least one product image is required');
 
+    if (hasDiscount) {
+      if (originalPrice && (isNaN(parseFloat(originalPrice)) || parseFloat(originalPrice) <= 0)) {
+        return Alert.alert('Invalid', 'Original price must be a valid positive number');
+      }
+      if (discountPercent && (isNaN(parseFloat(discountPercent)) || parseFloat(discountPercent) < 0 || parseFloat(discountPercent) > 100)) {
+        return Alert.alert('Invalid', 'Discount percentage must be between 0 and 100');
+      }
+    }
+
     setLoading(true);
     try {
       const formData = new FormData();
@@ -444,13 +519,33 @@ const UpdateProductScreen = ({ route, navigation }) => {
       if (removedImageUrls.length > 0) removedImageUrls.forEach(url => formData.append('removedImages[]', url));
       newImages.forEach((img) => { formData.append('productImages', { uri: Platform.OS === 'ios' ? img.uri.replace('file://', '') : img.uri, type: img.type, name: img.name }); });
 
+      // Append discount fields
+      if (hasDiscount) {
+        if (originalPrice) formData.append('originalPrice', parseFloat(originalPrice));
+        if (discountPercent) formData.append('discountPercentage', parseFloat(discountPercent));
+        if (discountStartDate) formData.append('discountStartDate', discountStartDate);
+        if (discountEndDate) formData.append('discountEndDate', discountEndDate);
+        formData.append('isOnSale', 'true');
+      } else {
+        // Clear discount if toggle is off
+        formData.append('discountInfo', JSON.stringify({}));
+      }
+
+      // Append specifications as JSON
+      const filledSpecs = specifications.filter(s => s.key.trim() && s.value.trim());
+      if (filledSpecs.length > 0) {
+        const specsObj = {};
+        filledSpecs.forEach(s => { specsObj[s.key.trim()] = s.value.trim(); });
+        formData.append('specifications', JSON.stringify(specsObj));
+      }
+
       const response = await updateProduct(productId, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      if (response.success || response.status === 200 || response?.data?.success  ) {
-        Alert.alert( 'success',  `${name} has been updated.` );
+      if (response.success || response.status === 200 || response?.data?.success) {
+        Alert.alert('success', `${name} has been updated.`);
         navigation.goBack();
-      } 
+      }
     } catch (error) {
-      Alert.alert( 'error', error?.response?.data?.message || error?.message || 'Something went wrong.' );
+      Alert.alert('error', error?.response?.data?.message || error?.message || 'Something went wrong.');
     } finally { setLoading(false); }
   };
 
@@ -524,7 +619,7 @@ const UpdateProductScreen = ({ route, navigation }) => {
             <DropdownSelector label="Condition" placeholder="Select condition" items={CONDITION_OPTIONS} selectedValue={condition} onSelect={setCondition} required style={{ marginBottom: 4 }} />
           </SectionCard>
 
-          <SectionCard title="Pricing & Availability" accent="#388E3C" changed={price !== (originalProduct?.price?.toString() || '') || negotiable !== (originalProduct?.negotiable || false) || countInStock !== (originalProduct?.countInStock?.toString() || '1') || isAvailable !== (originalProduct?.isAvailable !== undefined ? originalProduct.isAvailable : true)}>
+          <SectionCard title="Pricing & Availability" accent="#388E3C" changed={price !== (originalProduct?.price?.toString() || '') || negotiable !== (originalProduct?.negotiable || false) || countInStock !== (originalProduct?.countInStock?.toString() || '1') || isAvailable !== (originalProduct?.isAvailable !== undefined ? originalProduct.isAvailable : true) || originalPrice !== (originalProduct?.discountInfo?.originalPrice?.toString() || '') || discountPercent !== (originalProduct?.discountInfo?.discountPercentage?.toString() || '')}>
             <Text style={styles.quickLabel}>Price (GH₵) <Text style={styles.required}>*</Text></Text>
             <View style={styles.priceInputFull}><View style={styles.currencyTag}><Text style={styles.currencyText}>GH₵</Text></View><TextInput style={styles.priceInputField} placeholder="0.00" placeholderTextColor="#C5C5C5" keyboardType="decimal-pad" value={price} onChangeText={setPrice} /></View>
             <TouchableOpacity style={[styles.negotiableBtn, negotiable && styles.negotiableBtnActive]} onPress={() => setNegotiable(!negotiable)}><Ionicons name={negotiable ? 'pricetag' : 'pricetag-outline'} size={18} color={negotiable ? '#fff' : '#2E7D32'} /><Text style={[styles.negotiableText, negotiable && styles.negotiableTextActive]}>Price is negotiable</Text></TouchableOpacity>
@@ -535,6 +630,101 @@ const UpdateProductScreen = ({ route, navigation }) => {
               <TouchableOpacity style={[styles.availOption, isAvailable && styles.availOptionActive]} onPress={() => setIsAvailable(true)}><View style={[styles.availDot, { backgroundColor: '#4CAF50' }]} /><Text style={[styles.availText, isAvailable && styles.availTextActive]}>Available</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.availOption, !isAvailable && styles.availOptionInactive]} onPress={() => setIsAvailable(false)}><View style={[styles.availDot, { backgroundColor: '#E53935' }]} /><Text style={[styles.availText, !isAvailable && styles.availTextInactive]}>Sold Out</Text></TouchableOpacity>
             </View>
+
+            {/* Discount Section */}
+            <View style={{ marginTop: 8 }}>
+              <TouchableOpacity
+                style={[styles.discountToggle, hasDiscount && styles.discountToggleActive]}
+                onPress={() => setHasDiscount(!hasDiscount)}
+              >
+                <Ionicons name="pricetag" size={18} color={hasDiscount ? '#fff' : '#2E7D32'} />
+                <Text style={[styles.discountToggleText, hasDiscount && styles.discountToggleTextActive]}>
+                  {hasDiscount ? 'Discount applied' : 'Add discount (optional)'}
+                </Text>
+                <Ionicons name={hasDiscount ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={hasDiscount ? '#fff' : '#2E7D32'} />
+              </TouchableOpacity>
+
+              {hasDiscount && (
+                <View style={styles.discountFields}>
+                  <FloatingInput
+                    label="Original Price (GH₵)"
+                    icon="pricetag-outline"
+                    placeholder="e.g. 1500.00"
+                    value={originalPrice}
+                    onChangeText={setOriginalPrice}
+                    keyboardType="decimal-pad"
+                  />
+                  <FloatingInput
+                    label="Discount Percentage (%)"
+                    icon="trending-down-outline"
+                    placeholder="e.g. 20"
+                    value={discountPercent}
+                    onChangeText={setDiscountPercent}
+                    keyboardType="numeric"
+                  />
+                  <View style={styles.dateRow}>
+                    <View style={{ flex: 1, marginRight: 8 }}>
+                      <Text style={styles.quickLabel}>Start Date</Text>
+                      <TextInput
+                        style={styles.simpleInput}
+                        placeholder="YYYY-MM-DD"
+                        placeholderTextColor="#C5C5C5"
+                        value={discountStartDate}
+                        onChangeText={setDiscountStartDate}
+                      />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                      <Text style={styles.quickLabel}>End Date</Text>
+                      <TextInput
+                        style={styles.simpleInput}
+                        placeholder="YYYY-MM-DD"
+                        placeholderTextColor="#C5C5C5"
+                        value={discountEndDate}
+                        onChangeText={setDiscountEndDate}
+                      />
+                    </View>
+                  </View>
+                </View>
+              )}
+            </View>
+          </SectionCard>
+
+          {/* Specifications Section */}
+          <SectionCard 
+            title="Specifications (Optional)" 
+            accent="#8E24AA" 
+            changed={JSON.stringify(specifications.filter(s => s.key.trim() || s.value.trim())) !== JSON.stringify(getOriginalSpecsArray())}
+          >
+            <Text style={styles.sectionHint}>Add product details like storage, color, weight, material</Text>
+            {specifications.map((spec, index) => (
+              <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <TextInput
+                    style={styles.specInput}
+                    placeholder="Spec name (e.g. Color)"
+                    placeholderTextColor="#C5C5C5"
+                    value={spec.key}
+                    onChangeText={(v) => updateSpecField(index, 'key', v)}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <TextInput
+                    style={styles.specInput}
+                    placeholder="Value (e.g. Red)"
+                    placeholderTextColor="#C5C5C5"
+                    value={spec.value}
+                    onChangeText={(v) => updateSpecField(index, 'value', v)}
+                  />
+                </View>
+                <TouchableOpacity onPress={() => removeSpecField(index)} style={{ padding: 6 }}>
+                  <Ionicons name="close-circle" size={22} color="#E53935" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity style={styles.addSpecBtn} onPress={addSpecField} activeOpacity={0.8}>
+              <Ionicons name="add-circle-outline" size={20} color="#2E7D32" />
+              <Text style={styles.addSpecBtnText}>Add Specification</Text>
+            </TouchableOpacity>
           </SectionCard>
 
           <SectionCard title="Campus & Location" accent="#43A047" changed={campus !== (originalProduct?.campus || '') || campusArea !== (originalProduct?.location?.campusArea || '') || hostel !== (originalProduct?.location?.hostel || '')}>
@@ -647,6 +837,45 @@ const styles = StyleSheet.create({
   availText: { fontSize: 13, fontWeight: '600', color: '#666' },
   availTextActive: { color: '#2E7D32' },
   availTextInactive: { color: '#C62828' },
+  discountToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: '#E0E0E0',
+    marginBottom: 4,
+  },
+  discountToggleActive: { backgroundColor: '#E65100', borderColor: '#E65100' },
+  discountToggleText: { fontSize: 13, fontWeight: '600', color: '#2E7D32', flex: 1 },
+  discountToggleTextActive: { color: '#fff' },
+  discountFields: { paddingTop: 8, paddingHorizontal: 4 },
+  dateRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  specInput: {
+    backgroundColor: '#FAFAFA',
+    borderWidth: 1.5,
+    borderColor: '#E8E8E8',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#1A1A1A',
+  },
+  addSpecBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#C8E6C9',
+    borderStyle: 'dashed',
+    backgroundColor: '#F1F8F3',
+    marginTop: 4,
+  },
+  addSpecBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2E7D32',
+  },
   tagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   tagChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 22, backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: 'transparent' },
   tagChipActive: { backgroundColor: '#F1F8F3', borderColor: '#81C784' },
