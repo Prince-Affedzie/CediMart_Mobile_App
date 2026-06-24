@@ -39,9 +39,9 @@ const CONDITION_LABELS = {
 
 const StatCard = ({ value, label, hint, iconName, iconBg, iconColor }) => (
   <View style={styles.statCard}>
-    <View style={[styles.statIconWrap, { backgroundColor: iconBg }]}>
+    {/*<View style={[styles.statIconWrap, { backgroundColor: iconBg }]}>
       <Ionicons name={iconName} size={20} color={iconColor} />
-    </View>
+    </View>*/}
     <View style={styles.statRight}>
       <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>

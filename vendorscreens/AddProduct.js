@@ -195,6 +195,19 @@ const AVAILABLE_TAGS = [
 const formatDisplayName = (str) =>
   str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ').replace(/-/g, ' ');
 
+// ─────────────────────────────────────────────────────────────────────────────
+// WIZARD STEP DEFINITIONS
+// ─────────────────────────────────────────────────────────────────────────────
+const WIZARD_STEPS = [
+  { key: 'photos',   label: 'Photos',    icon: 'image-outline' },
+  { key: 'details',  label: 'Details',   icon: 'pricetag-outline' },
+  { key: 'pricing',  label: 'Pricing',   icon: 'cash-outline' },
+  { key: 'specs',    label: 'Specs',     icon: 'list-outline' },
+  { key: 'location', label: 'Location',  icon: 'location-outline' },
+  { key: 'about',    label: 'About',     icon: 'document-text-outline' },
+  { key: 'review',   label: 'Review',    icon: 'checkmark-done-outline' },
+];
+
 // ── Small helper-text row used under tricky fields ──────────────────────────
 const HelperText = ({ children, icon = 'information-circle-outline' }) => (
   <View style={styles.helperRow}>
@@ -350,25 +363,50 @@ const bsStyles = StyleSheet.create({
   itemHint: { fontSize: 11.5, color: '#9E9E9E', marginTop: 2, marginLeft: 44 },
 });
 
-const STEPS = ['Photos', 'Details', 'Pricing', 'Specs', 'Location'];
-
-const StepIndicator = ({ currentStep }) => (
-  <View style={styles.stepRow}>
-    {STEPS.map((label, i) => {
-      const done = i < currentStep;
-      const active = i === currentStep;
-      return (
-        <React.Fragment key={label}>
-          <View style={styles.stepItem}>
-            <View style={[styles.stepCircle, done && styles.stepDone, active && styles.stepActive]}>
-              {done ? <Ionicons name="checkmark" size={12} color="#fff" /> : <Text style={[styles.stepNum, active && styles.stepNumActive]}>{i + 1}</Text>}
-            </View>
-            <Text style={[styles.stepLabel, active && styles.stepLabelActive]}>{label}</Text>
-          </View>
-          {i < STEPS.length - 1 && <View style={[styles.stepLine, done && styles.stepLineDone]} />}
-        </React.Fragment>
-      );
-    })}
+// ─────────────────────────────────────────────────────────────────────────────
+// TOP PROGRESS STEPPER — compact horizontal dots, tap to revisit completed steps
+// ─────────────────────────────────────────────────────────────────────────────
+const ProgressStepper = ({ steps, currentIndex, furthestIndex, onStepPress }) => (
+  <View style={styles.stepperWrap}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stepperScroll}>
+      {steps.map((step, i) => {
+        const done = i < currentIndex;
+        const active = i === currentIndex;
+        const reachable = i <= furthestIndex;
+        return (
+          <React.Fragment key={step.key}>
+            <TouchableOpacity
+              style={styles.stepperItem}
+              disabled={!reachable}
+              onPress={() => reachable && onStepPress(i)}
+              activeOpacity={reachable ? 0.7 : 1}
+            >
+              <View style={[
+                styles.stepperCircle,
+                done && styles.stepperCircleDone,
+                active && styles.stepperCircleActive,
+              ]}>
+                {done ? (
+                  <Ionicons name="checkmark" size={13} color="#fff" />
+                ) : (
+                  <Ionicons
+                    name={step.icon}
+                    size={14}
+                    color={active ? '#fff' : '#9E9E9E'}
+                  />
+                )}
+              </View>
+              <Text style={[styles.stepperLabel, active && styles.stepperLabelActive, done && styles.stepperLabelDone]}>
+                {step.label}
+              </Text>
+            </TouchableOpacity>
+            {i < steps.length - 1 && (
+              <View style={[styles.stepperLine, i < currentIndex && styles.stepperLineDone]} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </ScrollView>
   </View>
 );
 
@@ -411,25 +449,15 @@ const FloatingInput = ({ label, icon, value, onChangeText, placeholder, keyboard
   );
 };
 
-const SectionCard = ({ title, subtitle, accent = '#2E7D32', children, stepNum, complete, sectionRef }) => (
-  <View style={styles.card} ref={sectionRef} collapsable={false}>
-    <View style={[styles.cardAccent, { backgroundColor: accent }]} />
-    <View style={styles.cardInner}>
-      <View style={styles.cardHeader}>
-        <View style={[styles.cardStepBadge, { backgroundColor: accent + '18' }]}>
-          {complete ? (
-            <Ionicons name="checkmark" size={16} color={accent} />
-          ) : (
-            <Text style={[styles.cardStepNum, { color: accent }]}>{stepNum}</Text>
-          )}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.cardTitle}>{title}</Text>
-          {subtitle && <Text style={styles.cardSubtitle}>{subtitle}</Text>}
-        </View>
-      </View>
-      {children}
-    </View>
+// ─────────────────────────────────────────────────────────────────────────────
+// STEP SHELL — consistent header used by every step screen
+// ─────────────────────────────────────────────────────────────────────────────
+const StepShell = ({ eyebrow, title, subtitle, children }) => (
+  <View style={styles.stepShell}>
+    <Text style={styles.stepEyebrow}>{eyebrow}</Text>
+    <Text style={styles.stepTitle}>{title}</Text>
+    {subtitle && <Text style={styles.stepSubtitle}>{subtitle}</Text>}
+    <View style={styles.stepBody}>{children}</View>
   </View>
 );
 
@@ -460,25 +488,13 @@ const AddProductScreen = ({ navigation }) => {
   // Specifications fields
   const [specifications, setSpecifications] = useState([{ key: '', value: '' }]);
 
-  // Field-level errors — populated only after a submit attempt, cleared as the vendor fixes things
+  // Field-level errors — populated only after a "Next"/submit attempt on that step
   const [errors, setErrors] = useState({});
 
+  // ── Wizard state ────────────────────────────────────────────────────────────
+  const [stepIndex, setStepIndex] = useState(0);
+  const [furthestIndex, setFurthestIndex] = useState(0); // lets user tap back to any visited step
   const scrollRef = useRef(null);
-  const photosRef = useRef(null);
-  const detailsRef = useRef(null);
-  const pricingRef = useRef(null);
-  const locationRef = useRef(null);
-
-  // ── Accurate completion tracking — each section is independently checked ──
-  const photosComplete   = images.length > 0;
-  const detailsComplete  = !!name.trim() && !!category && !!condition;
-  const pricingComplete  = !!price && !isNaN(parseFloat(price)) && parseFloat(price) >= 0;
-  const locationComplete = !!campus && !!campusArea.trim();
-  const specsComplete    = true; // optional section, always considered "done"
-
-  const completedCount = [photosComplete, detailsComplete, pricingComplete, locationComplete].filter(Boolean).length;
-  const currentStep = !photosComplete ? 0 : !detailsComplete ? 1 : !pricingComplete ? 2 : !locationComplete ? 4 : 5;
-  const completionPct = Math.round((completedCount / 4) * 100);
 
   const subcategoryOptions = useMemo(() => SUBCATEGORIES_MAP[category] || [], [category]);
 
@@ -542,51 +558,96 @@ const AddProductScreen = ({ navigation }) => {
     ));
   };
 
-  // ── Scroll to first incomplete/erroring section ───────────────────────────
-  const scrollToRef = (ref) => {
-    if (!ref?.current || !scrollRef.current) return;
-    ref.current.measureLayout(
-      scrollRef.current.getInnerViewNode ? scrollRef.current.getInnerViewNode() : scrollRef.current,
-      (x, y) => scrollRef.current.scrollTo({ y: Math.max(y - 16, 0), animated: true }),
-      () => {}
-    );
-  };
-
-  // ── Validation — collects ALL problems, shown inline, scrolls to first one ──
-  const validate = () => {
+  // ── Per-step validation — only checks the fields relevant to that step ──────
+  const validateStep = (index) => {
     const next = {};
+    const stepKey = WIZARD_STEPS[index].key;
 
-    if (images.length === 0) next.images = 'Add at least one photo so buyers can see what they’re getting.';
-    if (!name.trim()) next.name = 'Give your item a name buyers will recognize.';
-    if (!category) next.category = 'Pick the category that best fits your item.';
-    if (!price.trim()) next.price = 'Enter a price for this item.';
-    else if (isNaN(parseFloat(price)) || parseFloat(price) < 0) next.price = 'Enter a valid price (e.g. 150.00).';
-    if (!campus) next.campus = 'Select the campus where you’ll meet buyers.';
-    if (!campusArea.trim()) next.campusArea = 'Add a campus area so buyers know where to meet you.';
+    if (stepKey === 'photos') {
+      if (images.length === 0) next.images = 'Add at least one photo so buyers can see what they’re getting.';
+    }
 
-    if (hasDiscount) {
-      if (originalPrice && (isNaN(parseFloat(originalPrice)) || parseFloat(originalPrice) <= 0)) {
-        next.originalPrice = 'Original price should be a number greater than 0.';
-      }
-      if (discountPercent && (isNaN(parseFloat(discountPercent)) || parseFloat(discountPercent) < 0 || parseFloat(discountPercent) > 100)) {
-        next.discountPercent = 'Discount should be a number between 0 and 100.';
+    if (stepKey === 'details') {
+      if (!name.trim()) next.name = 'Give your item a name buyers will recognize.';
+      if (!category) next.category = 'Pick the category that best fits your item.';
+    }
+
+    if (stepKey === 'pricing') {
+      if (!price.trim()) next.price = 'Enter a price for this item.';
+      else if (isNaN(parseFloat(price)) || parseFloat(price) < 0) next.price = 'Enter a valid price (e.g. 150.00).';
+
+      if (hasDiscount) {
+        if (originalPrice && (isNaN(parseFloat(originalPrice)) || parseFloat(originalPrice) <= 0)) {
+          next.originalPrice = 'Original price should be a number greater than 0.';
+        }
+        if (discountPercent && (isNaN(parseFloat(discountPercent)) || parseFloat(discountPercent) < 0 || parseFloat(discountPercent) > 100)) {
+          next.discountPercent = 'Discount should be a number between 0 and 100.';
+        }
       }
     }
 
-    setErrors(next);
+    if (stepKey === 'location') {
+      if (!campus) next.campus = 'Select the campus where you’ll meet buyers.';
+      if (!campusArea.trim()) next.campusArea = 'Add a campus area so buyers know where to meet you.';
+    }
+
+    // 'specs' and 'about' steps are fully optional — nothing required there
+
     return next;
   };
 
+  // Runs the validation for ALL steps — used right before final submit, so
+  // nothing can slip through even if the user jumped around with the stepper.
+  const validateAll = () => {
+    let combined = {};
+    WIZARD_STEPS.forEach((_, i) => { combined = { ...combined, ...validateStep(i) }; });
+    return combined;
+  };
+
+  const scrollToTop = () => scrollRef.current?.scrollTo({ y: 0, animated: true });
+
+  const goToStep = (index) => {
+    setStepIndex(index);
+    setFurthestIndex(prev => Math.max(prev, index));
+    scrollToTop();
+  };
+
+  const handleNext = () => {
+    const stepErrors = validateStep(stepIndex);
+    setErrors(prev => ({ ...prev, ...stepErrors }));
+
+    const errorKeys = Object.keys(stepErrors);
+    if (errorKeys.length > 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'A few things need fixing',
+        text2: `${errorKeys.length} field${errorKeys.length > 1 ? 's' : ''} need${errorKeys.length === 1 ? 's' : ''} your attention.`,
+      });
+      return;
+    }
+
+    if (stepIndex < WIZARD_STEPS.length - 1) {
+      goToStep(stepIndex + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (stepIndex > 0) goToStep(stepIndex - 1);
+    else navigation.goBack();
+  };
+
   const handleSubmit = async () => {
-    const next = validate();
+    const next = validateAll();
     const errorKeys = Object.keys(next);
 
     if (errorKeys.length > 0) {
-      // Jump to the first section with a problem
-      if (next.images) scrollToRef(photosRef);
-      else if (next.name || next.category) scrollToRef(detailsRef);
-      else if (next.price || next.originalPrice || next.discountPercent) scrollToRef(pricingRef);
-      else if (next.campus || next.campusArea) scrollToRef(locationRef);
+      setErrors(next);
+      // Jump to the first step that has a problem
+      const firstBadStepIndex = WIZARD_STEPS.findIndex((_, i) => {
+        const stepErrs = validateStep(i);
+        return Object.keys(stepErrs).some(k => next[k]);
+      });
+      if (firstBadStepIndex !== -1) goToStep(firstBadStepIndex);
 
       Toast.show({
         type: 'error',
@@ -641,7 +702,7 @@ const AddProductScreen = ({ navigation }) => {
       const response = await createProduct(formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
       if (response?.data?.success || response?.status === 201) {
-        Toast.show({ type: 'success', text1: 'Listed!', text2: `"${name.trim()}" is now live on CediMart.` });
+        Alert.alert( 'success',  `"${name.trim()}" is now live on CediMart.` );
         navigation.goBack();
       } else {
         throw new Error('Failed to create product');
@@ -654,12 +715,380 @@ const AddProductScreen = ({ navigation }) => {
     }
   };
 
+  // ── Per-step completion (drives the stepper dots + footer hint) ────────────
+  const photosComplete   = images.length > 0;
+  const detailsComplete  = !!name.trim() && !!category && !!condition;
+  const pricingComplete  = !!price && !isNaN(parseFloat(price)) && parseFloat(price) >= 0;
+  const locationComplete = !!campus && !!campusArea.trim();
+
+  const completedCount = [photosComplete, detailsComplete, pricingComplete, locationComplete].filter(Boolean).length;
+  const completionPct = Math.round((completedCount / 4) * 100);
+
+  const currentStepKey = WIZARD_STEPS[stepIndex].key;
+  const isFirstStep = stepIndex === 0;
+  const isLastStep  = stepIndex === WIZARD_STEPS.length - 1;
+  const isReviewStep = currentStepKey === 'review';
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // STEP RENDERERS — each returns just the body for that step
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const renderPhotosStep = () => (
+    <StepShell
+      eyebrow="STEP 1 OF 7"
+      title="Add product photos"
+      subtitle="Up to 10 photos. The first one becomes your cover image."
+    >
+      <View style={styles.imageGrid}>
+        {images.map((img, i) => (
+          <View key={i} style={styles.imageThumbWrap}>
+            <Image source={{ uri: img.uri }} style={styles.imageThumb} resizeMode="cover" />
+            <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeImage(i)}>
+              <Ionicons name="close-circle" size={22} color="#E53935" />
+            </TouchableOpacity>
+            {i === 0 && <View style={styles.coverBadge}><Text style={styles.coverBadgeText}>Cover</Text></View>}
+          </View>
+        ))}
+        {images.length < 10 && (
+          <TouchableOpacity
+            style={[styles.imageAddBtn, errors.images && styles.imageAddBtnError]}
+            onPress={pickImages}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add" size={32} color={errors.images ? '#E53935' : '#2E7D32'} />
+            <Text style={[styles.imageAddText, errors.images && { color: '#E53935' }]}>
+              {images.length === 0 ? 'Add Photos' : `${images.length}/10`}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      <HelperText icon="bulb-outline">
+        Clear, well-lit photos sell faster. Show any wear or damage honestly — it builds trust with buyers.
+      </HelperText>
+      {!!errors.images && <FieldError>{errors.images}</FieldError>}
+    </StepShell>
+  );
+
+  const renderDetailsStep = () => (
+    <StepShell
+      eyebrow="STEP 2 OF 7"
+      title="What are you selling?"
+      subtitle="Give buyers a clear, recognizable name and category."
+    >
+      <FloatingInput
+        label="Product Name" icon="pricetag-outline"
+        placeholder="e.g. iPhone 13 Pro Max 256GB"
+        value={name}
+        onChangeText={(v) => { setName(v); if (v.trim()) setErrors(prev => ({ ...prev, name: null })); }}
+        required
+        error={errors.name}
+        maxLength={80}
+      />
+      <DropdownSelector
+        label="Category" placeholder="Select category" items={VALID_CATEGORIES}
+        selectedValue={category} onSelect={handleCategoryChange} required style={{ marginBottom: 14 }}
+        error={errors.category}
+        renderItem={({ item, isSelected }) => (
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <Text style={{ fontSize: 22, width: 32, textAlign: 'center' }}>{item.icon}</Text>
+            <Text style={[bsStyles.itemText, { marginLeft: 12 }, isSelected && bsStyles.itemTextActive]}>{formatDisplayName(item.key)}</Text>
+          </View>
+        )}
+      />
+      <DropdownSelector
+        label="Subcategory (optional)" placeholder="Select subcategory" items={subcategoryOptions}
+        selectedValue={subcategory} onSelect={setSubcategory} style={{ marginBottom: 14 }}
+        disabled={!category || subcategoryOptions.length === 0}
+      />
+      {!category && (
+        <HelperText>Choose a category first to see matching subcategories.</HelperText>
+      )}
+      <FloatingInput label="Brand (optional)" icon="bookmark-outline" placeholder="e.g. Apple, Samsung, Nike" value={brand} onChangeText={setBrand} />
+      <DropdownSelector
+        label="Condition" placeholder="Select condition" items={CONDITION_OPTIONS}
+        selectedValue={condition} onSelect={setCondition} required style={{ marginBottom: 4 }}
+      />
+      <HelperText>Be honest about condition — accurate listings get fewer cancelled deals.</HelperText>
+    </StepShell>
+  );
+
+  const renderPricingStep = () => (
+    <StepShell
+      eyebrow="STEP 3 OF 7"
+      title="Set your price"
+      subtitle="You can always edit this later."
+    >
+      <Text style={styles.quickLabel}>Price (GH₵) <Text style={styles.required}>*</Text></Text>
+      <View style={[styles.priceInputFull, errors.price && styles.priceInputFullError]}>
+        <View style={styles.currencyTag}><Text style={styles.currencyText}>GH₵</Text></View>
+        <TextInput
+          style={styles.priceInputField}
+          placeholder="0.00"
+          placeholderTextColor="#C5C5C5"
+          keyboardType="decimal-pad"
+          value={price}
+          onChangeText={(v) => { setPrice(v); if (v.trim() && !isNaN(parseFloat(v))) setErrors(prev => ({ ...prev, price: null })); }}
+        />
+      </View>
+      {!!errors.price && <FieldError>{errors.price}</FieldError>}
+
+      <TouchableOpacity style={[styles.negotiableBtn, negotiable && styles.negotiableBtnActive]} onPress={() => setNegotiable(!negotiable)}>
+        <Ionicons name={negotiable ? 'pricetag' : 'pricetag-outline'} size={18} color={negotiable ? '#fff' : '#2E7D32'} />
+        <Text style={[styles.negotiableText, negotiable && styles.negotiableTextActive]}>Price is negotiable</Text>
+      </TouchableOpacity>
+      <HelperText>
+        Turning this on lets buyers know they can message you to haggle.
+      </HelperText>
+
+      <Text style={styles.quickLabel}>Quantity Available</Text>
+      <TextInput style={styles.simpleInput} placeholder="1" placeholderTextColor="#C5C5C5" keyboardType="numeric" value={countInStock} onChangeText={setCountInStock} />
+      <HelperText>
+        How many of this exact item do you have to sell? Most listings are 1.
+      </HelperText>
+
+      {/* Discount Section */}
+      <View style={{ marginTop: 8 }}>
+        <TouchableOpacity
+          style={[styles.discountToggle, hasDiscount && styles.discountToggleActive]}
+          onPress={() => setHasDiscount(!hasDiscount)}
+        >
+          <Ionicons name="pricetag" size={18} color={hasDiscount ? '#fff' : '#2E7D32'} />
+          <Text style={[styles.discountToggleText, hasDiscount && styles.discountToggleTextActive]}>
+            {hasDiscount ? 'Discount applied' : 'Add discount (optional)'}
+          </Text>
+          <Ionicons name={hasDiscount ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={hasDiscount ? '#fff' : '#2E7D32'} />
+        </TouchableOpacity>
+
+        {hasDiscount && (
+          <View style={styles.discountFields}>
+            <HelperText icon="information-circle-outline">
+              Show buyers the original price was higher, so the deal feels real. All fields here are optional.
+            </HelperText>
+            <FloatingInput
+              label="Original Price (GH₵)" icon="pricetag-outline" placeholder="e.g. 1500.00"
+              value={originalPrice} onChangeText={setOriginalPrice} keyboardType="decimal-pad"
+              error={errors.originalPrice}
+            />
+            <FloatingInput
+              label="Discount Percentage (%)" icon="trending-down-outline" placeholder="e.g. 20"
+              value={discountPercent} onChangeText={setDiscountPercent} keyboardType="numeric"
+              error={errors.discountPercent}
+            />
+            <View style={styles.dateRow}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.quickLabel}>Start Date</Text>
+                <TextInput style={styles.simpleInput} placeholder="YYYY-MM-DD" placeholderTextColor="#C5C5C5" value={discountStartDate} onChangeText={setDiscountStartDate} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.quickLabel}>End Date</Text>
+                <TextInput style={styles.simpleInput} placeholder="YYYY-MM-DD" placeholderTextColor="#C5C5C5" value={discountEndDate} onChangeText={setDiscountEndDate} />
+              </View>
+            </View>
+            <HelperText>Leave dates blank if the discount has no end date.</HelperText>
+          </View>
+        )}
+      </View>
+    </StepShell>
+  );
+
+  const renderSpecsStep = () => (
+    <StepShell
+      eyebrow="STEP 4 OF 7 · OPTIONAL"
+      title="Add specifications"
+      subtitle="Things like storage, color, weight, or material help buyers compare."
+    >
+      {specifications.map((spec, index) => (
+        <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <View style={{ flex: 1 }}>
+            <TextInput
+              style={styles.specInput}
+              placeholder="Spec name (e.g. Color)"
+              placeholderTextColor="#C5C5C5"
+              value={spec.key}
+              onChangeText={(v) => updateSpecField(index, 'key', v)}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <TextInput
+              style={styles.specInput}
+              placeholder="Value (e.g. Red)"
+              placeholderTextColor="#C5C5C5"
+              value={spec.value}
+              onChangeText={(v) => updateSpecField(index, 'value', v)}
+            />
+          </View>
+          <TouchableOpacity onPress={() => removeSpecField(index)} style={{ padding: 6 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close-circle" size={22} color="#E53935" />
+          </TouchableOpacity>
+        </View>
+      ))}
+      <TouchableOpacity style={styles.addSpecBtn} onPress={addSpecField} activeOpacity={0.8}>
+        <Ionicons name="add-circle-outline" size={20} color="#2E7D32" />
+        <Text style={styles.addSpecBtnText}>Add Specification</Text>
+      </TouchableOpacity>
+      <HelperText>
+        Specs help buyers compare items quickly — e.g. "Storage: 256GB" or "Material: Leather". Feel free to skip this step.
+      </HelperText>
+    </StepShell>
+  );
+
+  const renderLocationStep = () => (
+    <StepShell
+      eyebrow="STEP 5 OF 7"
+      title="Where can buyers find you?"
+      subtitle="This helps buyers arrange a safe meet-up nearby."
+    >
+      <DropdownSelector
+        label="Campus" placeholder="Select your campus" items={CAMPUS_OPTIONS}
+        selectedValue={campus}
+        onSelect={(v) => { setCampus(v); setErrors(prev => ({ ...prev, campus: null })); }}
+        required style={{ marginBottom: 14 }}
+        error={errors.campus}
+      />
+      <FloatingInput
+        label="Campus Area" icon="location-outline"
+        placeholder="e.g. Main Campus, North Campus"
+        value={campusArea}
+        onChangeText={(v) => { setCampusArea(v); if (v.trim()) setErrors(prev => ({ ...prev, campusArea: null })); }}
+        required
+        error={errors.campusArea}
+      />
+      <FloatingInput label="Hostel / Hall (optional)" icon="home-outline" placeholder="e.g. Mensah Sarbah Hall, Pentagon" value={hostel} onChangeText={setHostel} />
+      <HelperText icon="shield-checkmark-outline">
+        Buyers will use this to arrange a safe meet-up. You won't share your exact address.
+      </HelperText>
+    </StepShell>
+  );
+
+  const renderAboutStep = () => (
+    <StepShell
+      eyebrow="STEP 6 OF 7 · OPTIONAL"
+      title="Description & tags"
+      subtitle="Help your item show up in the right searches and filters."
+    >
+      <FloatingInput
+        label="Description" icon="document-text-outline"
+        placeholder="Describe your item, reason for selling, what's included, etc."
+        value={description} onChangeText={setDescription} multiline
+        maxLength={500}
+      />
+      <Text style={[styles.quickLabel, { marginTop: 4 }]}>Tags <Text style={styles.optional}>(optional)</Text></Text>
+      <View style={styles.tagsGrid}>
+        {AVAILABLE_TAGS.map(({ key, icon }) => {
+          const active = selectedTags.includes(key);
+          return (
+            <TouchableOpacity key={key} style={[styles.tagChip, active && styles.tagChipActive]} onPress={() => toggleTag(key)} activeOpacity={0.75}>
+              <Text style={styles.tagEmoji}>{icon}</Text>
+              <Text style={[styles.tagLabel, active && styles.tagLabelActive]}>{formatDisplayName(key)}</Text>
+              {active && <Ionicons name="checkmark-circle" size={12} color="#2E7D32" />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {selectedTags.length > 0 && (
+        <View style={styles.tagCountRow}>
+          <Ionicons name="pricetags" size={13} color="#2E7D32" />
+          <Text style={styles.tagCountText}>{selectedTags.length} tag{selectedTags.length > 1 ? 's' : ''} selected</Text>
+          <TouchableOpacity onPress={() => setSelectedTags([])}><Text style={styles.tagClearText}>Clear all</Text></TouchableOpacity>
+        </View>
+      )}
+      <HelperText>Tags help your item show up in the right filters — pick what genuinely applies. Feel free to skip this step.</HelperText>
+    </StepShell>
+  );
+
+  const renderReviewStep = () => (
+    <StepShell
+      eyebrow="STEP 7 OF 7"
+      title="Review & publish"
+      subtitle="Double-check everything looks right before going live."
+    >
+      {/* Cover image preview */}
+      {images.length > 0 && (
+        <View style={styles.reviewImageRow}>
+          <Image source={{ uri: images[0].uri }} style={styles.reviewCoverImg} resizeMode="cover" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reviewName} numberOfLines={2}>{name || 'Untitled item'}</Text>
+            <Text style={styles.reviewPrice}>
+              GH₵ {parseFloat(price || 0).toFixed(2)}{negotiable ? ' · Negotiable' : ''}
+            </Text>
+            <Text style={styles.reviewPhotoCount}>{images.length} photo{images.length !== 1 ? 's' : ''} added</Text>
+          </View>
+          <TouchableOpacity onPress={() => goToStep(0)} style={styles.reviewEditBtn}>
+            <Ionicons name="create-outline" size={16} color="#2E7D32" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryHeader}>
+          <Ionicons name="checkmark-done-circle" size={18} color="#2E7D32" />
+          <Text style={styles.summaryTitle}>Listing Summary</Text>
+        </View>
+        {[
+          ['Item', name || '—', 1],
+          ['Category', category ? formatDisplayName(category) : '—', 1],
+          subcategory ? ['Subcategory', formatDisplayName(subcategory), 1] : null,
+          ['Brand', brand || '—', 1],
+          ['Condition', formatDisplayName(condition), 1],
+          ['Price', `GH₵ ${parseFloat(price || 0).toFixed(2)}${negotiable ? ' (negotiable)' : ''}`, 2],
+          hasDiscount && discountPercent ? ['Discount', `${discountPercent}% off`, 2] : null,
+          hasDiscount && originalPrice ? ['Original Price', `GH₵ ${parseFloat(originalPrice || 0).toFixed(2)}`, 2] : null,
+          ['Quantity', countInStock || '1', 2],
+          ['Campus', CAMPUS_OPTIONS.find(c => c.key === campus)?.label || campus || '—', 4],
+          ['Area', campusArea || '—', 4],
+          hostel ? ['Hostel / Hall', hostel, 4] : null,
+          ['Photos', `${images.length} image(s)`, 0],
+          selectedTags.length > 0 ? ['Tags', selectedTags.map(formatDisplayName).join(', '), 5] : null,
+        ].filter(Boolean).map(([k, v, stepToEdit]) => (
+          <TouchableOpacity
+            key={k}
+            style={styles.summaryRow}
+            onPress={() => goToStep(stepToEdit)}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.summaryKey}>{k}</Text>
+            <Text style={styles.summaryVal} numberOfLines={1}>{v}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {description ? (
+        <View style={styles.reviewDescBox}>
+          <Text style={styles.reviewDescLabel}>Description</Text>
+          <Text style={styles.reviewDescText} numberOfLines={4}>{description}</Text>
+        </View>
+      ) : null}
+
+      {/* Gentle nudge when form isn't ready, instead of a silent disabled button */}
+      {completionPct < 100 && (
+        <View style={styles.incompleteNotice}>
+          <Ionicons name="information-circle-outline" size={16} color="#E65100" />
+          <Text style={styles.incompleteNoticeText}>
+            {4 - completedCount} required section{4 - completedCount > 1 ? 's' : ''} still need attention. Tap any row above to fix it.
+          </Text>
+        </View>
+      )}
+    </StepShell>
+  );
+
+  const STEP_RENDERERS = {
+    photos: renderPhotosStep,
+    details: renderDetailsStep,
+    pricing: renderPricingStep,
+    specs: renderSpecsStep,
+    location: renderLocationStep,
+    about: renderAboutStep,
+    review: renderReviewStep,
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+
+        {/* ── Header ── */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color="#1A1A1A" />
+          <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
+            <Ionicons name={isFirstStep ? 'close' : 'arrow-back'} size={22} color="#1A1A1A" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>List Item</Text>
@@ -671,326 +1100,59 @@ const AddProductScreen = ({ navigation }) => {
             </Text>
           </View>
         </View>
-        <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: `${completionPct}%` }]} />
-        </View>
 
+        {/* ── Top progress stepper ── */}
+        <ProgressStepper
+          steps={WIZARD_STEPS}
+          currentIndex={stepIndex}
+          furthestIndex={furthestIndex}
+          onStepPress={goToStep}
+        />
+
+        {/* ── Active step content ── */}
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <StepIndicator currentStep={currentStep} />
-
-          {/* 01 PHOTOS */}
-          <SectionCard
-            title="Product Photos"
-            subtitle="Up to 10 photos. First photo is the cover."
-            accent="#1B5E20"
-            stepNum="01"
-            complete={photosComplete}
-            sectionRef={photosRef}
-          >
-            <View style={styles.imageGrid}>
-              {images.map((img, i) => (
-                <View key={i} style={styles.imageThumbWrap}>
-                  <Image source={{ uri: img.uri }} style={styles.imageThumb} resizeMode="cover" />
-                  <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeImage(i)}>
-                    <Ionicons name="close-circle" size={22} color="#E53935" />
-                  </TouchableOpacity>
-                  {i === 0 && <View style={styles.coverBadge}><Text style={styles.coverBadgeText}>Cover</Text></View>}
-                </View>
-              ))}
-              {images.length < 10 && (
-                <TouchableOpacity
-                  style={[styles.imageAddBtn, errors.images && styles.imageAddBtnError]}
-                  onPress={pickImages}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="add" size={32} color={errors.images ? '#E53935' : '#2E7D32'} />
-                  <Text style={[styles.imageAddText, errors.images && { color: '#E53935' }]}>
-                    {images.length === 0 ? 'Add Photos' : `${images.length}/10`}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <HelperText icon="bulb-outline">
-              Clear, well-lit photos sell faster. Show any wear or damage honestly — it builds trust with buyers.
-            </HelperText>
-            {!!errors.images && <FieldError>{errors.images}</FieldError>}
-          </SectionCard>
-
-          {/* 02 DETAILS */}
-          <SectionCard
-            title="Item Details"
-            subtitle="What are you selling?"
-            accent="#2E7D32"
-            stepNum="02"
-            complete={detailsComplete}
-            sectionRef={detailsRef}
-          >
-            <FloatingInput
-              label="Product Name" icon="pricetag-outline"
-              placeholder="e.g. iPhone 13 Pro Max 256GB"
-              value={name}
-              onChangeText={(v) => { setName(v); if (v.trim()) setErrors(prev => ({ ...prev, name: null })); }}
-              required
-              error={errors.name}
-              maxLength={80}
-            />
-            <DropdownSelector
-              label="Category" placeholder="Select category" items={VALID_CATEGORIES}
-              selectedValue={category} onSelect={handleCategoryChange} required style={{ marginBottom: 14 }}
-              error={errors.category}
-              renderItem={({ item, isSelected }) => (
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 22, width: 32, textAlign: 'center' }}>{item.icon}</Text>
-                  <Text style={[bsStyles.itemText, { marginLeft: 12 }, isSelected && bsStyles.itemTextActive]}>{formatDisplayName(item.key)}</Text>
-                </View>
-              )}
-            />
-            <DropdownSelector
-              label="Subcategory (optional)" placeholder="Select subcategory" items={subcategoryOptions}
-              selectedValue={subcategory} onSelect={setSubcategory} style={{ marginBottom: 14 }}
-              disabled={!category || subcategoryOptions.length === 0}
-            />
-            {!category && (
-              <HelperText>Choose a category first to see matching subcategories.</HelperText>
-            )}
-            <FloatingInput label="Brand (optional)" icon="bookmark-outline" placeholder="e.g. Apple, Samsung, Nike" value={brand} onChangeText={setBrand} />
-            <DropdownSelector
-              label="Condition" placeholder="Select condition" items={CONDITION_OPTIONS}
-              selectedValue={condition} onSelect={setCondition} required style={{ marginBottom: 4 }}
-            />
-            <HelperText>Be honest about condition — accurate listings get fewer cancelled deals.</HelperText>
-          </SectionCard>
-
-          {/* 03 PRICING */}
-          <SectionCard
-            title="Pricing"
-            subtitle="Set your price"
-            accent="#388E3C"
-            stepNum="03"
-            complete={pricingComplete}
-            sectionRef={pricingRef}
-          >
-            <Text style={styles.quickLabel}>Price (GH₵) <Text style={styles.required}>*</Text></Text>
-            <View style={[styles.priceInputFull, errors.price && styles.priceInputFullError]}>
-              <View style={styles.currencyTag}><Text style={styles.currencyText}>GH₵</Text></View>
-              <TextInput
-                style={styles.priceInputField}
-                placeholder="0.00"
-                placeholderTextColor="#C5C5C5"
-                keyboardType="decimal-pad"
-                value={price}
-                onChangeText={(v) => { setPrice(v); if (v.trim() && !isNaN(parseFloat(v))) setErrors(prev => ({ ...prev, price: null })); }}
-              />
-            </View>
-            {!!errors.price && <FieldError>{errors.price}</FieldError>}
-
-            <TouchableOpacity style={[styles.negotiableBtn, negotiable && styles.negotiableBtnActive]} onPress={() => setNegotiable(!negotiable)}>
-              <Ionicons name={negotiable ? 'pricetag' : 'pricetag-outline'} size={18} color={negotiable ? '#fff' : '#2E7D32'} />
-              <Text style={[styles.negotiableText, negotiable && styles.negotiableTextActive]}>Price is negotiable</Text>
-            </TouchableOpacity>
-            <HelperText>
-              Turning this on lets buyers know they can message you to haggle.
-            </HelperText>
-
-            <Text style={styles.quickLabel}>Quantity Available</Text>
-            <TextInput style={styles.simpleInput} placeholder="1" placeholderTextColor="#C5C5C5" keyboardType="numeric" value={countInStock} onChangeText={setCountInStock} />
-            <HelperText>
-              How many of this exact item do you have to sell? Most listings are 1.
-            </HelperText>
-
-            {/* Discount Section */}
-            <View style={{ marginTop: 8 }}>
-              <TouchableOpacity
-                style={[styles.discountToggle, hasDiscount && styles.discountToggleActive]}
-                onPress={() => setHasDiscount(!hasDiscount)}
-              >
-                <Ionicons name="pricetag" size={18} color={hasDiscount ? '#fff' : '#2E7D32'} />
-                <Text style={[styles.discountToggleText, hasDiscount && styles.discountToggleTextActive]}>
-                  {hasDiscount ? 'Discount applied' : 'Add discount (optional)'}
-                </Text>
-                <Ionicons name={hasDiscount ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={hasDiscount ? '#fff' : '#2E7D32'} />
-              </TouchableOpacity>
-
-              {hasDiscount && (
-                <View style={styles.discountFields}>
-                  <HelperText icon="information-circle-outline">
-                    Show buyers the original price was higher, so the deal feels real. All fields here are optional.
-                  </HelperText>
-                  <FloatingInput
-                    label="Original Price (GH₵)" icon="pricetag-outline" placeholder="e.g. 1500.00"
-                    value={originalPrice} onChangeText={setOriginalPrice} keyboardType="decimal-pad"
-                    error={errors.originalPrice}
-                  />
-                  <FloatingInput
-                    label="Discount Percentage (%)" icon="trending-down-outline" placeholder="e.g. 20"
-                    value={discountPercent} onChangeText={setDiscountPercent} keyboardType="numeric"
-                    error={errors.discountPercent}
-                  />
-                  <View style={styles.dateRow}>
-                    <View style={{ flex: 1, marginRight: 8 }}>
-                      <Text style={styles.quickLabel}>Start Date</Text>
-                      <TextInput style={styles.simpleInput} placeholder="YYYY-MM-DD" placeholderTextColor="#C5C5C5" value={discountStartDate} onChangeText={setDiscountStartDate} />
-                    </View>
-                    <View style={{ flex: 1, marginLeft: 8 }}>
-                      <Text style={styles.quickLabel}>End Date</Text>
-                      <TextInput style={styles.simpleInput} placeholder="YYYY-MM-DD" placeholderTextColor="#C5C5C5" value={discountEndDate} onChangeText={setDiscountEndDate} />
-                    </View>
-                  </View>
-                  <HelperText>Leave dates blank if the discount has no end date.</HelperText>
-                </View>
-              )}
-            </View>
-          </SectionCard>
-
-          {/* 04 SPECIFICATIONS */}
-          <SectionCard title="Specifications (Optional)" subtitle="Add product details like storage, color, weight, material" accent="#8E24AA" stepNum="04" complete={specsComplete}>
-            {specifications.map((spec, index) => (
-              <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <TextInput
-                    style={styles.specInput}
-                    placeholder="Spec name (e.g. Color)"
-                    placeholderTextColor="#C5C5C5"
-                    value={spec.key}
-                    onChangeText={(v) => updateSpecField(index, 'key', v)}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <TextInput
-                    style={styles.specInput}
-                    placeholder="Value (e.g. Red)"
-                    placeholderTextColor="#C5C5C5"
-                    value={spec.value}
-                    onChangeText={(v) => updateSpecField(index, 'value', v)}
-                  />
-                </View>
-                <TouchableOpacity onPress={() => removeSpecField(index)} style={{ padding: 6 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="close-circle" size={22} color="#E53935" />
-                </TouchableOpacity>
-              </View>
-            ))}
-            <TouchableOpacity style={styles.addSpecBtn} onPress={addSpecField} activeOpacity={0.8}>
-              <Ionicons name="add-circle-outline" size={20} color="#2E7D32" />
-              <Text style={styles.addSpecBtnText}>Add Specification</Text>
-            </TouchableOpacity>
-            <HelperText>
-              Specs help buyers compare items quickly — e.g. "Storage: 256GB" or "Material: Leather".
-            </HelperText>
-          </SectionCard>
-
-          {/* 05 LOCATION */}
-          <SectionCard
-            title="Campus & Location"
-            subtitle="Where can buyers find you?"
-            accent="#43A047"
-            stepNum="05"
-            complete={locationComplete}
-            sectionRef={locationRef}
-          >
-            <DropdownSelector
-              label="Campus" placeholder="Select your campus" items={CAMPUS_OPTIONS}
-              selectedValue={campus}
-              onSelect={(v) => { setCampus(v); setErrors(prev => ({ ...prev, campus: null })); }}
-              required style={{ marginBottom: 14 }}
-              error={errors.campus}
-            />
-            <FloatingInput
-              label="Campus Area" icon="location-outline"
-              placeholder="e.g. Main Campus, North Campus"
-              value={campusArea}
-              onChangeText={(v) => { setCampusArea(v); if (v.trim()) setErrors(prev => ({ ...prev, campusArea: null })); }}
-              required
-              error={errors.campusArea}
-            />
-            <FloatingInput label="Hostel / Hall (optional)" icon="home-outline" placeholder="e.g. Mensah Sarbah Hall, Pentagon" value={hostel} onChangeText={setHostel} />
-            <HelperText icon="shield-checkmark-outline">
-              Buyers will use this to arrange a safe meet-up. You won't share your exact address.
-            </HelperText>
-          </SectionCard>
-
-          {/* 06 DESCRIPTION & TAGS */}
-          <SectionCard title="Description & Tags" subtitle="Help buyers find your item" accent="#66BB6A" stepNum="06" complete={!!description.trim()}>
-            <FloatingInput
-              label="Description" icon="document-text-outline"
-              placeholder="Describe your item, reason for selling, what's included, etc."
-              value={description} onChangeText={setDescription} multiline
-              maxLength={500}
-            />
-            <Text style={[styles.quickLabel, { marginTop: 4 }]}>Tags <Text style={styles.optional}>(optional)</Text></Text>
-            <View style={styles.tagsGrid}>
-              {AVAILABLE_TAGS.map(({ key, icon }) => {
-                const active = selectedTags.includes(key);
-                return (
-                  <TouchableOpacity key={key} style={[styles.tagChip, active && styles.tagChipActive]} onPress={() => toggleTag(key)} activeOpacity={0.75}>
-                    <Text style={styles.tagEmoji}>{icon}</Text>
-                    <Text style={[styles.tagLabel, active && styles.tagLabelActive]}>{formatDisplayName(key)}</Text>
-                    {active && <Ionicons name="checkmark-circle" size={12} color="#2E7D32" />}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            {selectedTags.length > 0 && (
-              <View style={styles.tagCountRow}>
-                <Ionicons name="pricetags" size={13} color="#2E7D32" />
-                <Text style={styles.tagCountText}>{selectedTags.length} tag{selectedTags.length > 1 ? 's' : ''} selected</Text>
-                <TouchableOpacity onPress={() => setSelectedTags([])}><Text style={styles.tagClearText}>Clear all</Text></TouchableOpacity>
-              </View>
-            )}
-            <HelperText>Tags help your item show up in the right filters — pick what genuinely applies.</HelperText>
-          </SectionCard>
-
-          {/* SUMMARY */}
-          {name && category && price && campus && campusArea && images.length > 0 && (
-            <View style={styles.summaryCard}>
-              <View style={styles.summaryHeader}>
-                <Ionicons name="checkmark-done-circle" size={18} color="#2E7D32" />
-                <Text style={styles.summaryTitle}>Ready to List</Text>
-              </View>
-              {[
-                ['Item', name],
-                ['Category', formatDisplayName(category)],
-                subcategory ? ['Subcategory', formatDisplayName(subcategory)] : null,
-                ['Price', `GH₵ ${parseFloat(price || 0).toFixed(2)}${negotiable ? ' (negotiable)' : ''}`],
-                hasDiscount && discountPercent ? ['Discount', `${discountPercent}% off`] : null,
-                hasDiscount && originalPrice ? ['Original', `GH₵ ${parseFloat(originalPrice || 0).toFixed(2)}`] : null,
-                ['Condition', formatDisplayName(condition)],
-                ['Campus', CAMPUS_OPTIONS.find(c => c.key === campus)?.label || campus],
-                ['Photos', `${images.length} image(s)`],
-              ].filter(Boolean).map(([k, v]) => (
-                <View key={k} style={styles.summaryRow}>
-                  <Text style={styles.summaryKey}>{k}</Text>
-                  <Text style={styles.summaryVal} numberOfLines={1}>{v}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Gentle nudge when form isn't ready, instead of a silent disabled button */}
-          {completionPct < 100 && (
-            <View style={styles.incompleteNotice}>
-              <Ionicons name="information-circle-outline" size={16} color="#E65100" />
-              <Text style={styles.incompleteNoticeText}>
-                {4 - completedCount} required section{4 - completedCount > 1 ? 's' : ''} left to finish before you can publish.
-              </Text>
-            </View>
-          )}
-
-          <TouchableOpacity style={[styles.publishBtn, loading && styles.publishBtnDisabled]} onPress={handleSubmit} disabled={loading} activeOpacity={0.88}>
-            {loading ? <ActivityIndicator size="small" color="#fff" /> : (
-              <>
-                <View style={styles.publishIcon}><Ionicons name="rocket-outline" size={20} color="#2E7D32" /></View>
-                <Text style={styles.publishBtnText}>List on CediMart</Text>
-                <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.8)" />
-              </>
-            )}
-          </TouchableOpacity>
-          <View style={{ height: 60 }} />
+          {STEP_RENDERERS[currentStepKey]()}
+          <View style={{ height: 12 }} />
         </ScrollView>
+
+        {/* ── Bottom navigation bar ── */}
+      
+
+{/* ── Bottom navigation bar ── */}
+        <View style={styles.bottomNav}>
+          <TouchableOpacity style={styles.backNavBtn} onPress={handleBack} activeOpacity={0.8}>
+            <Ionicons name="arrow-back" size={18} color="#424242" />
+            <Text style={styles.backNavBtnText}>{isFirstStep ? 'Cancel' : 'Back'}</Text>
+          </TouchableOpacity>
+
+          {isReviewStep ? (
+            <TouchableOpacity
+              style={[styles.publishBtn, loading && styles.publishBtnDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+              activeOpacity={0.88}
+            >
+              {loading ? <ActivityIndicator size="small" color="#fff" /> : (
+                <>
+                  <Text style={styles.publishBtnText}>List on CediMart</Text>
+                  <Ionicons name="rocket-outline" size={18} color="#fff" />
+                </>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.nextBtn} onPress={handleNext} activeOpacity={0.88}>
+              <Text style={styles.nextBtnText}>
+                {WIZARD_STEPS[stepIndex + 1]?.key === 'review' ? 'Review' : 'Next'}
+              </Text>
+              <Ionicons name="arrow-forward" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -998,6 +1160,8 @@ const AddProductScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F4F6F4' },
+
+  // ── Header ──────────────────────────────────────────────────────────────────
   header: {
     backgroundColor: '#FFFFFF',
     flexDirection: 'row', alignItems: 'center',
@@ -1012,30 +1176,37 @@ const styles = StyleSheet.create({
   headerCompletionBadgeDone: { backgroundColor: '#2E7D32' },
   headerCompletionText: { fontSize: 13, fontWeight: '800', color: '#2E7D32' },
   headerCompletionTextDone: { color: '#fff' },
-  progressBarBg: { height: 3, backgroundColor: '#E8E8E8' },
-  progressBarFill: { height: 3, backgroundColor: '#2E7D32' },
-  stepRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#fff', marginBottom: 4, borderBottomWidth: 1, borderBottomColor: '#EEEEEE' },
-  stepItem: { alignItems: 'center', gap: 4 },
-  stepLine: { flex: 1, height: 2, backgroundColor: '#E0E0E0', marginHorizontal: 4, marginBottom: 14 },
-  stepLineDone: { backgroundColor: '#4CAF50' },
-  stepCircle: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center' },
-  stepDone: { backgroundColor: '#4CAF50' },
-  stepActive: { backgroundColor: '#1B5E20', borderWidth: 2, borderColor: '#A5D6A7' },
-  stepNum: { fontSize: 11, fontWeight: '700', color: '#9E9E9E' },
-  stepNumActive: { color: '#fff' },
-  stepLabel: { fontSize: 10, color: '#9E9E9E', fontWeight: '600' },
-  stepLabelActive: { color: '#1B5E20', fontWeight: '700' },
-  scrollContent: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 20 },
-  card: { backgroundColor: '#fff', borderRadius: 20, marginBottom: 14, flexDirection: 'row', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 },
-  cardAccent: { width: 4 },
-  cardInner: { flex: 1, padding: 18 },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 18 },
-  cardStepBadge: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  cardStepNum: { fontSize: 13, fontWeight: '900', letterSpacing: -0.5 },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#1A1A1A', marginBottom: 2 },
-  cardSubtitle: { fontSize: 12, color: '#9E9E9E', fontWeight: '500' },
 
-  // Helper / error text
+  // ── Progress stepper ──────────────────────────────────────────────────────
+  stepperWrap: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1, borderBottomColor: '#EEEEEE',
+  },
+  stepperScroll: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
+  stepperItem: { alignItems: 'center', gap: 5, width: 58 },
+  stepperLine: { width: 20, height: 2, backgroundColor: '#E0E0E0', marginHorizontal: 2, marginBottom: 18 },
+  stepperLineDone: { backgroundColor: '#4CAF50' },
+  stepperCircle: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1.5, borderColor: '#E8E8E8',
+  },
+  stepperCircleDone: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  stepperCircleActive: { backgroundColor: '#1B5E20', borderColor: '#1B5E20' },
+  stepperLabel: { fontSize: 10, color: '#9E9E9E', fontWeight: '600', textAlign: 'center' },
+  stepperLabelActive: { color: '#1B5E20', fontWeight: '800' },
+  stepperLabelDone: { color: '#4CAF50', fontWeight: '700' },
+
+  // ── Step shell ────────────────────────────────────────────────────────────
+  scrollContent: { paddingHorizontal: 18, paddingTop: 20, paddingBottom: 46 , marginBottom:36},
+  stepShell: {},
+  stepEyebrow: { fontSize: 11, fontWeight: '800', color: '#4CAF50', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  stepTitle: { fontSize: 23, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.4, marginBottom: 5 },
+  stepSubtitle: { fontSize: 13.5, color: '#888', lineHeight: 19, marginBottom: 22 },
+  stepBody: {},
+
+  // ── Helper / error text ──────────────────────────────────────────────────
   helperRow: { flexDirection: 'row', gap: 6, marginTop: 6, marginBottom: 4, paddingRight: 6 },
   helperText: { flex: 1, fontSize: 11.5, color: '#9E9E9E', lineHeight: 16 },
   fieldErrorRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 2 },
@@ -1130,12 +1301,29 @@ const styles = StyleSheet.create({
   tagCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
   tagCountText: { fontSize: 12, color: '#2E7D32', fontWeight: '600', flex: 1 },
   tagClearText: { fontSize: 12, color: '#E53935', fontWeight: '600' },
+
+  // ── Review step ───────────────────────────────────────────────────────────
+  reviewImageRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#fff', borderRadius: 16, padding: 12, marginBottom: 16,
+    borderWidth: 1, borderColor: '#F0F0F0',
+  },
+  reviewCoverImg: { width: 64, height: 64, borderRadius: 12, backgroundColor: '#F5F5F5' },
+  reviewName: { fontSize: 14, fontWeight: '700', color: '#1A1A1A', marginBottom: 3 },
+  reviewPrice: { fontSize: 13, fontWeight: '800', color: '#1B5E20', marginBottom: 2 },
+  reviewPhotoCount: { fontSize: 11, color: '#9E9E9E' },
+  reviewEditBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' },
+
   summaryCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1.5, borderColor: '#C8E6C9', shadowColor: '#2E7D32', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 2 },
   summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   summaryTitle: { fontSize: 14, fontWeight: '800', color: '#1B5E20' },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
   summaryKey: { fontSize: 12, color: '#9E9E9E', fontWeight: '600', flex: 0.4 },
   summaryVal: { fontSize: 13, color: '#1A1A1A', fontWeight: '700', flex: 0.6, textAlign: 'right' },
+
+  reviewDescBox: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#F0F0F0' },
+  reviewDescLabel: { fontSize: 11, fontWeight: '700', color: '#9E9E9E', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 },
+  reviewDescText: { fontSize: 13.5, color: '#424242', lineHeight: 20 },
 
   incompleteNotice: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -1145,10 +1333,36 @@ const styles = StyleSheet.create({
   },
   incompleteNoticeText: { fontSize: 12.5, color: '#E65100', fontWeight: '600', flex: 1 },
 
-  publishBtn: { backgroundColor: '#1B5E20', paddingVertical: 18, paddingHorizontal: 24, borderRadius: 18, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12, shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 8 },
+  
+bottomNav: {
+  flexDirection: 'row', alignItems: 'center', gap: 10,
+  paddingHorizontal: 18, paddingTop: 14,
+  backgroundColor: '#fff',
+  borderTopWidth: 1, borderTopColor: '#F0F0F0',
+  shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
+  shadowOpacity: 0.05, shadowRadius: 8, elevation: 6,
+   bottom: 50,
+ 
+},
+  backNavBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14,
+    backgroundColor: '#F5F5F5',
+  },
+  backNavBtnText: { fontSize: 14, fontWeight: '700', color: '#424242' },
+  nextBtn: {
+    flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
+    backgroundColor: '#1B5E20', paddingVertical: 15, borderRadius: 14,
+    shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 5,
+  },
+  nextBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  publishBtn: {
+    flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10,
+    backgroundColor: '#1B5E20', paddingVertical: 15, borderRadius: 14,
+    shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.32, shadowRadius: 10, elevation: 6,
+  },
   publishBtnDisabled: { backgroundColor: '#81C784', shadowOpacity: 0 },
-  publishIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-  publishBtnText: { fontSize: 17, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
+  publishBtnText: { fontSize: 15.5, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
 });
 
 export default AddProductScreen;

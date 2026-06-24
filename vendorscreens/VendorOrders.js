@@ -23,9 +23,7 @@ const { width } = Dimensions.get('window');
 // ─────────────────────────────────────────────
 const STATUS_CONFIG = {
   Pending:   { bg: '#FFF8E1', border: '#FFD54F', text: '#E65100', icon: 'time-outline',              label: 'Pending' },
-  //confirmed: { bg: '#E8F5E9', border: '#81C784', text: '#2E7D32', icon: 'checkmark-circle-outline',  label: 'Confirmed' },
   Processing: { bg: '#E3F2FD', border: '#64B5F6', text: '#1565C0', icon: 'restaurant-outline',        label: 'Processing' },
- // ready:     { bg: '#F3E5F5', border: '#CE93D8', text: '#6A1B9A', icon: 'cube-outline',              label: 'Ready' },
   Delivered: { bg: '#E0F2F1', border: '#4DB6AC', text: '#00695C', icon: 'checkmark-done-outline',    label: 'Delivered' },
   Cancelled: { bg: '#FFEBEE', border: '#EF9A9A', text: '#C62828', icon: 'close-circle-outline',      label: 'Cancelled' },
 };
@@ -33,8 +31,7 @@ const STATUS_CONFIG = {
 // ─────────────────────────────────────────────
 // FILTER TABS
 // ─────────────────────────────────────────────
-//'Out for Delivery',
-const FILTERS = ['All', 'Pending', 'Processing',  'Delivered', 'Cancelled'];
+const FILTERS = ['All', 'Pending', 'Processing', 'Delivered', 'Cancelled'];
 
 // ─────────────────────────────────────────────
 // HELPERS
@@ -193,7 +190,6 @@ const VendorOrdersScreen = () => {
       setError(null);
       const res = await getMyOrders();
       if (res?.data?.success || res?.status === 200) {
-        
         setOrders(res.data.data || res.data);
       } else {
         setError('Failed to load orders.');
@@ -216,7 +212,7 @@ const VendorOrdersScreen = () => {
     ? orders
     : orders.filter(o => o.status === activeFilter);
 
-  // Summary stats for header
+  // Summary stats
   const pendingCount   = orders.filter(o => o.status === 'Pending').length;
   const preparingCount = orders.filter(o => ['confirmed', 'Processing'].includes(o.status)).length;
   const doneCount      = orders.filter(o => o.status === 'Delivered').length;
@@ -225,8 +221,12 @@ const VendorOrdersScreen = () => {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
+        <View style={styles.simpleHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color="#1A1A1A" />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>My Orders</Text>
+          <View style={{ width: 36 }} />
         </View>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#2E7D32" />
@@ -236,40 +236,39 @@ const VendorOrdersScreen = () => {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-
-      {/* ══════════════════════════
-          HEADER
-          ══════════════════════════ */}
-      <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <View>
-            <Text style={styles.headerTitle}>My Orders</Text>
-            <Text style={styles.headerSub}>
-              {orders.length} order{orders.length !== 1 ? 's' : ''} total
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.headerRefreshBtn}
-            onPress={() => { setLoading(false); setRefreshing(true); fetchOrders(); }}
-          >
-            <Ionicons name="refresh-outline" size={20} color="#fff" />
-          </TouchableOpacity>
+  // ── List Header Component (scrolls with content) ──
+  const ListHeaderComponent = () => (
+    <View>
+      {/* Simple Header Bar */}
+      <View style={styles.simpleHeader}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color="#1A1A1A" />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>My Orders</Text>
+          <Text style={styles.headerSub}>
+            {orders.length} order{orders.length !== 1 ? 's' : ''} total
+          </Text>
         </View>
-
-        {/* Stats strip */}
-        {orders.length > 0 && (
-          <View style={styles.statsRow}>
-            <StatCard label="Pending"   count={pendingCount}   iconName="time-outline"           color="#E65100" bg="#FFF8E1" />
-            <StatCard label="Active"    count={preparingCount} iconName="restaurant-outline"      color="#1565C0" bg="#E3F2FD" />
-            <StatCard label="Delivered" count={doneCount}      iconName="checkmark-done-outline"  color="#00695C" bg="#E0F2F1" />
-            <StatCard label="Total"     count={orders.length}  iconName="receipt-outline"         color="#1B5E20" bg="#E8F5E9" />
-          </View>
-        )}
+        <TouchableOpacity
+          style={styles.refreshBtn}
+          onPress={() => { setLoading(false); setRefreshing(true); fetchOrders(); }}
+        >
+          <Ionicons name="refresh-outline" size={20} color="#2E7D32" />
+        </TouchableOpacity>
       </View>
 
-      {/* ── Error banner ── */}
+      {/* Stats Cards */}
+      {orders.length > 0 && (
+        <View style={styles.statsRow}>
+          <StatCard label="Pending"   count={pendingCount}   iconName="time-outline"           color="#E65100" bg="#FFF8E1" />
+          <StatCard label="Active"    count={preparingCount} iconName="restaurant-outline"      color="#1565C0" bg="#E3F2FD" />
+          <StatCard label="Delivered" count={doneCount}      iconName="checkmark-done-outline"  color="#00695C" bg="#E0F2F1" />
+          <StatCard label="Total"     count={orders.length}  iconName="receipt-outline"         color="#1B5E20" bg="#E8F5E9" />
+        </View>
+      )}
+
+      {/* Error Banner */}
       {error && !refreshing && (
         <View style={styles.errorBanner}>
           <Ionicons name="alert-circle" size={18} color="#C62828" />
@@ -283,9 +282,7 @@ const VendorOrdersScreen = () => {
         </View>
       )}
 
-      {/* ══════════════════════════
-          FILTER TABS
-          ══════════════════════════ */}
+      {/* Filter Tabs */}
       <View style={styles.filterWrapper}>
         <FlatList
           data={FILTERS}
@@ -296,7 +293,7 @@ const VendorOrdersScreen = () => {
           renderItem={({ item: f }) => {
             const active = activeFilter === f;
             const cfg    = f !== 'All' ? STATUS_CONFIG[f] : null;
-            const count  = f === 'All' ? orders.length : orders.filter(o => o.vendorStatus === f).length;
+            const count  = f === 'All' ? orders.length : orders.filter(o => o.status === f).length;
             return (
               <TouchableOpacity
                 style={[styles.filterTab, active && styles.filterTabActive, active && cfg && { backgroundColor: cfg.text }]}
@@ -317,16 +314,18 @@ const VendorOrdersScreen = () => {
           }}
         />
       </View>
+    </View>
+  );
 
-      {/* ══════════════════════════
-          ORDER LIST
-          ══════════════════════════ */}
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
       <FlatList
         data={filteredOrders}
         keyExtractor={item => item._id}
         renderItem={({ item, index }) => (
           <OrderCard item={item} onPress={order => navigation.navigate('VendorOrderDetail', { order })} index={index} />
         )}
+        ListHeaderComponent={ListHeaderComponent}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2E7D32" colors={['#2E7D32']} />
@@ -363,40 +362,64 @@ const VendorOrdersScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F2F5F2' },
 
-  // ── HEADER ──
-  header: {
-    backgroundColor: '#1B5E20',
-    paddingHorizontal: 16,
-    marginHorizontal:8,
-    paddingTop: 14,
-    paddingBottom: 20,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-  },
-  headerTopRow: {
+  // ── SIMPLE HEADER (scrolls with content) ──
+  simpleHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 18,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  headerSub:   { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
-  headerRefreshBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center', alignItems: 'center',
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: { 
+    fontSize: 17, 
+    fontWeight: '700', 
+    color: '#1A1A1A' 
+  },
+  headerSub: { 
+    fontSize: 12, 
+    color: '#9E9E9E', 
+    marginTop: 1,
+    fontWeight: '500',
+  },
+  refreshBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Stats
-  statsRow: { flexDirection: 'row', gap: 10 },
-  statCard: {
-    flex: 1, borderRadius: 14, padding: 10,
-    alignItems: 'center', gap: 4,
+  statsRow: { 
+    flexDirection: 'row', 
+    gap: 8, 
+    paddingHorizontal: 16, 
+    paddingTop: 14, 
+    paddingBottom: 6 
   },
-  statIconWrap: {
-    width: 30, height: 30, borderRadius: 10,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 2,
+  statCard: {
+    flex: 1, 
+    borderRadius: 14, 
+    padding: 12,
+    alignItems: 'center', 
+    gap: 4,
   },
   statCount: { fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
   statLabel: { fontSize: 10, color: '#9E9E9E', fontWeight: '600', textAlign: 'center' },
@@ -440,11 +463,12 @@ const styles = StyleSheet.create({
   filterBadgeTextActive: { color: '#fff' },
 
   // ── ORDER CARD ──
-  listContent: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 40 },
+  listContent: { paddingBottom: 40 },
   card: {
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: 18,
+    marginHorizontal: 16,
     marginBottom: 12,
     overflow: 'hidden',
     shadowColor: '#1B5E20',
