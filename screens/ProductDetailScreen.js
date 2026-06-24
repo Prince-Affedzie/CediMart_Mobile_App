@@ -23,6 +23,7 @@ import productService from '../services/productService';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { addToFavorites, removeFromFavorites } from '../apis/userActionsApi';
+import {shareProduct} from '../utils/shareUtils'
 
 const { width } = Dimensions.get('window');
 
@@ -423,6 +424,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [vendorProducts, setVendorProducts] = useState([]);
   const [loading, setLoading] = useState(!initialProduct);
+  const [sharing, setSharing] = useState(false); 
   const [error, setError] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -536,11 +538,18 @@ const ProductDetailScreen = ({ route, navigation }) => {
   };
 
   const handleShare = async () => {
-    if (!product) return;
-    try {
-      await Share.share({ message: `Check out "${product.name}" on CampusMart — GH₵ ${product.price?.toFixed(2)}`, title: product.name });
-    } catch {}
-  };
+      if (sharing) return; // Prevent double-tap
+      
+      setSharing(true);
+      try {
+        const result = await shareProduct(product);   
+      } catch (error) {
+        console.error('Share error:', error);
+      } finally {
+        setSharing(false);
+      }
+    };
+  
 
   const handleRelatedProductPress = useCallback(
     (item) => navigation.push('ProductDetail', { productId: item._id || item.id, product: null }),
@@ -642,9 +651,18 @@ const ProductDetailScreen = ({ route, navigation }) => {
           <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
         </TouchableOpacity>
         <View style={styles.navRight}>
-          <TouchableOpacity style={styles.navIconBtn} onPress={handleShare}>
-            <Ionicons name="share-social-outline" size={20} color="#1A1A1A" />
-          </TouchableOpacity>
+          <TouchableOpacity 
+                      style={[styles.navIconBtn, sharing && styles.navIconBtnSharing]} 
+                      onPress={handleShare}
+                      disabled={sharing}
+                      activeOpacity={0.7}
+                    >
+                      {sharing ? (
+                        <ActivityIndicator size="small" color="#2E7D32" />
+                      ) : (
+                        <Ionicons name="share-social-outline" size={20} color="#1A1A1A" />
+                      )}
+                    </TouchableOpacity>
           <TouchableOpacity style={styles.navIconBtn} onPress={handleFavoriteToggle} disabled={favoriteLoading || checkingFavorite}>
             {favoriteLoading ? (
               <ActivityIndicator size="small" color="#E53935" />
@@ -1133,6 +1151,9 @@ const styles = StyleSheet.create({
   },
   addToCartBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
   btnDisabled: { backgroundColor: '#A5D6A7', shadowOpacity: 0 },
+  navIconBtnSharing: {
+    backgroundColor: '#F5F5F5',
+  },
 });
 
 export default ProductDetailScreen;

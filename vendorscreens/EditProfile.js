@@ -24,6 +24,7 @@ import { getMyProfileDetails, updateProfile } from '../apis/vendorApi';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { shareVendorProfile } from '../utils/shareUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -114,6 +115,7 @@ const VendorAccountScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const [name, setName] = useState('');
   const [storeName, setStoreName] = useState('');
@@ -127,6 +129,7 @@ const VendorAccountScreen = () => {
   const [productCount, setProductCount] = useState(0);
   const [rating, setRating] = useState(0);
   const [totalSales, setTotalSales] = useState(0);
+  const [vendorId, setVendorId] = useState('');
 
   const [existingBanner, setExistingBanner] = useState('');
   const [existingProfile, setExistingProfile] = useState('');
@@ -144,6 +147,7 @@ const VendorAccountScreen = () => {
       const res = await getMyProfileDetails();
       if (res?.status === 200 || res?.data?.success) {
         const vendor = res.data.data || res.data;
+        setVendorId(vendor._id || vendor.id || '');
         setName(vendor.name || '');
         setStoreName(vendor.storeName || '');
         setPhone(vendor.phone || '');
@@ -172,6 +176,39 @@ const VendorAccountScreen = () => {
 
   useEffect(() => { fetchProfile(); }, []);
   const onRefresh = useCallback(() => { setRefreshing(true); fetchProfile(); }, []);
+
+  const handleShareProfile = async () => {
+    if (sharing) return;
+    
+    setSharing(true);
+    try {
+      const vendorData = {
+        _id: vendorId,
+        id: vendorId,
+        name: storeName || name || 'Vendor',
+        shopName: storeName,
+        description: bio,
+        avatar: profilePreview || existingProfile,
+        logo: profilePreview || existingProfile,
+        image: bannerPreview || existingBanner,
+        rating: rating,
+        totalProducts: productCount,
+      };
+      
+      const result = await shareVendorProfile(vendorData);
+      
+      if (result?.success) {
+        Toast.show({ type: 'success', text1: 'Profile shared successfully!' });
+      } else if (!result?.cancelled) {
+        Toast.show({ type: 'error', text1: 'Failed to share profile' });
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      Toast.show({ type: 'error', text1: 'Could not share profile' });
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const pickImage = (type) => {
     Alert.alert(type === 'banner' ? 'Store Banner' : 'Profile Photo', 'Choose a source', [
@@ -304,11 +341,10 @@ const VendorAccountScreen = () => {
     ]);
   };
 
-  // Navigation handlers for SettingsRows
   const handleHelpFAQ = () => navigation.navigate('VendorSupport');
   const handleContactSupport = () => navigation.navigate('VendorSupport');
   const handlePrivacyPolicy = () => {
-   navigation.navigate('PrivacyPolicy')
+    navigation.navigate('PrivacyPolicy');
   };
   const handleTermsOfService = () => {
     Linking.openURL('https://cedimart.com/terms').catch(() =>
@@ -370,7 +406,7 @@ const VendorAccountScreen = () => {
                 {bannerPreview ? (
                   <>
                     <Image source={{ uri: bannerPreview }} style={styles.bannerImage} resizeMode="cover" />
-                    {isEditing && (
+                    {isEditing ? (
                       <View style={styles.bannerControls}>
                         <TouchableOpacity style={styles.bannerCtrlBtn} onPress={() => pickImage('banner')}>
                           <Ionicons name="camera-outline" size={14} color="#fff" />
@@ -380,6 +416,19 @@ const VendorAccountScreen = () => {
                           <Ionicons name="trash-outline" size={14} color="#fff" />
                         </TouchableOpacity>
                       </View>
+                    ) : (
+                      <TouchableOpacity 
+                        style={styles.shareBannerBtn}
+                        onPress={handleShareProfile}
+                        disabled={sharing}
+                        activeOpacity={0.8}
+                      >
+                        {sharing ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Ionicons name="share-outline" size={18} color="#fff" />
+                        )}
+                      </TouchableOpacity>
                     )}
                   </>
                 ) : (
@@ -414,11 +463,34 @@ const VendorAccountScreen = () => {
                     </TouchableOpacity>
                   )}
                 </View>
+                
+                {/* Share Button in Avatar Row (when not editing) */}
+                {!isEditing && (
+                  <TouchableOpacity 
+                    style={styles.shareProfileBtn}
+                    onPress={handleShareProfile}
+                    disabled={sharing}
+                    activeOpacity={0.8}
+                  >
+                    {sharing ? (
+                      <ActivityIndicator size="small" color="#2E7D32" />
+                    ) : (
+                      <>
+                        <Ionicons name="share-social-outline" size={16} color="#2E7D32" />
+                        <Text style={styles.shareProfileBtnText}>Share Profile</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
 
               <View style={styles.profileMeta}>
-                <Text style={styles.profileName}>{name || 'Your Store'}</Text>
-                {storeName ? <Text style={styles.profileStoreName}>{storeName}</Text> : null}
+                <View style={styles.profileNameRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.profileName}>{name || 'Your Store'}</Text>
+                    {storeName ? <Text style={styles.profileStoreName}>{storeName}</Text> : null}
+                  </View>
+                </View>
                 <Text style={styles.profileLocation}>
                   {campus ? CAMPUS_LABELS[campus] || campus : ''}
                   {campusArea ? ` · ${campusArea}` : ''}
@@ -482,7 +554,7 @@ const VendorAccountScreen = () => {
                 </View>
               </Section>
 
-              {/* Support — now with onPress handlers */}
+              {/* Support */}
               <Section label="Support">
                 <SettingsRow
                   iconName="help-circle-outline"
@@ -505,14 +577,6 @@ const VendorAccountScreen = () => {
                   value="Terms & conditions"
                   onPress={handlePrivacyPolicy}
                 />
-                {/*<SettingsRow
-                  iconName="shield-outline"
-                  iconBg="#E3F2FD" iconColor="#1565C0"
-                  label="Terms of Service"
-                  value="Read our terms"
-                  onPress={handleTermsOfService}
-                  isLast
-                />*/}
               </Section>
 
               {/* Account */}
@@ -613,6 +677,12 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: '#fff',
   },
   profileMeta: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 18, alignItems: 'flex-start' },
+  profileNameRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
   profileName: { fontSize: 20, fontWeight: '800', color: '#1B2714', letterSpacing: -0.3 },
   profileStoreName: { fontSize: 14, color: '#757575', fontWeight: '500', marginTop: 2 },
   profileLocation: { fontSize: 13, color: '#757575', marginTop: 2, marginBottom: 12 },
@@ -634,6 +704,39 @@ const styles = StyleSheet.create({
   chipDotPending: { backgroundColor: '#E65100' },
   chipText: { fontSize: 12, fontWeight: '600', color: '#1B5E20' },
   chipTextPending: { color: '#E65100' },
+  
+  // Share button styles
+  shareBannerBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  shareProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+    marginLeft: 'auto',
+    marginBottom: 4,
+  },
+  shareProfileBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2E7D32',
+  },
+  
   body: { paddingHorizontal: 16 },
   section: { marginBottom: 22 },
   sectionLabel: {

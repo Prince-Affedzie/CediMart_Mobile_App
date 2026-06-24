@@ -53,6 +53,31 @@ import VendorOrdersScreen from '../vendorscreens/VendorOrders'      // future
 import VendorOrderDetailScreen from '../vendorscreens/OrderDetail'
 import UpdateProductScreen from '../vendorscreens/EditProduct'
 import VendorSupportScreen from '../vendorscreens/VendorSupport'
+
+import * as Linking from 'expo-linking';
+import { DEEP_LINK_PREFIXES, DEEP_LINK_CONFIG } from '../config/deepLinks';
+
+const linking = {
+  prefixes: DEEP_LINK_PREFIXES,
+  config: DEEP_LINK_CONFIG,
+  
+  async getInitialURL() {
+    // Check if app was opened from a deep link
+    const url = await Linking.getInitialURL();
+    return url;
+  },
+  
+  subscribe(listener) {
+    // Listen for incoming links when app is already open
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      listener(url);
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  },
+};
      
 // future (reuse edit vendor)
 /*import VendorOrdersScreen from '../vendorscreens/VendorOrdersScreen'; */    // placeholder for now
@@ -269,7 +294,7 @@ function MainStackNavigator() {
 
 export default function AppNavigator() {
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef}  linking={linking}  fallback={null}>
       <MainStackNavigator />
     </NavigationContainer>
   );

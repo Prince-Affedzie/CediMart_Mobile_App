@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getProductById, deleteProduct } from '../apis/vendorApi';
 import Toast from 'react-native-toast-message';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import {shareProduct} from '../utils/shareUtils'
 
 const { width } = Dimensions.get('window');
 
@@ -322,6 +323,7 @@ const VendorProductDetailScreen = () => {
 
   const [product, setProduct] = useState(initialProduct || null);
   const [loading, setLoading] = useState(!initialProduct);
+  const [sharing, setSharing] = useState(false); 
   const [deleting, setDeleting] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showAllReviews, setShowAllReviews] = useState(false);
@@ -387,12 +389,35 @@ const VendorProductDetailScreen = () => {
   };
 
   const handleShare = async () => {
+    if (sharing) return; // Prevent double-tap
+    
+    setSharing(true);
     try {
-      await Share.share({ 
-        message: `Check out "${product?.name}" on CampusMart — GH₵ ${product?.price?.toFixed(2)}`, 
-        title: product?.name 
+      const result = await shareProduct(product);
+      
+      if (result?.success) {
+        Toast.show({ 
+          type: 'success', 
+          text1: 'Shared successfully!', 
+          text2: 'Your product has been shared.' 
+        });
+      } else if (!result?.cancelled) {
+        Toast.show({ 
+          type: 'error', 
+          text1: 'Share failed', 
+          text2: 'Could not share product. Try again.' 
+        });
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      Toast.show({ 
+        type: 'error', 
+        text1: 'Share failed', 
+        text2: 'An error occurred while sharing.' 
       });
-    } catch {}
+    } finally {
+      setSharing(false);
+    }
   };
 
   const onImageScroll = (e) => {
@@ -460,8 +485,17 @@ const VendorProductDetailScreen = () => {
           <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
         </TouchableOpacity>
         <View style={styles.navRight}>
-          <TouchableOpacity style={styles.navIconBtn} onPress={handleShare}>
-            <Ionicons name="share-social-outline" size={20} color="#1A1A1A" />
+          <TouchableOpacity 
+            style={[styles.navIconBtn, sharing && styles.navIconBtnSharing]} 
+            onPress={handleShare}
+            disabled={sharing}
+            activeOpacity={0.7}
+          >
+            {sharing ? (
+              <ActivityIndicator size="small" color="#2E7D32" />
+            ) : (
+              <Ionicons name="share-social-outline" size={20} color="#1A1A1A" />
+            )}
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.navIconBtn}
@@ -790,6 +824,9 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   deleteListingBtnText: { fontSize: 10, fontWeight: '700', color: '#C62828' },
+   navIconBtnSharing: {
+    backgroundColor: '#F5F5F5',
+  },
 });
 
 export default VendorProductDetailScreen;

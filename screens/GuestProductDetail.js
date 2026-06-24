@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { getProductById } from '../apis/productApi';
+import {shareGuestProduct} from '../utils/shareUtils'
 
 const { width } = Dimensions.get('window');
 
@@ -345,6 +346,7 @@ const GuestProductDetailScreen = () => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [vendorProducts, setVendorProducts] = useState([]);
   const [loading, setLoading] = useState(!routeProduct);
+  const [sharing, setSharing] = useState(false); 
   const [error, setError] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showAllReviews, setShowAllReviews] = useState(false);
@@ -392,7 +394,16 @@ const GuestProductDetailScreen = () => {
   }, [loading, product]);
 
   const handleShare = async () => {
-    try { await Share.share({ message: `Check out "${product?.name}" on CampusMart — GH₵ ${product?.price?.toFixed(2)}`, title: product?.name }); } catch {}
+    if (sharing) return; // Prevent double-tap
+    
+    setSharing(true);
+    try {
+      const result = await shareGuestProduct(product);   
+    } catch (error) {
+      console.error('Share error:', error);
+    } finally {
+      setSharing(false);
+    }
   };
 
   const handleAddToCart = () => {
@@ -487,8 +498,17 @@ const GuestProductDetailScreen = () => {
           <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
         </TouchableOpacity>
         <View style={styles.navRight}>
-          <TouchableOpacity style={styles.navIconBtn} onPress={handleShare}>
-            <Ionicons name="share-social-outline" size={20} color="#1A1A1A" />
+          <TouchableOpacity 
+            style={[styles.navIconBtn, sharing && styles.navIconBtnSharing]} 
+            onPress={handleShare}
+            disabled={sharing}
+            activeOpacity={0.7}
+          >
+            {sharing ? (
+              <ActivityIndicator size="small" color="#2E7D32" />
+            ) : (
+              <Ionicons name="share-social-outline" size={20} color="#1A1A1A" />
+            )}
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -955,6 +975,9 @@ const styles = StyleSheet.create({
   },
   addToCartBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
   btnDisabled: { backgroundColor: '#A5D6A7', shadowOpacity: 0 },
+   navIconBtnSharing: {
+    backgroundColor: '#F5F5F5',
+  },
 });
 
 export default GuestProductDetailScreen;
