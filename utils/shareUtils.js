@@ -65,22 +65,7 @@ const getStoreLinks = () => {
   const links = getAppStoreLink();
   return `App Store: ${links.ios}\nGoogle Play: ${links.android}`;
 };
-/**
- * Build a rich share message with all product details
- */
-// First, update the getAppStoreLink function to return both links
-export const getAppStoreLink = () => {
-  return {
-    ios: 'https://apps.apple.com/us/app/cedimart/id6762318566',
-    android: 'https://play.google.com/store/apps/details?id=com.freshyfood.factory',
-  };
-};
 
-// Helper to get both store links as formatted string
-const getStoreLinks = () => {
-  const links = getAppStoreLink();
-  return `📱 App Store: ${links.ios}\n📱 Google Play: ${links.android}`;
-};
 
 // Then update the buildProductMessage function
 const buildProductMessage = (product, shareLink, includeDescription = true) => {
@@ -254,7 +239,7 @@ export const shareVendorProfile = async (vendor) => {
     }
     
     message += `\n🔗 ${shareLink}\n\n` +
-      `📲 Download CediMart: ${getAppStoreLink()}`;
+      `📲 Download CediMart: ${getStoreLinks()}`;
     
     const imageUrl = vendor.storeBanner || vendor.profileImage || vendor.image;
     
@@ -358,7 +343,7 @@ export const shareAppInvite = async () => {
       `✅ Best student deals\n` +
       `✅ Free to join\n` +
       `✅ Trusted by thousands of students\n\n` +
-      `📲 Download now: ${getAppStoreLink()}`;
+      `📲 Download now: ${getStoreLinks()}`;
     
     return await shareWithRNShare({
       title: 'Join CediMart - Student Marketplace',

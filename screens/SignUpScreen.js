@@ -176,67 +176,101 @@ const SignUpScreen = ({ navigation }) => {
   };
 
   const handleGoogleSignUp = async () => {
-    if (isLoading) return;
+    // Prevent multiple clicks while any loading is in progress
+    if (loading || googleLoading || appleLoading) return;
     
     setGoogleLoading(true);
     
     try {
+      
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices({
           showPlayServicesUpdateDialog: true,
         });
       }
 
-      try {
-        await GoogleSignin.signOut();
-      } catch (signOutError) {
-        console.log('Sign out error:', signOutError);
+      //  CRITICAL FOR iOS: Do NOT sign out before signing in
+      // On iOS, calling signOut() when no user is signed in causes:
+      // - "The user cancelled the sign-in flow" error
+      // - Apple rejects apps that unnecessarily sign out
+      
+      // Only handle sign-out on Android as a workaround for token refresh
+      if (Platform.OS === 'android') {
+        try {
+          const isSignedIn = await GoogleSignin.isSignedIn();
+          if (isSignedIn) {
+            await GoogleSignin.signOut();
+          }
+        } catch (signOutError) {
+          console.log('Sign out check (non-critical):', signOutError);
+        }
       }
 
+      // Sign in with Google - works on both platforms
       const res = await GoogleSignin.signIn();
-      const idToken = res.data.idToken;
       
+      // Validate token
+      if (!res?.data?.idToken) {
+        throw new Error('No ID token received from Google. Please try again.');
+      }
+      
+      const idToken = res.data.idToken;
       const response = await google_signUp({ token: idToken });
 
-      if (response.success) {
-        const userId = response.data.user?._id;
-        const tokenSent = await syncTokenWithBackend(userId, expoPushToken);
+      if (response?.success) {
+        const userId = response.data?.user?._id;
+        
+        // Sync push token (non-critical)
+        if (userId && expoPushToken) {
+          try {
+            await syncTokenWithBackend(userId, expoPushToken);
+          } catch (pushError) {
+            console.log('Push token sync failed (non-critical):', pushError);
+          }
+        }
+        
+        // Navigate first for smoother UX
+        navigation.navigate('MainTabs');
+        
+        // Show welcome after navigation
         setTimeout(() => {
-          navigation.navigate('MainTabs');
           Alert.alert(
-            'Welcome to CediMart!',
-            `Welcome! Your account has been created successfully 🎉`,
+            'Welcome to CediMart! 🎉',
+            'Your account has been created successfully.',
             [{ text: 'Continue' }]
           );
-        }, 100);
+        }, 500);
+        
       } else {
-        const errorMessage = response.error || 
-                            response.message || 
-                            'Registration failed. Please try again.';
-        Alert.alert('Registration Failed', errorMessage);
+        Alert.alert(
+          'Registration Failed', 
+          response?.error || response?.message || 'Please try again.'
+        );
       }
       
     } catch (error) {
       console.error('Google Sign-Up Error:', error);
       
-      switch (error.code) {
-        case statusCodes.SIGN_IN_CANCELLED:
-          Alert.alert('Google Sign-In Cancelled', 'You cancelled the sign-in process.');
-          break;
-        case statusCodes.IN_PROGRESS:
-          Alert.alert('Google Sign-In In Progress', 'A sign-in operation is already in progress.');
-          break;
-        case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-          Alert.alert(
-            'Google Play Services Not Available',
-            'Google Play Services are not available or outdated. Please update.'
-          );
-          break;
-        default:
-          Alert.alert(
-            'Google Sign-Up Failed',
-            error.message || 'An error occurred during Google Sign-Up. Please try again.'
-          );
+      // ✅ iOS-specific: Don't show alert when user cancels
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log('User cancelled Google Sign-In');
+        // No alert needed - user intentionally dismissed
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        Alert.alert(
+          'Sign-In In Progress',
+          'Please wait for the current sign-in to complete.'
+        );
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        // This only happens on Android
+        Alert.alert(
+          'Google Play Services',
+          'Google Play Services are not available or need to be updated.'
+        );
+      } else {
+        Alert.alert(
+          'Google Sign-Up Failed',
+          error.message || 'An error occurred. Please try again.'
+        );
       }
     } finally {
       setGoogleLoading(false);
