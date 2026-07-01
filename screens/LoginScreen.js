@@ -168,70 +168,90 @@ const LoginScreen = ({ navigation }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+
+  const isLoading = loading || googleLoading || appleLoading;
+
   const handleGoogleLogin = async () => {
-    if (isLoading) return;
-    
-    setGoogleLoading(true);
-    
+  if (isLoading ) return; // Fixed: Check googleLoading toggle too
+
+  setGoogleLoading(true);
+  let navigatedAway = false;
+
+  try {
+    if (Platform.OS === 'android') {
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+    }
+
+    // clean Sign out to clear session cache (Removed dangerous revokeAccess)
     try {
-      if (Platform.OS === 'android') {
-        await GoogleSignin.hasPlayServices({
-          showPlayServicesUpdateDialog: true,
-        });
-      }
+      await GoogleSignin.signOut();
+      await new Promise(resolve => setTimeout(resolve, 300));
+    } catch (signOutError) {
+      console.log('Sign out check (non-critical):', signOutError);
+    }
 
-      try {
-        await GoogleSignin.signOut();
-      } catch (signOutError) {
-        console.log('Sign out error:', signOutError);
-      }
-
-      const res = await GoogleSignin.signIn();
-      const idToken = res.data.idToken;
+    const res = await GoogleSignin.signIn();
     
-      const response = await google_login({ token: idToken });
+    // Cross-version fallback for v12+ and older versions
+    const idToken = res?.data?.idToken || res?.idToken;
 
-      if (response?.success) {
-        navigation.navigate('MainTabs')
+    if (!idToken) {
+      throw new Error('No ID token received from Google. Please try again.');
+    }
+
+    const response = await google_login({ token: idToken });
+    
+    if (response?.success) {
+      //  Safety toggle before shifting screens
+      navigatedAway = true;
+      setGoogleLoading(false);
+
+      navigation.navigate('MainTabs');
+      
+      Alert.alert(
+        'Welcome to CediMart!',
+        `Welcome back! 🎉`,
+        [{ text: 'Continue' }]
+      );
+    } else {
+      const errorMessage = response?.error ||
+                           response?.message ||
+                           "Login failed. Please check your internet connectivity or ensure you have created an account.";
+      Alert.alert('Login Failed', errorMessage);
+    }
+
+  } catch (error) {
+    console.error('Google Login Error:', error);
+
+    switch (error.code) {
+      case statusCodes.SIGN_IN_CANCELLED:
+        // Silently handle user cancellation for better UX
+        console.log('User cancelled Google Sign-In flow');
+        break;
+      case statusCodes.IN_PROGRESS:
+        Alert.alert('Google Sign-In In Progress', 'A sign-in operation is already running.');
+        break;
+      case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
         Alert.alert(
-          'Welcome to CediMart!',
-          `Welcome back! 🎉`,
-          [{ text: 'Continue' }]
+          'Google Play Services Not Available',
+          'Google Play Services are not available or outdated. Please update.'
         );
-        
-      } else {
-        const errorMessage = response?.error || 
-                            response?.message || 
-                            "Login failed. Issues maybe Internet connectivity or you haven't created an account with Us.";
-        Alert.alert('Login Failed', errorMessage);
-      }
-      
-    } catch (error) {
-      console.error('Google Login Error:', error);
-      
-      switch (error.code) {
-        case statusCodes.SIGN_IN_CANCELLED:
-          Alert.alert('Google Sign-In Cancelled', 'You cancelled the sign-in process.');
-          break;
-        case statusCodes.IN_PROGRESS:
-          Alert.alert('Google Sign-In In Progress', 'A sign-in operation is already in progress.');
-          break;
-        case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-          Alert.alert(
-            'Google Play Services Not Available',
-            'Google Play Services are not available or outdated. Please update.'
-          );
-          break;
-        default:
-          Alert.alert(
-            'Google Sign-In Failed',
-            error.message || 'An error occurred during Google Sign-In. Please try again.'
-          );
-      }
-    } finally {
+        break;
+      default:
+        Alert.alert(
+          'Google Sign-In Failed',
+          error.message || 'An error occurred during Google Sign-In. Please try again.'
+        );
+    }
+  } finally {
+    // Safe cleanup if navigation didn't happen
+    if (!navigatedAway) {
       setGoogleLoading(false);
     }
-  };
+  }
+};
 
   const handleAppleLogin = async () => {
     if (isLoading) return;
@@ -331,7 +351,7 @@ const LoginScreen = ({ navigation }) => {
     navigation.navigate('ForgotPassword');
   };
 
-  const isLoading = loading || googleLoading || appleLoading;
+  
 
   return (
     <KeyboardAvoidingView
@@ -412,6 +432,12 @@ const LoginScreen = ({ navigation }) => {
               </View>
             </Animated.View>
           </TouchableOpacity>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>For Buyers</Text>
+            <View style={styles.divider} />
+          </View>
 
           {/* Social Login */}
           <View style={styles.socialContainer}>

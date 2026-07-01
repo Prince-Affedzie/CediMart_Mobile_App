@@ -175,107 +175,108 @@ const SignUpScreen = ({ navigation }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+
+   const isLoading = loading || googleLoading || appleLoading;
+
   const handleGoogleSignUp = async () => {
-    // Prevent multiple clicks while any loading is in progress
-    if (loading || googleLoading || appleLoading) return;
-    
-    setGoogleLoading(true);
-    
-    try {
-      
-      if (Platform.OS === 'android') {
-        await GoogleSignin.hasPlayServices({
-          showPlayServicesUpdateDialog: true,
-        });
-      }
+ 
+  if (isLoading) return;
+  
+  setGoogleLoading(true);
+  let navigatedAway = false; // Track navigation state to prevent memory leak warnings
+  
+  try {
+    if (Platform.OS === 'android') {
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+    }
 
-      //  CRITICAL FOR iOS: Do NOT sign out before signing in
-      // On iOS, calling signOut() when no user is signed in causes:
-      // - "The user cancelled the sign-in flow" error
-      // - Apple rejects apps that unnecessarily sign out
+    // Only handle sign-out on Android as a workaround for token refresh
+    if (Platform.OS === 'android') {
+      try {
+          await GoogleSignin.signOut();
+          await new Promise(resolve => setTimeout(resolve, 300));
+      } catch (signOutError) {
+        console.log('Sign out check (non-critical):', signOutError);
+      }
+    }
+
+    // Sign in with Google - works on both platforms
+    const res = await GoogleSignin.signIn();
+    
+    // Cross-version fallback support (v12+ nesting vs older flat structures)
+    const idToken = res?.data?.idToken || res?.idToken;
+    
+    if (!idToken) {
+      throw new Error('No ID token received from Google. Please try again.');
+    }
+    
+    const response = await google_signUp({ token: idToken });
+
+    if (response?.success) {
+      const userId = response.data?.user?._id;
       
-      // Only handle sign-out on Android as a workaround for token refresh
-      if (Platform.OS === 'android') {
+      // Sync push token (non-critical)
+      if (userId && expoPushToken) {
         try {
-          const isSignedIn = await GoogleSignin.isSignedIn();
-          if (isSignedIn) {
-            await GoogleSignin.signOut();
-          }
-        } catch (signOutError) {
-          console.log('Sign out check (non-critical):', signOutError);
+          await syncTokenWithBackend(userId, expoPushToken);
+        } catch (pushError) {
+          console.log('Push token sync failed (non-critical):', pushError);
         }
       }
-
-      // Sign in with Google - works on both platforms
-      const res = await GoogleSignin.signIn();
       
-      // Validate token
-      if (!res?.data?.idToken) {
-        throw new Error('No ID token received from Google. Please try again.');
-      }
+      // Kill the loading spinner immediately BEFORE leaving the screen layout
+      navigatedAway = true;
+      setGoogleLoading(false);
       
-      const idToken = res.data.idToken;
-      const response = await google_signUp({ token: idToken });
-
-      if (response?.success) {
-        const userId = response.data?.user?._id;
-        
-        // Sync push token (non-critical)
-        if (userId && expoPushToken) {
-          try {
-            await syncTokenWithBackend(userId, expoPushToken);
-          } catch (pushError) {
-            console.log('Push token sync failed (non-critical):', pushError);
-          }
-        }
-        
-        // Navigate first for smoother UX
-        navigation.navigate('MainTabs');
-        
-        // Show welcome after navigation
-        setTimeout(() => {
-          Alert.alert(
-            'Welcome to CediMart! 🎉',
-            'Your account has been created successfully.',
-            [{ text: 'Continue' }]
-          );
-        }, 500);
-        
-      } else {
-        Alert.alert(
-          'Registration Failed', 
-          response?.error || response?.message || 'Please try again.'
-        );
-      }
+      // Navigate first for smoother UX
+      navigation.navigate('MainTabs');
       
-    } catch (error) {
-      console.error('Google Sign-Up Error:', error);
+      // Show welcome after navigation
+      setTimeout(() => {
+        Alert.alert(
+          'Welcome to CediMart! 🎉',
+          'Your account has been created successfully.',
+          [{ text: 'Continue' }]
+        );
+      }, 500);
       
-      // ✅ iOS-specific: Don't show alert when user cancels
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log('User cancelled Google Sign-In');
-        // No alert needed - user intentionally dismissed
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        Alert.alert(
-          'Sign-In In Progress',
-          'Please wait for the current sign-in to complete.'
-        );
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        // This only happens on Android
-        Alert.alert(
-          'Google Play Services',
-          'Google Play Services are not available or need to be updated.'
-        );
-      } else {
-        Alert.alert(
-          'Google Sign-Up Failed',
-          error.message || 'An error occurred. Please try again.'
-        );
-      }
-    } finally {
+    } else {
+      Alert.alert(
+        'Registration Failed', 
+        response?.error || response?.message || 'Please try again.'
+      );
+    }
+    
+  } catch (error) {
+    console.error('Google Sign-Up Error:', error);
+    
+    if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+      console.log('User cancelled Google Sign-In');
+    } else if (error.code === statusCodes.IN_PROGRESS) {
+      Alert.alert(
+        'Sign-In In Progress',
+        'Please wait for the current sign-in to complete.'
+      );
+    } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      Alert.alert(
+        'Google Play Services',
+        'Google Play Services are not available or need to be updated.'
+      );
+    } else {
+      Alert.alert(
+        'Google Sign-Up Failed',
+        error.message || 'An error occurred. Please try again.'
+      );
+    }
+  } finally {
+    // Safe cleanup: Only run if the component hasn't safely transitioned out
+    if (!navigatedAway) {
       setGoogleLoading(false);
     }
-  };
+  }
+};
 
   const handleAppleSignUp = async () => {
     if (isLoading) return;
@@ -400,7 +401,7 @@ const SignUpScreen = ({ navigation }) => {
     }
   };
 
-  const isLoading = loading || googleLoading || appleLoading;
+ 
 
   return (
     <KeyboardAvoidingView
@@ -493,6 +494,15 @@ const SignUpScreen = ({ navigation }) => {
             </Animated.View>
           </TouchableOpacity>
 
+
+          {/* Divider with better styling */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}> For Buyers </Text>
+            <View style={styles.divider} />
+          </View>
+
+
           {/* Social Sign Up */}
           <View style={styles.socialContainer}>
             {/* Google Button */}
@@ -552,7 +562,7 @@ const SignUpScreen = ({ navigation }) => {
           {/* Divider with better styling */}
           <View style={styles.dividerContainer}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>or sign up with email</Text>
+            <Text style={styles.dividerText}> OR </Text>
             <View style={styles.divider} />
           </View>
 

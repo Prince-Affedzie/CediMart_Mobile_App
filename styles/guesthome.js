@@ -23,22 +23,117 @@ export const styles = StyleSheet.create({
   scrollContent: {},
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F2EE' },
   loadingText: { marginTop: 14, fontSize: 15, color: '#757575' },
-  header: { borderTopRightRadius: 12, borderTopLeftRadius: 12, backgroundColor: '#1B5E20', marginHorizontal: 4, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 18, zIndex: 100 },
-  headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  headerGreeting: { fontSize: 11, color: '#81C784', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 },
-  locationPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginTop: 6 },
-  locationDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#69F0AE' },
-  locationText: { fontSize: 11, color: '#E8F5E9', fontWeight: '500' },
-  headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 4 },
-  headerSignInBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' },
-  headerSignInText: { fontSize: 13, color: '#fff', fontWeight: '700' },
-  headerSignUpBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFD54F' },
-  headerSignUpText: { fontSize: 13, color: '#1B5E20', fontWeight: '900' },
+  
+  // ── HEADER (Plain white background) ──────────────────────────────────────
+  header: { 
+    backgroundColor: '#FFFFFF',                                    // ← Changed from '#1B5E20'
+    marginHorizontal: 4, 
+    paddingHorizontal: 16, 
+    paddingTop: 8, 
+    paddingBottom: 18, 
+    zIndex: 100,
+    borderBottomWidth: 1,                                          // ← Added subtle border
+    borderBottomColor: '#F0F0F0',
+  },
+  headerTopRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    marginBottom: 14 
+  },
+  headerGreeting: { 
+    fontSize: 11, 
+    color: '#1A1A1A',                                              // ← Changed from '#81C784'
+    fontWeight: '700', 
+    textTransform: 'uppercase', 
+    letterSpacing: 0.5, 
+    marginBottom: 3 
+  },
+  headerTitle: { 
+    fontSize: 20, 
+    fontWeight: '800', 
+    color: '#1A1A1A',                                              // ← Changed from '#FFFFFF'
+    letterSpacing: -0.3 
+  },
+  locationPill: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 5, 
+    backgroundColor: '#F5F5F5',                                    // ← Changed from 'rgba(255,255,255,0.12)'
+    borderRadius: 12, 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    alignSelf: 'flex-start', 
+    marginTop: 6 
+  },
+  locationDot: { 
+    width: 6, 
+    height: 6, 
+    borderRadius: 3, 
+    backgroundColor: '#4CAF50'                                     // ← Changed from '#69F0AE'
+  },
+  locationText: { 
+    fontSize: 11, 
+    color: '#757575',                                              // ← Changed from '#E8F5E9'
+    fontWeight: '500' 
+  },
+  headerActions: { 
+    flexDirection: 'row', 
+    gap: 8, 
+    alignItems: 'center', 
+    marginTop: 4 
+  },
+  headerSignInBtn: { 
+    paddingHorizontal: 14, 
+    paddingVertical: 8, 
+    borderRadius: 20, 
+    borderWidth: 1.5, 
+    borderColor: '#E0E0E0'                                        // ← Changed from 'rgba(255,255,255,0.35)'
+  },
+  headerSignInText: { 
+    fontSize: 13, 
+    color: '#1A1A1A',                                              // ← Changed from '#fff'
+    fontWeight: '700' 
+  },
+  headerSignUpBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 5, 
+    paddingHorizontal: 14, 
+    paddingVertical: 8, 
+    borderRadius: 20, 
+    backgroundColor: '#2E7D32'                                     // ← Changed from '#FFD54F'
+  },
+  headerSignUpText: { 
+    fontSize: 13, 
+    color: '#FFFFFF',                                              // ← Changed from '#1B5E20'
+    fontWeight: '900' 
+  },
+  
+  // ── SEARCH ───────────────────────────────────────────────────────────────
   searchWrapper: { position: 'relative', zIndex: 200 },
-  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F5F5F5', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11 },  // ← Slightly different bg for contrast
   searchInput: { flex: 1, fontSize: 14, color: '#1B2714', paddingVertical: 0 },
-  filterBtn: { width: 30, height: 30, borderRadius: 8, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' },
+ 
+
+// ✅ ADD this new style:
+searchIconBtn: { 
+    width: 64,                                          // ← Wider than before
+    height: 44,                                     // ← Full height of search bar
+    backgroundColor: '#2E7D32',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopRightRadius: 14,                           // ← Rounded right
+    borderBottomRightRadius: 14,                        // ← Rounded right
+    borderTopLeftRadius: 0,                             // ← Flat left
+    borderBottomLeftRadius: 0,                          // ← Flat left
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
   searchBackdrop: { position: 'absolute', top: 0, left: -16, right: -16, bottom: -1200, zIndex: 998 },
   searchDropdown: { position: 'absolute', top: 54, left: 0, right: 0, backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E8E8E8', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 10, zIndex: 999, overflow: 'hidden' },
   searchSection: { paddingVertical: 6 },
@@ -53,6 +148,8 @@ export const styles = StyleSheet.create({
   noResultsSub: { fontSize: 13, color: '#9E9E9E', marginTop: 3 },
   viewAllRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderTopWidth: 0.5, borderTopColor: '#F0F0F0' },
   viewAllText: { fontSize: 13, fontWeight: '600', color: '#2E7D32' },
+  
+  // ── CAROUSEL ─────────────────────────────────────────────────────────────
   carouselSection: { marginHorizontal: 16, marginTop: 16 },
   carouselWrap: { borderRadius: 20, overflow: 'hidden' },
   slideWrapper: { height: 200, position: 'relative', backgroundColor: '#1B5E20' },
@@ -69,11 +166,15 @@ export const styles = StyleSheet.create({
   dot: { borderRadius: 4, height: 5 },
   dotActive: { width: 18, backgroundColor: '#1B5E20' },
   dotInactive: { width: 5, backgroundColor: '#C8E6C9' },
+  
+  // ── STATS BANNER (still green for contrast) ──────────────────────────────
   statsBanner: { flexDirection: 'row', backgroundColor: '#1B5E20', marginHorizontal: 16, marginTop: 10, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20, justifyContent: 'space-around', alignItems: 'center' },
   statItem: { alignItems: 'center' },
   statValue: { fontSize: 18, fontWeight: '800', color: '#fff' },
   statLabel: { fontSize: 10, color: '#A5D6A7', marginTop: 2, fontWeight: '500' },
   statDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.2)' },
+  
+  // ── SECTIONS ─────────────────────────────────────────────────────────────
   section: { backgroundColor: '#FFFFFF', marginTop: 10, paddingTop: 18, paddingBottom: 20 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, marginBottom: 14 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -82,6 +183,8 @@ export const styles = StyleSheet.create({
   seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 },
   seeAllText: { fontSize: 13, fontWeight: '600', color: '#2E7D32' },
   urgentDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF5252', marginTop: 4 },
+  
+  // ── CAMPUS CARDS ─────────────────────────────────────────────────────────
   campusScrollContent: { paddingHorizontal: 16, gap: 10 },
   campusCard: { width: 140, borderRadius: 16, padding: 13, borderWidth: 1, gap: 7 },
   campusIconBadge: { width: 38, height: 38, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
@@ -91,11 +194,15 @@ export const styles = StyleSheet.create({
   campusCountDot: { width: 5, height: 5, borderRadius: 3 },
   campusCountText: { fontSize: 10, fontWeight: '700' },
   campusNoListings: { fontSize: 10, color: '#BDBDBD' },
+  
+  // ── CATEGORIES ───────────────────────────────────────────────────────────
   categoryScroll: { paddingHorizontal: 16, gap: 10 },
   categoryPill: { alignItems: 'center', width: 68 },
   categoryIconCircle: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', marginBottom: 6, borderWidth: 1 },
   categoryEmoji: { fontSize: 22 },
   categoryName: { fontSize: 10, fontWeight: '600', color: '#424242', textAlign: 'center' },
+  
+  // ── PRODUCT CARDS ────────────────────────────────────────────────────────
   productsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 16 },
   productCard: { width: (width - 42) / 2, backgroundColor: '#FFFFFF', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#F0F0F0', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 5, elevation: 2 },
   productImgWrap: { position: 'relative' },
@@ -113,6 +220,8 @@ export const styles = StyleSheet.create({
   viewBtn: { width: 28, height: 28, borderRadius: 9, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#C8E6C9' },
   conditionBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start' },
   conditionBadgeText: { fontSize: 9, fontWeight: '700' },
+  
+  // ── HORIZONTAL SCROLL / DEAL CARDS ───────────────────────────────────────
   horizontalScroll: { paddingHorizontal: 16, gap: 12 },
   dealCard: { width: 160, height: 200, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E8F5E9' },
   dealImg: { width: '100%', height: '100%', position: 'absolute' },
@@ -125,6 +234,8 @@ export const styles = StyleSheet.create({
   dealPrice: { fontSize: 14, fontWeight: '800', color: '#A5D6A7' },
   dealNeg: { fontSize: 9, color: '#81C784', fontWeight: '600', marginTop: 1 },
   dealViewBtn: { width: 28, height: 28, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  
+  // ── SELL BANNER ──────────────────────────────────────────────────────────
   bannerSection: { paddingHorizontal: 16, marginTop: 10 },
   sellBanner: { backgroundColor: '#1B5E20', borderRadius: 20, flexDirection: 'row', overflow: 'hidden', minHeight: 150 },
   sellBannerContent: { flex: 1, padding: 18, justifyContent: 'center' },
@@ -135,6 +246,8 @@ export const styles = StyleSheet.create({
   sellBannerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   sellBannerBtnText: { fontSize: 13, fontWeight: '700', color: '#1B5E20' },
   sellBannerIllustration: { width: 100, justifyContent: 'center', alignItems: 'center' },
+  
+  // ── SAFETY SECTION ───────────────────────────────────────────────────────
   safetySection: { backgroundColor: '#fff', marginTop: 10, paddingTop: 18, paddingBottom: 20 },
   safetySectionTitle: { fontSize: 16, fontWeight: '800', color: '#1B2714', paddingHorizontal: 16, marginBottom: 12 },
   safetyScroll: { paddingHorizontal: 16, gap: 10 },
@@ -142,102 +255,33 @@ export const styles = StyleSheet.create({
   safetyCardIcon: { fontSize: 22 },
   safetyCardTitle: { fontSize: 12, fontWeight: '700', color: '#1B2714' },
   safetyCardDesc: { fontSize: 11, color: '#757575', lineHeight: 15 },
+  
   // ─── Product Card - Discount styles ──────────────────────────────────────
-discountBadgeProduct: {
-  position: 'absolute',
-  top: 8,
-  left: 8,
-  backgroundColor: '#C62828',
-  paddingHorizontal: 7,
-  paddingVertical: 3,
-  borderRadius: 5,
-  zIndex: 3,
-},
-discountBadgeProductText: {
-  color: '#FFFFFF',
-  fontSize: 10,
-  fontWeight: '800',
-  letterSpacing: 0.3,
-},
-conditionOverlaySecondary: {
-  position: 'absolute',
-  top: 8,
-  right: 8,
-  zIndex: 3,
-},
-productPriceStack: {
-  gap: 2,
-},
-productPriceRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 5,
-},
-productOriginalPrice: {
-  fontSize: 10.5,
-  color: '#9E9E9E',
-  fontWeight: '600',
-  textDecorationLine: 'line-through',
-},
-productDiscountPill: {
-  backgroundColor: '#FFEBEE',
-  paddingHorizontal: 5,
-  paddingVertical: 1.5,
-  borderRadius: 3,
-  borderWidth: 1,
-  borderColor: '#FFCDD2',
-},
-productDiscountPillText: {
-  fontSize: 8.5,
-  fontWeight: '800',
-  color: '#C62828',
-},
+  discountBadgeProduct: {
+    position: 'absolute', top: 8, left: 8,
+    backgroundColor: '#C62828',
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderRadius: 5, zIndex: 3,
+  },
+  discountBadgeProductText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
+  conditionOverlaySecondary: { position: 'absolute', top: 8, right: 8, zIndex: 3 },
+  productPriceStack: { gap: 2 },
+  productPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  productOriginalPrice: { fontSize: 10.5, color: '#9E9E9E', fontWeight: '600', textDecorationLine: 'line-through' },
+  productDiscountPill: { backgroundColor: '#FFEBEE', paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 3, borderWidth: 1, borderColor: '#FFCDD2' },
+  productDiscountPillText: { fontSize: 8.5, fontWeight: '800', color: '#C62828' },
 
-// ─── Deal Card - Discount styles ─────────────────────────────────────────
-dealDiscountBadge: {
-  position: 'absolute',
-  top: 8,
-  left: 8,
-  backgroundColor: '#C62828',
-  paddingHorizontal: 8,
-  paddingVertical: 3,
-  borderRadius: 5,
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 3,
-  zIndex: 3,
-},
-dealDiscountBadgeText: {
-  color: '#FFFFFF',
-  fontSize: 9,
-  fontWeight: '800',
-  letterSpacing: 0.3,
-},
-dealPriceStack: {
-  gap: 1,
-},
-dealPriceRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 5,
-},
-dealOriginalPrice: {
-  fontSize: 10,
-  color: '#BDBDBD',
-  fontWeight: '600',
-  textDecorationLine: 'line-through',
-},
-dealDiscountPill: {
-  backgroundColor: '#FFEBEE',
-  paddingHorizontal: 5,
-  paddingVertical: 1.5,
-  borderRadius: 3,
-  borderWidth: 1,
-  borderColor: '#FFCDD2',
-},
-dealDiscountPillText: {
-  fontSize: 8,
-  fontWeight: '800',
-  color: '#C62828',
-},
+  // ─── Deal Card - Discount styles ─────────────────────────────────────────
+  dealDiscountBadge: {
+    position: 'absolute', top: 8, left: 8,
+    backgroundColor: '#C62828',
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 5, flexDirection: 'row', alignItems: 'center', gap: 3, zIndex: 3,
+  },
+  dealDiscountBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
+  dealPriceStack: { gap: 1 },
+  dealPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dealOriginalPrice: { fontSize: 10, color: '#BDBDBD', fontWeight: '600', textDecorationLine: 'line-through' },
+  dealDiscountPill: { backgroundColor: '#FFEBEE', paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 3, borderWidth: 1, borderColor: '#FFCDD2' },
+  dealDiscountPillText: { fontSize: 8, fontWeight: '800', color: '#C62828' },
 });

@@ -45,7 +45,7 @@ const HERO_SLIDES = [
     subtitle: "Connect with students across Ghana's top universities",
     btnText: 'Start Shopping',
     accentColor: '#fff',
-    overlayColor: 'rgba(0,0,0,0.45)',
+    overlayColor: 'rgba(10,20,60,0.50)',
     nav: { screen: 'Products', params: {} },
   },
   {
@@ -67,7 +67,7 @@ const HERO_SLIDES = [
     subtitle: 'Trendy outfits, accessories & vintage finds at great prices',
     btnText: 'Shop Fashion',
     accentColor: '#FFCC80',
-    overlayColor: 'rgba(60,30,0,0.46)',
+    overlayColor: 'rgba(10,20,60,0.50)',
     nav: { screen: 'Products', params: { category: 'fashion' } },
   },
   {
@@ -78,7 +78,7 @@ const HERO_SLIDES = [
       subtitle: 'Groceries, snacks, drinks and daily essentials delivered to your doorstep',
       btnText: 'Shop Food Items',
       accentColor: '#FFB74D',  // Warm orange/amber for food
-      overlayColor: 'rgba(40,20,0,0.50)',
+      overlayColor: 'rgba(10,20,60,0.50)',
       nav: { screen: 'Products', params: { category: 'food and drinks' } },
   },
 ];
@@ -491,38 +491,110 @@ const GuestHomeScreen = () => {
           </View>
 
           <View style={styles.searchWrapper}>
-            <View style={styles.searchBar}>
-              <Ionicons name="search-outline" size={17} color="#9E9E9E" />
-              <TextInput style={styles.searchInput} placeholder="Search products, categories…" placeholderTextColor="#BDBDBD" value={searchQuery} onChangeText={setSearchQuery} onSubmitEditing={handleSearchSubmit} returnKeyType="search" autoCapitalize="none" autoCorrect={false} />
-              {searching ? <ActivityIndicator size="small" color="#2E7D32" /> : searchQuery.length > 0 ? <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Ionicons name="close-circle" size={17} color="#BDBDBD" /></TouchableOpacity> : <TouchableOpacity style={styles.filterBtn} onPress={() => navigation.navigate('GuestProducts')}><Ionicons name="options-outline" size={15} color="#2E7D32" /></TouchableOpacity>}
+  <View style={styles.searchBar}>
+    
+    <TextInput 
+      style={styles.searchInput} 
+      placeholder="Search products, categories…" 
+      placeholderTextColor="#BDBDBD" 
+      value={searchQuery} 
+      onChangeText={setSearchQuery} 
+      onSubmitEditing={handleSearchSubmit} 
+      returnKeyType="search" 
+      autoCapitalize="none" 
+      autoCorrect={false} 
+    />
+    {searching ? (
+      <ActivityIndicator size="small" color="#2E7D32" />
+    ) : searchQuery.length > 0 ? (
+      <TouchableOpacity 
+        onPress={clearSearch} 
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name="close-circle" size={17} color="#BDBDBD" />
+      </TouchableOpacity>
+    ) : (
+      <TouchableOpacity 
+        style={styles.searchIconBtn}
+        onPress={handleSearchSubmit}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="search-outline" size={16} color="#FFFFFF" />
+      </TouchableOpacity>
+    )}
+  </View>
+  
+  {showSearchResults && (
+    <>
+      <TouchableWithoutFeedback onPress={() => setShowSearchResults(false)}>
+        <View style={styles.searchBackdrop} />
+      </TouchableWithoutFeedback>
+      <View style={styles.searchDropdown}>
+        <ScrollView 
+          style={{ maxHeight: 380 }} 
+          keyboardShouldPersistTaps="handled" 
+          nestedScrollEnabled 
+          showsVerticalScrollIndicator={false}
+        >
+          {searchResults.length > 0 ? (
+            <View style={styles.searchSection}>
+              <Text style={styles.searchSectionLabel}>Products</Text>
+              {searchResults.map(p => (
+                <TouchableOpacity 
+                  key={p._id} 
+                  style={styles.searchRow} 
+                  onPress={() => { handleProductPress(p); clearSearch(); }}
+                >
+                  {p.images?.[0] ? (
+                    <Image source={{ uri: p.images[0] }} style={styles.searchThumb} />
+                  ) : (
+                    <View style={[styles.searchThumb, { 
+                      backgroundColor: CATEGORY_CONFIG[p.category]?.color || '#F5F5F5', 
+                      justifyContent: 'center', 
+                      alignItems: 'center' 
+                    }]}>
+                      <Text style={{ fontSize: 18 }}>
+                        {CATEGORY_CONFIG[p.category]?.icon || '📦'}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.searchRowName} numberOfLines={1}>
+                      {p.name}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <Text style={styles.searchRowPrice}>
+                        GH₵ {p.price?.toFixed(2)}
+                      </Text>
+                      {p.campus && (
+                        <Text style={styles.searchRowCampus}>{p.campus}</Text>
+                      )}
+                    </View>
+                  </View>
+                  {p.condition && <ConditionBadge condition={p.condition} />}
+                </TouchableOpacity>
+              ))}
             </View>
-            {showSearchResults && (
-              <>
-                <TouchableWithoutFeedback onPress={() => setShowSearchResults(false)}><View style={styles.searchBackdrop} /></TouchableWithoutFeedback>
-                <View style={styles.searchDropdown}>
-                  <ScrollView style={{ maxHeight: 380 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                    {searchResults.length > 0 ? (
-                      <View style={styles.searchSection}>
-                        <Text style={styles.searchSectionLabel}>Products</Text>
-                        {searchResults.map(p => (
-                          <TouchableOpacity key={p._id} style={styles.searchRow} onPress={() => { handleProductPress(p); clearSearch(); }}>
-                            {p.images?.[0] ? <Image source={{ uri: p.images[0] }} style={styles.searchThumb} /> : <View style={[styles.searchThumb, { backgroundColor: CATEGORY_CONFIG[p.category]?.color || '#F5F5F5', justifyContent: 'center', alignItems: 'center' }]}><Text style={{ fontSize: 18 }}>{CATEGORY_CONFIG[p.category]?.icon || '📦'}</Text></View>}
-                            <View style={{ flex: 1 }}><Text style={styles.searchRowName} numberOfLines={1}>{p.name}</Text><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}><Text style={styles.searchRowPrice}>GH₵ {p.price?.toFixed(2)}</Text>{p.campus && <Text style={styles.searchRowCampus}>{p.campus}</Text>}</View></View>
-                            {p.condition && <ConditionBadge condition={p.condition} />}
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : !searching ? (
-                      <View style={styles.noResults}><Ionicons name="search-outline" size={36} color="#C8E6C9" /><Text style={styles.noResultsTitle}>No results</Text><Text style={styles.noResultsSub}>Try a different keyword</Text></View>
-                    ) : null}
-                    {searchResults.length > 0 && (
-                      <TouchableOpacity style={styles.viewAllRow} onPress={handleSearchSubmit}><Text style={styles.viewAllText}>See all results for "{searchQuery}"</Text><Ionicons name="arrow-forward" size={14} color="#2E7D32" /></TouchableOpacity>
-                    )}
-                  </ScrollView>
-                </View>
-              </>
-            )}
-          </View>
+          ) : !searching ? (
+            <View style={styles.noResults}>
+              <Ionicons name="search-outline" size={36} color="#C8E6C9" />
+              <Text style={styles.noResultsTitle}>No results</Text>
+              <Text style={styles.noResultsSub}>Try a different keyword</Text>
+            </View>
+          ) : null}
+          {searchResults.length > 0 && (
+            <TouchableOpacity style={styles.viewAllRow} onPress={handleSearchSubmit}>
+              <Text style={styles.viewAllText}>
+                See all results for "{searchQuery}"
+              </Text>
+              <Ionicons name="arrow-forward" size={14} color="#2E7D32" />
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      </View>
+    </>
+  )}
+</View>
         </View>
 
         {/* HERO CAROUSEL */}

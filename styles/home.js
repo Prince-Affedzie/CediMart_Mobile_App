@@ -21,22 +21,25 @@ const { width } = Dimensions.get('window');
 // ─────────────────────────────────────────────
 // STYLES
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────────
 export const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F0F2EE' },
   scrollContent: {},
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F2EE' },
   loadingText: { marginTop: 14, fontSize: 15, color: '#757575' },
 
-  // ── Header ──
+  // ── Header (Plain white background) ──
   header: {
-    borderTopRightRadius: 12,
-    borderTopLeftRadius: 12,
-    backgroundColor: '#1B5E20',
+    backgroundColor: '#FFFFFF',                        // ← Changed from '#1B5E20'
     marginHorizontal: 4,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 18,
     zIndex: 100,
+    borderBottomWidth: 1,                              // ← Added subtle border
+    borderBottomColor: '#F0F0F0',
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -46,7 +49,7 @@ export const styles = StyleSheet.create({
   },
   headerGreeting: {
     fontSize: 11,
-    color: '#81C784',
+    color: '#9E9E9E',                                  // ← Changed from '#81C784'
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -55,28 +58,28 @@ export const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#1A1A1A',                                   // ← Changed from '#FFFFFF'
     letterSpacing: -0.3,
   },
   locationPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#F5F5F5',                         // ← Changed from 'rgba(255,255,255,0.12)'
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
     alignSelf: 'flex-start',
     marginTop: 6,
   },
-  locationDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#69F0AE' },
-  locationText: { fontSize: 11, color: '#E8F5E9', fontWeight: '500' },
+  locationDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4CAF50' },  // ← Changed
+  locationText: { fontSize: 11, color: '#757575', fontWeight: '500' },                  // ← Changed
   headerActions: { flexDirection: 'row', gap: 6, marginTop: 4 },
   headerIconBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#F5F5F5',                         // ← Changed from 'rgba(255,255,255,0.12)'
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -92,30 +95,48 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#1B5E20',
+    borderColor: '#FFFFFF',                              // ← Changed from '#1B5E20'
   },
   notifBadgeText: { color: '#fff', fontSize: 8, fontWeight: '800', paddingHorizontal: 2 },
 
-  // ── Search ──
+  // ── Search ───────────────────────────────────────────────────────────────
   searchWrapper: { position: 'relative', zIndex: 200 },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F5F5',                        // ← Changed from '#FFFFFF'
     borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingLeft: 14,
+    paddingRight: 0,                                    // ← Remove right padding for button
+    paddingVertical: 0,                                 // ← Remove vertical padding
   },
-  searchInput: { flex: 1, fontSize: 14, color: '#1B2714', paddingVertical: 0 },
-  filterBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: '#E8F5E9',
+  searchInput: { 
+    flex: 1, 
+    fontSize: 14, 
+    color: '#1B2714', 
+    paddingVertical: 12,                                // ← Added explicit padding
+  },
+  
+  // ✅ NEW: Search icon button - flat left, rounded right
+  searchIconBtn: { 
+    width: 64,                                          // ← Wider than before
+    height: 34,                                     // ← Full height of search bar
+    backgroundColor: '#2E7D32',
     justifyContent: 'center',
     alignItems: 'center',
+    borderTopRightRadius: 14,                           // ← Rounded right
+    borderBottomRightRadius: 14,                        // ← Rounded right
+    borderTopLeftRadius: 0,                             // ← Flat left
+    borderBottomLeftRadius: 0,                          // ← Flat left
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
+
+  
   searchBackdrop: {
     position: 'absolute',
     top: 0,
@@ -126,7 +147,7 @@ export const styles = StyleSheet.create({
   },
   searchDropdown: {
     position: 'absolute',
-    top: 54,
+    top: 50,                                             // ← Adjusted for new search bar height
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
@@ -185,7 +206,7 @@ export const styles = StyleSheet.create({
   },
   viewAllText: { fontSize: 13, fontWeight: '600', color: '#2E7D32' },
 
-  // ── Carousel ──
+  // ── Carousel ─────────────────────────────────────────────────────────────
   carouselSection: { marginHorizontal: 16, marginTop: 16 },
   carouselWrap: { borderRadius: 20, overflow: 'hidden' },
   slideWrapper: { height: 200, position: 'relative', backgroundColor: '#1B5E20' },
@@ -238,7 +259,7 @@ export const styles = StyleSheet.create({
   dotActive: { width: 18, backgroundColor: '#1B5E20' },
   dotInactive: { width: 5, backgroundColor: '#C8E6C9' },
 
-  // ── Stats Banner ──
+  // ── Stats Banner ─────────────────────────────────────────────────────────
   statsBanner: {
     flexDirection: 'row',
     backgroundColor: '#1B5E20',
@@ -255,7 +276,7 @@ export const styles = StyleSheet.create({
   statLabel: { fontSize: 10, color: '#A5D6A7', marginTop: 2, fontWeight: '500' },
   statDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.2)' },
 
-  // ── Section ──
+  // ── Section ──────────────────────────────────────────────────────────────
   section: { backgroundColor: '#FFFFFF', marginTop: 10, paddingTop: 18, paddingBottom: 20 },
   sectionHeader: {
     flexDirection: 'row',
@@ -277,7 +298,7 @@ export const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // ── Campus cards ──
+  // ── Campus cards ─────────────────────────────────────────────────────────
   campusScrollContent: { paddingHorizontal: 16, gap: 10 },
   campusCard: {
     width: 140,
@@ -309,7 +330,7 @@ export const styles = StyleSheet.create({
   campusCountText: { fontSize: 10, fontWeight: '700' },
   campusNoListings: { fontSize: 10, color: '#BDBDBD' },
 
-  // ── Category ──
+  // ── Category ─────────────────────────────────────────────────────────────
   categoryScroll: { paddingHorizontal: 16, gap: 10 },
   categoryPill: { alignItems: 'center', width: 68 },
   categoryIconCircle: {
@@ -324,7 +345,7 @@ export const styles = StyleSheet.create({
   categoryEmoji: { fontSize: 22 },
   categoryName: { fontSize: 10, fontWeight: '600', color: '#424242', textAlign: 'center' },
 
-  // ── Product grid ──
+  // ── Product grid ─────────────────────────────────────────────────────────
   productsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -389,7 +410,7 @@ export const styles = StyleSheet.create({
   },
   addBtnActive: { backgroundColor: '#1B5E20' },
 
-  // ── Condition badge ──
+  // ── Condition badge ──────────────────────────────────────────────────────
   conditionBadge: {
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -398,7 +419,7 @@ export const styles = StyleSheet.create({
   },
   conditionBadgeText: { fontSize: 9, fontWeight: '700' },
 
-  // ── Deal card (horizontal) ──
+  // ── Deal card (horizontal) ───────────────────────────────────────────────
   horizontalScroll: { paddingHorizontal: 16, gap: 12 },
   dealCard: {
     width: 160,
@@ -450,7 +471,7 @@ export const styles = StyleSheet.create({
   },
   dealAddBtnActive: { backgroundColor: '#1B5E20' },
 
-  // ── Sell Banner ──
+  // ── Sell Banner ──────────────────────────────────────────────────────────
   bannerSection: { paddingHorizontal: 16, marginTop: 10 },
   sellBanner: {
     backgroundColor: '#1B5E20',
@@ -491,7 +512,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // ── Safety section ──
+  // ── Safety section ───────────────────────────────────────────────────────
   safetySection: {
     backgroundColor: '#fff',
     marginTop: 10,
@@ -519,7 +540,7 @@ export const styles = StyleSheet.create({
   safetyCardTitle: { fontSize: 12, fontWeight: '700', color: '#1B2714' },
   safetyCardDesc: { fontSize: 11, color: '#757575', lineHeight: 15 },
 
-  // ── Modal ──
+  // ── Modal ────────────────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.48)',
@@ -555,102 +576,33 @@ export const styles = StyleSheet.create({
     borderColor: '#C8E6C9',
   },
   continueBtnText: { color: '#2E7D32', fontSize: 15, fontWeight: '600' },
-  // ─── Product Card - Discount styles ──────────────────────────────────────
-discountBadgeProduct: {
-  position: 'absolute',
-  top: 8,
-  left: 8,
-  backgroundColor: '#C62828',
-  paddingHorizontal: 7,
-  paddingVertical: 3,
-  borderRadius: 5,
-  zIndex: 3,
-},
-discountBadgeProductText: {
-  color: '#FFFFFF',
-  fontSize: 10,
-  fontWeight: '800',
-  letterSpacing: 0.3,
-},
-conditionOverlaySecondary: {
-  position: 'absolute',
-  top: 8,
-  right: 8,
-  zIndex: 3,
-},
-productPriceStack: {
-  gap: 2,
-},
-productPriceRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 5,
-},
-productOriginalPrice: {
-  fontSize: 10.5,
-  color: '#9E9E9E',
-  fontWeight: '600',
-  textDecorationLine: 'line-through',
-},
-productDiscountPill: {
-  backgroundColor: '#FFEBEE',
-  paddingHorizontal: 5,
-  paddingVertical: 1.5,
-  borderRadius: 3,
-  borderWidth: 1,
-  borderColor: '#FFCDD2',
-},
-productDiscountPillText: {
-  fontSize: 8.5,
-  fontWeight: '800',
-  color: '#C62828',
-},
 
-// ─── Deal Card - Discount styles ─────────────────────────────────────────
-dealDiscountBadge: {
-  position: 'absolute',
-  top: 8,
-  left: 8,
-  backgroundColor: '#C62828',
-  paddingHorizontal: 8,
-  paddingVertical: 3,
-  borderRadius: 5,
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 3,
-  zIndex: 3,
-},
-dealDiscountBadgeText: {
-  color: '#FFFFFF',
-  fontSize: 9,
-  fontWeight: '800',
-  letterSpacing: 0.3,
-},
-dealPriceStack: {
-  gap: 1,
-},
-dealPriceRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 5,
-},
-dealOriginalPrice: {
-  fontSize: 10,
-  color: '#BDBDBD',
-  fontWeight: '600',
-  textDecorationLine: 'line-through',
-},
-dealDiscountPill: {
-  backgroundColor: '#FFEBEE',
-  paddingHorizontal: 5,
-  paddingVertical: 1.5,
-  borderRadius: 3,
-  borderWidth: 1,
-  borderColor: '#FFCDD2',
-},
-dealDiscountPillText: {
-  fontSize: 8,
-  fontWeight: '800',
-  color: '#C62828',
-},
+  // ─── Product Card - Discount styles ──────────────────────────────────────
+  discountBadgeProduct: {
+    position: 'absolute', top: 8, left: 8,
+    backgroundColor: '#C62828',
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderRadius: 5, zIndex: 3,
+  },
+  discountBadgeProductText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
+  conditionOverlaySecondary: { position: 'absolute', top: 8, right: 8, zIndex: 3 },
+  productPriceStack: { gap: 2 },
+  productPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  productOriginalPrice: { fontSize: 10.5, color: '#9E9E9E', fontWeight: '600', textDecorationLine: 'line-through' },
+  productDiscountPill: { backgroundColor: '#FFEBEE', paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 3, borderWidth: 1, borderColor: '#FFCDD2' },
+  productDiscountPillText: { fontSize: 8.5, fontWeight: '800', color: '#C62828' },
+
+  // ─── Deal Card - Discount styles ─────────────────────────────────────────
+  dealDiscountBadge: {
+    position: 'absolute', top: 8, left: 8,
+    backgroundColor: '#C62828',
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 5, flexDirection: 'row', alignItems: 'center', gap: 3, zIndex: 3,
+  },
+  dealDiscountBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
+  dealPriceStack: { gap: 1 },
+  dealPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  dealOriginalPrice: { fontSize: 10, color: '#BDBDBD', fontWeight: '600', textDecorationLine: 'line-through' },
+  dealDiscountPill: { backgroundColor: '#FFEBEE', paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 3, borderWidth: 1, borderColor: '#FFCDD2' },
+  dealDiscountPillText: { fontSize: 8, fontWeight: '800', color: '#C62828' },
 });
