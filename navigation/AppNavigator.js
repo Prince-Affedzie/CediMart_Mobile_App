@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useChat } from '../context/ChatContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ── Customer screens ──
@@ -39,6 +40,8 @@ import GuestProductDetailScreen from '../screens/GuestProductDetail'
 import GuestMarketDetailScreen from '../screens/GuestMarketDetail';
 import CampusProductsScreen from '../screens/CampusProductsScreen'
 import TagProductsScreen from '../screens/TagProductsScreen'
+import ChatScreen from '../screens/ChatScreen'
+import InboxScreen from '../screens/InboxScreen'
 
 
 // ── Vendor screens ──
@@ -117,6 +120,7 @@ function AuthNavigator() {
 // ───────────────────────────────────────────────────
 function VendorTabNavigator() {
   const { bottom } = useSafeAreaInsets();
+  const {totalUnread} = useChat()
 
   return (
     <Tab.Navigator
@@ -135,6 +139,9 @@ function VendorTabNavigator() {
               break;
             case 'Settings':
               iconName = focused ? 'person-circle' : 'person-circle-outline';
+              break;
+            case 'Inbox':
+              iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
               break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -156,6 +163,7 @@ function VendorTabNavigator() {
       <Tab.Screen name="Dashboard" component={VendorDashboardScreen} options={{ title: 'Dashboard' }} />
       <Tab.Screen name="MyProducts" component={MyProductsScreen} options={{ title: 'Products' }} />
        <Tab.Screen name="Orders" component={ VendorOrdersScreen} options={{ title: 'Orders' }} />
+       <Tab.Screen name="Inbox" component={InboxScreen} options={{ title: 'Inbox', tabBarBadge: totalUnread > 0 ? totalUnread : null, }} />
        <Tab.Screen name="Settings" component={VendorAccountScreen} options={{ title: 'Profile' }} />
      
      
@@ -281,11 +289,14 @@ function MainStackNavigator() {
               <Stack.Screen name="Payment" component={PaymentScreen} options={{ headerShown: false }} />
               <Stack.Screen name="MarketDetail" component={MarketDetailScreen} options={{ headerShown: false }} />
               <Stack.Screen name="VendorDetail" component={VendorDetailScreen} options={{ headerShown: false }} />
+               <Stack.Screen name="Inbox" component={InboxScreen} options={{ headerShown: false }} />
             </>
           )}
           {/* Both roles still have access to Auth (for re‑login) 
           <Stack.Screen name="Auth" component={AuthNavigator} />
           */}
+          <Stack.Screen name="ChatScreen" component={ChatScreen} />
+          
         </>
       )}
     </Stack.Navigator>

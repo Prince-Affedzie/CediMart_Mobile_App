@@ -8,6 +8,7 @@ import AppNavigator from './navigation/AppNavigator';
 import { SafeAreaProvider,SafeAreaView } from 'react-native-safe-area-context';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import {ChatProvider} from './context/ChatContext';
 import { PaystackProvider } from "react-native-paystack-webview";
 import * as Updates from 'expo-updates';
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
@@ -53,20 +54,22 @@ export default function App() {
         <StatusBar style="light" backgroundColor="#2E7D32" translucent={true} />
         <AuthProvider>
           <NotificationProvider>
-        <CartProvider>
+           <ChatProvider>
+
+          <CartProvider>
        
         
         <PaystackProvider debug 
          publicKey={PayStack_Public_Key}
          currency="GHS"
          defaultChannels={['card','mobile_money','bank_transfer']}
-        containerStyle={{ 
-        flex: 1, 
-        height: '100%', 
-       width: '100%', 
-      zIndex: 9999, 
-      marginTop: 20 // Pushes it down slightly to force a repaint
-    }}
+          containerStyle={{ 
+          flex: 1, 
+          height: '100%', 
+          width: '100%', 
+          zIndex: 9999, 
+           marginTop: 20 // Pushes it down slightly to force a repaint
+          }}
          > 
          <PushNotificationInitializer/>
         <SafeAreaView style={{ flex: 1, backgroundColor: '#2E7D32' }} edges={['top']}>
@@ -74,6 +77,7 @@ export default function App() {
         </SafeAreaView>
         </PaystackProvider>
         </CartProvider>
+         </ChatProvider>
         </NotificationProvider>
         </AuthProvider>
         

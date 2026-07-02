@@ -21,6 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { getProductById } from '../apis/productApi';
 import {shareGuestProduct} from '../utils/shareUtils'
+import ChatFAB from '../components/ChatFAB';
+
 
 const { width } = Dimensions.get('window');
 
@@ -815,6 +817,19 @@ const GuestProductDetailScreen = () => {
             <Ionicons name="bag-add-outline" size={20} color="#fff" />
             <Text style={styles.addToCartBtnText}>{isAvailable ? `Add to Cart · GH₵ ${lineTotal}` : 'Sold Out'}</Text>
           </TouchableOpacity>
+          <ChatFAB 
+                        product={product}
+                        isAuthenticated={false}
+                        style={{ 
+                          position: 'absolute', 
+                          bottom: 100, 
+                          right: 20,
+                          zIndex: 20,
+                        }}
+                        onConversationOpened={(conversation) => {
+                          console.log('Conversation opened:', conversation._id);
+                        }}
+                   />
         </SafeAreaView>
       </View>
     </View>

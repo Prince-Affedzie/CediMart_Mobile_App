@@ -24,6 +24,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { addToFavorites, removeFromFavorites } from '../apis/userActionsApi';
 import {shareProduct} from '../utils/shareUtils'
+import ChatFAB from '../components/ChatFAB';
 
 const { width } = Dimensions.get('window');
 
@@ -993,6 +994,19 @@ const ProductDetailScreen = ({ route, navigation }) => {
               </>
             )}
           </TouchableOpacity>
+           <ChatFAB 
+              product={product}
+              isAuthenticated={isAuthenticated}
+              style={{ 
+                position: 'absolute', 
+                bottom: 100, 
+                right: 20,
+                zIndex: 20,
+              }}
+              onConversationOpened={(conversation) => {
+                console.log('Conversation opened:', conversation._id);
+              }}
+         />
         </SafeAreaView>
       </View>
     </View>

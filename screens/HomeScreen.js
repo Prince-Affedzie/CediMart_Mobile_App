@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import productService from '../services/productService';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 import { NotificationContext } from '../context/NotificationContext';
 import { useNavigation } from '@react-navigation/native';
 import {styles} from '../styles/home'
@@ -503,6 +504,7 @@ const HomeScreen = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const {totalUnread} = useChat()
 
   const unreadCount = notifications?.filter(n => !n.read).length ?? 0;
 
@@ -713,9 +715,9 @@ const HomeScreen = () => {
               </View>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Favorites')}>
+            {/*<TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Favorites')}>
                 <Ionicons name="heart-outline" size={24} color="#2E7D32" />
-              </TouchableOpacity>
+              </TouchableOpacity>*/}
               <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Notification')}>
                 <Ionicons name={unreadCount > 0 ? 'notifications' : 'notifications-outline'} size={24} color="#2E7D32" />
                 {unreadCount > 0 && (
@@ -724,11 +726,11 @@ const HomeScreen = () => {
                   </View>
                 )}
               </TouchableOpacity>
-              <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Cart')}>
-                <Ionicons name="cart-outline" size={24} color="#2E7D32" />
-                {cartCount > 0 && (
+              <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Inbox')}>
+                <Ionicons name="mail-outline" size={24} color="#2E7D32" />
+                {totalUnread > 0 && (
                   <View style={styles.notifBadge}>
-                    <Text style={styles.notifBadgeText}>{cartCount > 9 ? '9+' : cartCount}</Text>
+                    <Text style={styles.notifBadgeText}>{totalUnread > 9 ? '9+' : totalUnread}</Text>
                   </View>
                 )}
               </TouchableOpacity>
