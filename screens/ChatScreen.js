@@ -67,6 +67,7 @@ export default function ChatScreen({ route, navigation }) {
     const text = inputText.trim();
     if (!text || isSending) return;
 
+    // ✅ Clear input FIRST, then send
     setInputText('');
     emitStopTyping(initialConversation._id);
     clearTimeout(typingTimeoutRef.current);
@@ -74,11 +75,13 @@ export default function ChatScreen({ route, navigation }) {
     setIsSending(true);
     try {
       await sendMessage(initialConversation._id, text);
+      // Scroll to bottom after sending
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     } catch {
-      // sendMessage already handles showing errors
+      // ✅ On error, restore the text so user can try again
+      setInputText(text);
     } finally {
       setIsSending(false);
     }
@@ -227,12 +230,12 @@ export default function ChatScreen({ route, navigation }) {
               <View style={[styles.typingDot, { animationDelay: '300ms' }]} />
             </View>
             <Text style={styles.typingText}>
-              {otherParty?.name?.split(' ')[0]} is typing
+              {otherParty?.firstName || otherParty?.name?.split(' ')[0]} is typing
             </Text>
           </View>
         )}
 
-        {/* Input bar */}
+        {/* ✅ FIXED: Input bar - send button works on first tap */}
         <SafeAreaView edges={['bottom']} style={styles.inputSafeArea}>
           <View style={styles.inputBar}>
             <View style={styles.inputWrapper}>
@@ -246,21 +249,32 @@ export default function ChatScreen({ route, navigation }) {
                 maxLength={500}
                 returnKeyType="default"
                 blurOnSubmit={false}
+                // ✅ ADD: Submit on return key as alternative
+                onSubmitEditing={() => {
+                  if (inputText.trim() && !isSending) {
+                    handleSend();
+                  }
+                }}
               />
             </View>
+            {/* ✅ FIXED: Only disable when actually sending */}
             <TouchableOpacity
               style={[
                 styles.sendBtn,
-                (!inputText.trim() || isSending) && styles.sendBtnDisabled,
+                isSending && styles.sendBtnDisabled,
               ]}
               onPress={handleSend}
-              disabled={!inputText.trim() || isSending}
+              disabled={isSending}
               activeOpacity={0.8}
             >
               {isSending ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Ionicons name="send" size={18} color="#FFFFFF" />
+                <Ionicons 
+                  name="send" 
+                  size={18} 
+                  color={inputText.trim() ? '#FFFFFF' : '#A5D6A7'}
+                />
               )}
             </TouchableOpacity>
           </View>
@@ -271,9 +285,6 @@ export default function ChatScreen({ route, navigation }) {
 }
 
 // ── Skeleton loader ────────────────────────────────────────────────────────
-// Renders while the first page of messages is being fetched.
-// Mimics the rough shape of a real conversation so the screen
-// doesn't feel blank or broken on slow connections.
 
 const SkeletonBubble = ({ isMe, width }) => {
   const shimmer = useRef(new Animated.Value(0)).current;
@@ -324,12 +335,14 @@ const ChatHeader = ({ otherParty, product }) => (
     ) : (
       <View style={[headerStyles.avatar, headerStyles.avatarFallback]}>
         <Text style={headerStyles.avatarLetter}>
-          {otherParty?.name?.[0]?.toUpperCase() ?? '?'}
+          {(otherParty?.firstName || otherParty?.name)?.[0]?.toUpperCase() ?? '?'}
         </Text>
       </View>
     )}
     <View style={headerStyles.info}>
-      <Text style={headerStyles.name} numberOfLines={1}>{otherParty?.name}</Text>
+      <Text style={headerStyles.name} numberOfLines={1}>
+        {otherParty?.firstName || otherParty?.name}
+      </Text>
       <Text style={headerStyles.sub} numberOfLines={1}>
         {product?.name || product?.title || 'Product'}
       </Text>
@@ -380,7 +393,7 @@ const MessageBubble = ({ message, isMe, showAvatar, otherParty, isRead }) => (
         ) : (
           <View style={[bubbleStyles.avatar, bubbleStyles.avatarFallback]}>
             <Text style={bubbleStyles.avatarLetter}>
-              {otherParty?.firstName?.[0]?.toUpperCase() ?? '?'}
+              {(otherParty?.firstName || otherParty?.name)?.[0]?.toUpperCase() ?? '?'}
             </Text>
           </View>
         )
@@ -529,8 +542,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    bottom: 40,
     backgroundColor: '#FFFFFF',
+    bottom:40
   },
   inputWrapper: {
     flex: 1,

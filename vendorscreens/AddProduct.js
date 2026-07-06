@@ -197,14 +197,15 @@ const formatDisplayName = (str) =>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WIZARD STEP DEFINITIONS
+// Reduced from 7 → 6 steps: "Specs" and "About" were both optional add-ons,
+// so they're merged into a single "Extras" step to cut down on perceived effort.
 // ─────────────────────────────────────────────────────────────────────────────
 const WIZARD_STEPS = [
   { key: 'photos',   label: 'Photos',    icon: 'image-outline' },
   { key: 'details',  label: 'Details',   icon: 'pricetag-outline' },
   { key: 'pricing',  label: 'Pricing',   icon: 'cash-outline' },
-  { key: 'specs',    label: 'Specs',     icon: 'list-outline' },
   { key: 'location', label: 'Location',  icon: 'location-outline' },
-  { key: 'about',    label: 'About',     icon: 'document-text-outline' },
+  { key: 'extras',   label: 'Extras',    icon: 'sparkles-outline' },
   { key: 'review',   label: 'Review',    icon: 'checkmark-done-outline' },
 ];
 
@@ -487,6 +488,9 @@ const AddProductScreen = ({ navigation }) => {
 
   // Specifications fields
   const [specifications, setSpecifications] = useState([{ key: '', value: '' }]);
+  // Specs are tucked behind a toggle inside the "Extras" step so the step
+  // doesn't look like a form full of empty boxes by default.
+  const [showSpecs, setShowSpecs] = useState(false);
 
   // Field-level errors — populated only after a "Next"/submit attempt on that step
   const [errors, setErrors] = useState({});
@@ -587,11 +591,12 @@ const AddProductScreen = ({ navigation }) => {
     }
 
     if (stepKey === 'location') {
+      // Only the campus itself is required — campus area is a nice-to-have
+      // that buyers can also just ask about in chat.
       if (!campus) next.campus = 'Select the campus where you’ll meet buyers.';
-      if (!campusArea.trim()) next.campusArea = 'Add a campus area so buyers know where to meet you.';
     }
 
-    // 'specs' and 'about' steps are fully optional — nothing required there
+    // 'extras' step is fully optional — nothing required there
 
     return next;
   };
@@ -669,7 +674,7 @@ const AddProductScreen = ({ navigation }) => {
       formData.append('condition', condition);
       formData.append('description', description.trim() || '');
       formData.append('campus', campus);
-      formData.append('location[campusArea]', campusArea.trim());
+      if (campusArea.trim()) formData.append('location[campusArea]', campusArea.trim());
       if (hostel.trim()) formData.append('location[hostel]', hostel.trim());
       formData.append('countInStock', parseInt(countInStock) || 1);
       selectedTags.forEach(tag => formData.append('tags[]', tag));
@@ -719,7 +724,7 @@ const AddProductScreen = ({ navigation }) => {
   const photosComplete   = images.length > 0;
   const detailsComplete  = !!name.trim() && !!category && !!condition;
   const pricingComplete  = !!price && !isNaN(parseFloat(price)) && parseFloat(price) >= 0;
-  const locationComplete = !!campus && !!campusArea.trim();
+  const locationComplete = !!campus; // campus area is optional, so it's not part of "required"
 
   const completedCount = [photosComplete, detailsComplete, pricingComplete, locationComplete].filter(Boolean).length;
   const completionPct = Math.round((completedCount / 4) * 100);
@@ -728,6 +733,7 @@ const AddProductScreen = ({ navigation }) => {
   const isFirstStep = stepIndex === 0;
   const isLastStep  = stepIndex === WIZARD_STEPS.length - 1;
   const isReviewStep = currentStepKey === 'review';
+  const isOptionalStep = currentStepKey === 'extras';
 
   // ─────────────────────────────────────────────────────────────────────────
   // STEP RENDERERS — each returns just the body for that step
@@ -735,7 +741,7 @@ const AddProductScreen = ({ navigation }) => {
 
   const renderPhotosStep = () => (
     <StepShell
-      eyebrow="STEP 1 OF 7"
+      eyebrow="STEP 1 OF 6"
       title="Add product photos"
       subtitle="Up to 10 photos. The first one becomes your cover image."
     >
@@ -771,7 +777,7 @@ const AddProductScreen = ({ navigation }) => {
 
   const renderDetailsStep = () => (
     <StepShell
-      eyebrow="STEP 2 OF 7"
+      eyebrow="STEP 2 OF 6"
       title="What are you selling?"
       subtitle="Give buyers a clear, recognizable name and category."
     >
@@ -814,7 +820,7 @@ const AddProductScreen = ({ navigation }) => {
 
   const renderPricingStep = () => (
     <StepShell
-      eyebrow="STEP 3 OF 7"
+      eyebrow="STEP 3 OF 6"
       title="Set your price"
       subtitle="You can always edit this later."
     >
@@ -891,52 +897,11 @@ const AddProductScreen = ({ navigation }) => {
     </StepShell>
   );
 
-  const renderSpecsStep = () => (
-    <StepShell
-      eyebrow="STEP 4 OF 7 · OPTIONAL"
-      title="Add specifications"
-      subtitle="Things like storage, color, weight, or material help buyers compare."
-    >
-      {specifications.map((spec, index) => (
-        <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <View style={{ flex: 1 }}>
-            <TextInput
-              style={styles.specInput}
-              placeholder="Spec name (e.g. Color)"
-              placeholderTextColor="#C5C5C5"
-              value={spec.key}
-              onChangeText={(v) => updateSpecField(index, 'key', v)}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <TextInput
-              style={styles.specInput}
-              placeholder="Value (e.g. Red)"
-              placeholderTextColor="#C5C5C5"
-              value={spec.value}
-              onChangeText={(v) => updateSpecField(index, 'value', v)}
-            />
-          </View>
-          <TouchableOpacity onPress={() => removeSpecField(index)} style={{ padding: 6 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close-circle" size={22} color="#E53935" />
-          </TouchableOpacity>
-        </View>
-      ))}
-      <TouchableOpacity style={styles.addSpecBtn} onPress={addSpecField} activeOpacity={0.8}>
-        <Ionicons name="add-circle-outline" size={20} color="#2E7D32" />
-        <Text style={styles.addSpecBtnText}>Add Specification</Text>
-      </TouchableOpacity>
-      <HelperText>
-        Specs help buyers compare items quickly — e.g. "Storage: 256GB" or "Material: Leather". Feel free to skip this step.
-      </HelperText>
-    </StepShell>
-  );
-
   const renderLocationStep = () => (
     <StepShell
-      eyebrow="STEP 5 OF 7"
+      eyebrow="STEP 4 OF 6"
       title="Where can buyers find you?"
-      subtitle="This helps buyers arrange a safe meet-up nearby."
+      subtitle="Just your campus is required — the rest helps buyers plan a meet-up, but you can skip it."
     >
       <DropdownSelector
         label="Campus" placeholder="Select your campus" items={CAMPUS_OPTIONS}
@@ -946,25 +911,23 @@ const AddProductScreen = ({ navigation }) => {
         error={errors.campus}
       />
       <FloatingInput
-        label="Campus Area" icon="location-outline"
+        label="Campus Area (optional)" icon="location-outline"
         placeholder="e.g. Main Campus, North Campus"
         value={campusArea}
-        onChangeText={(v) => { setCampusArea(v); if (v.trim()) setErrors(prev => ({ ...prev, campusArea: null })); }}
-        required
-        error={errors.campusArea}
+        onChangeText={setCampusArea}
       />
       <FloatingInput label="Hostel / Hall (optional)" icon="home-outline" placeholder="e.g. Mensah Sarbah Hall, Pentagon" value={hostel} onChangeText={setHostel} />
       <HelperText icon="shield-checkmark-outline">
-        Buyers will use this to arrange a safe meet-up. You won't share your exact address.
+        Buyers will use this to arrange a safe meet-up. You won't share your exact address, and you can always confirm details in chat.
       </HelperText>
     </StepShell>
   );
 
-  const renderAboutStep = () => (
+  const renderExtrasStep = () => (
     <StepShell
-      eyebrow="STEP 6 OF 7 · OPTIONAL"
-      title="Description & tags"
-      subtitle="Help your item show up in the right searches and filters."
+      eyebrow="STEP 5 OF 6 · OPTIONAL"
+      title="Add a few final touches"
+      subtitle="Everything on this step is optional — add as much or as little as you like, or skip it entirely."
     >
       <FloatingInput
         label="Description" icon="document-text-outline"
@@ -972,6 +935,7 @@ const AddProductScreen = ({ navigation }) => {
         value={description} onChangeText={setDescription} multiline
         maxLength={500}
       />
+
       <Text style={[styles.quickLabel, { marginTop: 4 }]}>Tags <Text style={styles.optional}>(optional)</Text></Text>
       <View style={styles.tagsGrid}>
         {AVAILABLE_TAGS.map(({ key, icon }) => {
@@ -992,13 +956,67 @@ const AddProductScreen = ({ navigation }) => {
           <TouchableOpacity onPress={() => setSelectedTags([])}><Text style={styles.tagClearText}>Clear all</Text></TouchableOpacity>
         </View>
       )}
-      <HelperText>Tags help your item show up in the right filters — pick what genuinely applies. Feel free to skip this step.</HelperText>
+
+      {/* Specifications are tucked behind a toggle so this step doesn't open
+          with a wall of empty inputs. */}
+      <TouchableOpacity
+        style={[styles.discountToggle, showSpecs && styles.discountToggleActive, { marginTop: 18 }]}
+        onPress={() => setShowSpecs(!showSpecs)}
+      >
+        <Ionicons name="list-outline" size={18} color={showSpecs ? '#fff' : '#2E7D32'} />
+        <Text style={[styles.discountToggleText, showSpecs && styles.discountToggleTextActive]}>
+          {showSpecs ? 'Specifications added' : 'Add specifications (optional)'}
+        </Text>
+        <Ionicons name={showSpecs ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={showSpecs ? '#fff' : '#2E7D32'} />
+      </TouchableOpacity>
+
+      {showSpecs && (
+        <View style={styles.discountFields}>
+          {specifications.map((spec, index) => (
+            <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  style={styles.specInput}
+                  placeholder="Spec name (e.g. Color)"
+                  placeholderTextColor="#C5C5C5"
+                  value={spec.key}
+                  onChangeText={(v) => updateSpecField(index, 'key', v)}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  style={styles.specInput}
+                  placeholder="Value (e.g. Red)"
+                  placeholderTextColor="#C5C5C5"
+                  value={spec.value}
+                  onChangeText={(v) => updateSpecField(index, 'value', v)}
+                />
+              </View>
+              <TouchableOpacity onPress={() => removeSpecField(index)} style={{ padding: 6 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={22} color="#E53935" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity style={styles.addSpecBtn} onPress={addSpecField} activeOpacity={0.8}>
+            <Ionicons name="add-circle-outline" size={20} color="#2E7D32" />
+            <Text style={styles.addSpecBtnText}>Add Specification</Text>
+          </TouchableOpacity>
+          <HelperText>
+            Specs help buyers compare items quickly — e.g. "Storage: 256GB" or "Material: Leather".
+          </HelperText>
+        </View>
+      )}
+
+      <TouchableOpacity style={styles.skipStepBtn} onPress={() => goToStep(stepIndex + 1)} activeOpacity={0.7}>
+        <Text style={styles.skipStepBtnText}>Skip this step for now</Text>
+        <Ionicons name="arrow-forward" size={14} color="#757575" />
+      </TouchableOpacity>
     </StepShell>
   );
 
   const renderReviewStep = () => (
     <StepShell
-      eyebrow="STEP 7 OF 7"
+      eyebrow="STEP 6 OF 6"
       title="Review & publish"
       subtitle="Double-check everything looks right before going live."
     >
@@ -1034,11 +1052,11 @@ const AddProductScreen = ({ navigation }) => {
           hasDiscount && discountPercent ? ['Discount', `${discountPercent}% off`, 2] : null,
           hasDiscount && originalPrice ? ['Original Price', `GH₵ ${parseFloat(originalPrice || 0).toFixed(2)}`, 2] : null,
           ['Quantity', countInStock || '1', 2],
-          ['Campus', CAMPUS_OPTIONS.find(c => c.key === campus)?.label || campus || '—', 4],
-          ['Area', campusArea || '—', 4],
-          hostel ? ['Hostel / Hall', hostel, 4] : null,
+          ['Campus', CAMPUS_OPTIONS.find(c => c.key === campus)?.label || campus || '—', 3],
+          ['Area', campusArea || '—', 3],
+          hostel ? ['Hostel / Hall', hostel, 3] : null,
           ['Photos', `${images.length} image(s)`, 0],
-          selectedTags.length > 0 ? ['Tags', selectedTags.map(formatDisplayName).join(', '), 5] : null,
+          selectedTags.length > 0 ? ['Tags', selectedTags.map(formatDisplayName).join(', '), 4] : null,
         ].filter(Boolean).map(([k, v, stepToEdit]) => (
           <TouchableOpacity
             key={k}
@@ -1075,9 +1093,8 @@ const AddProductScreen = ({ navigation }) => {
     photos: renderPhotosStep,
     details: renderDetailsStep,
     pricing: renderPricingStep,
-    specs: renderSpecsStep,
     location: renderLocationStep,
-    about: renderAboutStep,
+    extras: renderExtrasStep,
     review: renderReviewStep,
   };
 
@@ -1121,9 +1138,6 @@ const AddProductScreen = ({ navigation }) => {
         </ScrollView>
 
         {/* ── Bottom navigation bar ── */}
-      
-
-{/* ── Bottom navigation bar ── */}
         <View style={styles.bottomNav}>
           <TouchableOpacity style={styles.backNavBtn} onPress={handleBack} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={18} color="#424242" />
@@ -1147,7 +1161,7 @@ const AddProductScreen = ({ navigation }) => {
           ) : (
             <TouchableOpacity style={styles.nextBtn} onPress={handleNext} activeOpacity={0.88}>
               <Text style={styles.nextBtnText}>
-                {WIZARD_STEPS[stepIndex + 1]?.key === 'review' ? 'Review' : 'Next'}
+                {isOptionalStep ? 'Continue' : WIZARD_STEPS[stepIndex + 1]?.key === 'review' ? 'Review' : 'Next'}
               </Text>
               <Ionicons name="arrow-forward" size={18} color="#fff" />
             </TouchableOpacity>
@@ -1302,6 +1316,13 @@ const styles = StyleSheet.create({
   tagCountText: { fontSize: 12, color: '#2E7D32', fontWeight: '600', flex: 1 },
   tagClearText: { fontSize: 12, color: '#E53935', fontWeight: '600' },
 
+  // ── Skip-step link (for optional steps) ─────────────────────────────────
+  skipStepBtn: {
+    flexDirection: 'row', alignSelf: 'center', alignItems: 'center', gap: 6,
+    marginTop: 20, paddingVertical: 8, paddingHorizontal: 12,
+  },
+  skipStepBtnText: { fontSize: 13, fontWeight: '600', color: '#757575' },
+
   // ── Review step ───────────────────────────────────────────────────────────
   reviewImageRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -1333,17 +1354,15 @@ const styles = StyleSheet.create({
   },
   incompleteNoticeText: { fontSize: 12.5, color: '#E65100', fontWeight: '600', flex: 1 },
 
-  
-bottomNav: {
-  flexDirection: 'row', alignItems: 'center', gap: 10,
-  paddingHorizontal: 18, paddingTop: 14,
-  backgroundColor: '#fff',
-  borderTopWidth: 1, borderTopColor: '#F0F0F0',
-  shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
-  shadowOpacity: 0.05, shadowRadius: 8, elevation: 6,
-   bottom: 50,
- 
-},
+  bottomNav: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 18, paddingTop: 14,
+    backgroundColor: '#fff',
+    borderTopWidth: 1, borderTopColor: '#F0F0F0',
+    shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.05, shadowRadius: 8, elevation: 6,
+    bottom: 50,
+  },
   backNavBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14,
