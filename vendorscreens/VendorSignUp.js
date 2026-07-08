@@ -281,7 +281,7 @@ const VendorSignUpScreen = ({ navigation }) => {
       const response = await sendOTPVendor(trimmed);
       if (response?.data?.success || response?.status === 200) {
         setStep(STEPS.OTP);
-        setResendCooldown(60);
+        setResendCooldown(180);
       } else {
         Alert.alert('Error', response?.data?.message || 'Failed to send verification code.');
       }
@@ -320,7 +320,7 @@ const VendorSignUpScreen = ({ navigation }) => {
       const trimmed = phone.trim().replace(/\s/g, '');
       const response = await sendOTPVendor(trimmed);
       if (response?.data?.success || response?.status === 200) {
-        setResendCooldown(60);
+        setResendCooldown(180);
         Alert.alert('Code Sent', 'A new verification code has been sent.');
       }
     } catch { Alert.alert('Error', 'Network error.'); }
@@ -451,7 +451,9 @@ const VendorSignUpScreen = ({ navigation }) => {
       <View style={styles.resendRow}>
         <Text style={styles.resendPrompt}>Didn't receive a code? </Text>
         <TouchableOpacity onPress={handleResendOTP} disabled={resendCooldown > 0 || loading}>
-          <Text style={[styles.resendLink, (resendCooldown > 0 || loading) && styles.resendLinkDisabled]}>{resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}</Text>
+          <Text style={[styles.resendLink, (resendCooldown > 0 || loading) && styles.resendLinkDisabled]}> {resendCooldown > 0 
+      ? `Resend in ${Math.floor(resendCooldown / 60)}:${String(resendCooldown % 60).padStart(2, '0')}` 
+      : 'Resend Code'}</Text>
         </TouchableOpacity>
       </View>
       <TouchableOpacity style={styles.backLinkRow} onPress={() => { setStep(STEPS.PHONE); setOtp(''); setError(''); }} disabled={loading}>

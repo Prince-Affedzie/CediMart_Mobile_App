@@ -225,7 +225,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
       const response = await getOTP(phone.trim());
       if (response?.data?.success || response?.status === 200) {
         setStep(STEPS.OTP);
-        setResendCooldown(60);
+        setResendCooldown(180);
       } else {
         Alert.alert('Error', response?.data?.message || 'Failed to send OTP. Please try again.');
       }
@@ -292,7 +292,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
     try {
       const response = await getOTP(phone.trim());
       if (response?.data?.success || response?.status === 200) {
-        setResendCooldown(60);
+        setResendCooldown(180);
         Alert.alert('Code Sent', 'A new verification code has been sent to your phone.');
       } else {
         Alert.alert('Error', 'Failed to resend code. Please try again.');
@@ -375,7 +375,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
         <Text style={styles.stepTitle}>Enter OTP</Text>
         <Text style={styles.stepSubtitle}>
           We sent a 6-digit code to{' '}
-          <Text style={styles.phoneHighlight}>+{phone}</Text>
+          <Text style={styles.phoneHighlight}>{phone}</Text>
         </Text>
       </View>
 
@@ -407,7 +407,9 @@ const ForgotPasswordScreen = ({ navigation }) => {
         <Text style={styles.resendPrompt}>Didn't receive a code? </Text>
         <TouchableOpacity onPress={handleResendOTP} disabled={resendCooldown > 0 || loading}>
           <Text style={[styles.resendLink, (resendCooldown > 0 || loading) && styles.resendLinkDisabled]}>
-            {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
+             {resendCooldown > 0 
+           ? `Resend in ${Math.floor(resendCooldown / 60)}:${String(resendCooldown % 60).padStart(2, '0')}` 
+            : 'Resend Code'}
           </Text>
         </TouchableOpacity>
       </View>

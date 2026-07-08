@@ -287,7 +287,7 @@ const DropdownSelector = ({
         <Text style={[styles.dropdownButtonText, !selectedValue && styles.dropdownPlaceholder, disabled && styles.dropdownButtonTextDisabled]} numberOfLines={1}>
           {triggerLabel}
         </Text>
-        <Ionicons name={visible ? 'chevron-up' : 'chevron-down'} size={18} color={disabled ? '#D0D0D0' : visible ? '#2E7D32' : error ? '#E53935' : '#9E9E9E'} />
+        <Ionicons name={visible ? 'chevron-up' : 'chevron-down'} size={18} color={disabled ? '#D0D0D0' : visible ? '#1FAA59' : error ? '#E53935' : '#9E9E9E'} />
       </TouchableOpacity>
       {!!error && <FieldError>{error}</FieldError>}
 
@@ -332,7 +332,7 @@ const DropdownSelector = ({
                       )}
                     </View>
                   )}
-                  {isSelected && <Ionicons name="checkmark-circle" size={20} color="#2E7D32" style={{ marginLeft: 'auto' }} />}
+                  {isSelected && <Ionicons name="checkmark-circle" size={20} color="#1FAA59" style={{ marginLeft: 'auto' }} />}
                 </TouchableOpacity>
               );
             }}
@@ -360,7 +360,7 @@ const bsStyles = StyleSheet.create({
   itemActive: { backgroundColor: '#F1F8F3', borderBottomColor: 'transparent' },
   itemEmoji: { fontSize: 22, width: 32, textAlign: 'center' },
   itemText: { fontSize: 15, color: '#424242', fontWeight: '500', flex: 1 },
-  itemTextActive: { color: '#1B5E20', fontWeight: '700' },
+  itemTextActive: { color: '#128244', fontWeight: '700' },
   itemHint: { fontSize: 11.5, color: '#9E9E9E', marginTop: 2, marginLeft: 44 },
 });
 
@@ -423,7 +423,7 @@ const FloatingInput = ({ label, icon, value, onChangeText, placeholder, keyboard
         { marginBottom: 0 },
       ]}>
         <View style={styles.floatHeader}>
-          <Ionicons name={icon} size={14} color={error ? '#E53935' : focused ? '#2E7D32' : '#9E9E9E'} />
+          <Ionicons name={icon} size={14} color={error ? '#E53935' : focused ? '#1FAA59' : '#9E9E9E'} />
           <Text style={[styles.floatLabel, focused && styles.floatLabelFocused, error && styles.floatLabelError]}>
             {label}{required ? ' *' : ''}
           </Text>
@@ -761,7 +761,7 @@ const AddProductScreen = ({ navigation }) => {
             onPress={pickImages}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={32} color={errors.images ? '#E53935' : '#2E7D32'} />
+            <Ionicons name="add" size={32} color={errors.images ? '#E53935' : '#1FAA59'} />
             <Text style={[styles.imageAddText, errors.images && { color: '#E53935' }]}>
               {images.length === 0 ? 'Add Photos' : `${images.length}/10`}
             </Text>
@@ -839,7 +839,7 @@ const AddProductScreen = ({ navigation }) => {
       {!!errors.price && <FieldError>{errors.price}</FieldError>}
 
       <TouchableOpacity style={[styles.negotiableBtn, negotiable && styles.negotiableBtnActive]} onPress={() => setNegotiable(!negotiable)}>
-        <Ionicons name={negotiable ? 'pricetag' : 'pricetag-outline'} size={18} color={negotiable ? '#fff' : '#2E7D32'} />
+        <Ionicons name={negotiable ? 'pricetag' : 'pricetag-outline'} size={18} color={negotiable ? '#fff' : '#1FAA59'} />
         <Text style={[styles.negotiableText, negotiable && styles.negotiableTextActive]}>Price is negotiable</Text>
       </TouchableOpacity>
       <HelperText>
@@ -858,11 +858,11 @@ const AddProductScreen = ({ navigation }) => {
           style={[styles.discountToggle, hasDiscount && styles.discountToggleActive]}
           onPress={() => setHasDiscount(!hasDiscount)}
         >
-          <Ionicons name="pricetag" size={18} color={hasDiscount ? '#fff' : '#2E7D32'} />
+          <Ionicons name="pricetag" size={18} color={hasDiscount ? '#fff' : '#1FAA59'} />
           <Text style={[styles.discountToggleText, hasDiscount && styles.discountToggleTextActive]}>
             {hasDiscount ? 'Discount applied' : 'Add discount (optional)'}
           </Text>
-          <Ionicons name={hasDiscount ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={hasDiscount ? '#fff' : '#2E7D32'} />
+          <Ionicons name={hasDiscount ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={hasDiscount ? '#fff' : '#1FAA59'} />
         </TouchableOpacity>
 
         {hasDiscount && (
@@ -944,14 +944,14 @@ const AddProductScreen = ({ navigation }) => {
             <TouchableOpacity key={key} style={[styles.tagChip, active && styles.tagChipActive]} onPress={() => toggleTag(key)} activeOpacity={0.75}>
               <Text style={styles.tagEmoji}>{icon}</Text>
               <Text style={[styles.tagLabel, active && styles.tagLabelActive]}>{formatDisplayName(key)}</Text>
-              {active && <Ionicons name="checkmark-circle" size={12} color="#2E7D32" />}
+              {active && <Ionicons name="checkmark-circle" size={12} color="#1FAA59" />}
             </TouchableOpacity>
           );
         })}
       </View>
       {selectedTags.length > 0 && (
         <View style={styles.tagCountRow}>
-          <Ionicons name="pricetags" size={13} color="#2E7D32" />
+          <Ionicons name="pricetags" size={13} color="#1FAA59" />
           <Text style={styles.tagCountText}>{selectedTags.length} tag{selectedTags.length > 1 ? 's' : ''} selected</Text>
           <TouchableOpacity onPress={() => setSelectedTags([])}><Text style={styles.tagClearText}>Clear all</Text></TouchableOpacity>
         </View>
@@ -963,11 +963,11 @@ const AddProductScreen = ({ navigation }) => {
         style={[styles.discountToggle, showSpecs && styles.discountToggleActive, { marginTop: 18 }]}
         onPress={() => setShowSpecs(!showSpecs)}
       >
-        <Ionicons name="list-outline" size={18} color={showSpecs ? '#fff' : '#2E7D32'} />
+        <Ionicons name="list-outline" size={18} color={showSpecs ? '#fff' : '#1FAA59'} />
         <Text style={[styles.discountToggleText, showSpecs && styles.discountToggleTextActive]}>
           {showSpecs ? 'Specifications added' : 'Add specifications (optional)'}
         </Text>
-        <Ionicons name={showSpecs ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={showSpecs ? '#fff' : '#2E7D32'} />
+        <Ionicons name={showSpecs ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={showSpecs ? '#fff' : '#1FAA59'} />
       </TouchableOpacity>
 
       {showSpecs && (
@@ -998,7 +998,7 @@ const AddProductScreen = ({ navigation }) => {
             </View>
           ))}
           <TouchableOpacity style={styles.addSpecBtn} onPress={addSpecField} activeOpacity={0.8}>
-            <Ionicons name="add-circle-outline" size={20} color="#2E7D32" />
+            <Ionicons name="add-circle-outline" size={20} color="#1FAA59" />
             <Text style={styles.addSpecBtnText}>Add Specification</Text>
           </TouchableOpacity>
           <HelperText>
@@ -1032,14 +1032,14 @@ const AddProductScreen = ({ navigation }) => {
             <Text style={styles.reviewPhotoCount}>{images.length} photo{images.length !== 1 ? 's' : ''} added</Text>
           </View>
           <TouchableOpacity onPress={() => goToStep(0)} style={styles.reviewEditBtn}>
-            <Ionicons name="create-outline" size={16} color="#2E7D32" />
+            <Ionicons name="create-outline" size={16} color="#1FAA59" />
           </TouchableOpacity>
         </View>
       )}
 
       <View style={styles.summaryCard}>
         <View style={styles.summaryHeader}>
-          <Ionicons name="checkmark-done-circle" size={18} color="#2E7D32" />
+          <Ionicons name="checkmark-done-circle" size={18} color="#1FAA59" />
           <Text style={styles.summaryTitle}>Listing Summary</Text>
         </View>
         {[
@@ -1187,8 +1187,8 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 19, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3 },
   headerSub: { fontSize: 12, color: '#888', marginTop: 1 },
   headerCompletionBadge: { backgroundColor: '#E8F5E9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  headerCompletionBadgeDone: { backgroundColor: '#2E7D32' },
-  headerCompletionText: { fontSize: 13, fontWeight: '800', color: '#2E7D32' },
+  headerCompletionBadgeDone: { backgroundColor: '#1FAA59' },
+  headerCompletionText: { fontSize: 13, fontWeight: '800', color: '#1FAA59' },
   headerCompletionTextDone: { color: '#fff' },
 
   // ── Progress stepper ──────────────────────────────────────────────────────
@@ -1199,23 +1199,23 @@ const styles = StyleSheet.create({
   stepperScroll: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
   stepperItem: { alignItems: 'center', gap: 5, width: 58 },
   stepperLine: { width: 20, height: 2, backgroundColor: '#E0E0E0', marginHorizontal: 2, marginBottom: 18 },
-  stepperLineDone: { backgroundColor: '#4CAF50' },
+  stepperLineDone: { backgroundColor: '#1FAA59' },
   stepperCircle: {
     width: 30, height: 30, borderRadius: 15,
     backgroundColor: '#F0F0F0',
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1.5, borderColor: '#E8E8E8',
   },
-  stepperCircleDone: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
-  stepperCircleActive: { backgroundColor: '#1B5E20', borderColor: '#1B5E20' },
+  stepperCircleDone: { backgroundColor: '#1FAA59', borderColor: '#1FAA59' },
+  stepperCircleActive: { backgroundColor: '#128244', borderColor: '#128244' },
   stepperLabel: { fontSize: 10, color: '#9E9E9E', fontWeight: '600', textAlign: 'center' },
-  stepperLabelActive: { color: '#1B5E20', fontWeight: '800' },
-  stepperLabelDone: { color: '#4CAF50', fontWeight: '700' },
+  stepperLabelActive: { color: '#128244', fontWeight: '800' },
+  stepperLabelDone: { color: '#1FAA59', fontWeight: '700' },
 
   // ── Step shell ────────────────────────────────────────────────────────────
-  scrollContent: { paddingHorizontal: 18, paddingTop: 20, paddingBottom: 46 , marginBottom:36},
+  scrollContent: { paddingHorizontal: 18, paddingTop: 20, paddingBottom: 64,backgroundColor: '#FFFFFF', },
   stepShell: {},
-  stepEyebrow: { fontSize: 11, fontWeight: '800', color: '#4CAF50', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  stepEyebrow: { fontSize: 11, fontWeight: '800', color: '#1FAA59', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
   stepTitle: { fontSize: 23, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.4, marginBottom: 5 },
   stepSubtitle: { fontSize: 13.5, color: '#888', lineHeight: 19, marginBottom: 22 },
   stepBody: {},
@@ -1227,12 +1227,12 @@ const styles = StyleSheet.create({
   fieldErrorText: { fontSize: 12, color: '#E53935', fontWeight: '600', flex: 1 },
 
   floatWrap: { borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, backgroundColor: '#FAFAFA' },
-  floatWrapFocused: { borderColor: '#2E7D32', backgroundColor: '#fff' },
+  floatWrapFocused: { borderColor: '#1FAA59', backgroundColor: '#fff' },
   floatWrapError: { borderColor: '#E53935', backgroundColor: '#FFF8F8' },
   floatWrapMulti: { paddingBottom: 16 },
   floatHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
   floatLabel: { fontSize: 11, fontWeight: '700', color: '#9E9E9E', letterSpacing: 0.3, textTransform: 'uppercase', flex: 1 },
-  floatLabelFocused: { color: '#2E7D32' },
+  floatLabelFocused: { color: '#1FAA59' },
   floatLabelError: { color: '#E53935' },
   charCount: { fontSize: 10, color: '#C5C5C5', fontWeight: '600' },
   floatInput: { fontSize: 15.5, color: '#1A1A1A', padding: 0 },
@@ -1245,10 +1245,10 @@ const styles = StyleSheet.create({
   coverBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   imageAddBtn: { width: (width - 68) / 3, height: (width - 68) / 3, borderRadius: 12, borderWidth: 1.5, borderColor: '#A5D6A7', borderStyle: 'dashed', backgroundColor: '#F1F8F3', justifyContent: 'center', alignItems: 'center', gap: 4 },
   imageAddBtnError: { borderColor: '#E53935', backgroundColor: '#FFF8F8' },
-  imageAddText: { fontSize: 11, color: '#2E7D32', fontWeight: '600' },
+  imageAddText: { fontSize: 11, color: '#1FAA59', fontWeight: '600' },
   dropdownLabel: { fontSize: 12, fontWeight: '700', color: '#616161', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
   dropdownButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, backgroundColor: '#FAFAFA' },
-  dropdownButtonFocused: { borderColor: '#2E7D32', backgroundColor: '#fff' },
+  dropdownButtonFocused: { borderColor: '#1FAA59', backgroundColor: '#fff' },
   dropdownButtonDisabled: { backgroundColor: '#F5F5F5', borderColor: '#E8E8E8' },
   dropdownButtonError: { borderColor: '#E53935', backgroundColor: '#FFF8F8' },
   dropdownButtonText: { fontSize: 15.5, color: '#1A1A1A', flex: 1 },
@@ -1260,10 +1260,10 @@ const styles = StyleSheet.create({
   priceInputFull: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAFAFA', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, overflow: 'hidden', marginBottom: 4 },
   priceInputFullError: { borderColor: '#E53935', backgroundColor: '#FFF8F8' },
   currencyTag: { backgroundColor: '#E8F5E9', paddingHorizontal: 14, height: 52, justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E0E0E0' },
-  currencyText: { fontSize: 15, fontWeight: '800', color: '#2E7D32' },
+  currencyText: { fontSize: 15, fontWeight: '800', color: '#1FAA59' },
   priceInputField: { flex: 1, paddingHorizontal: 14, fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
   negotiableBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: '#E0E0E0', marginTop: 14, marginBottom: 0 },
-  negotiableBtnActive: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
+  negotiableBtnActive: { backgroundColor: '#1FAA59', borderColor: '#1FAA59' },
   negotiableText: { fontSize: 13, fontWeight: '600', color: '#666' },
   negotiableTextActive: { color: '#fff' },
   simpleInput: { backgroundColor: '#FAFAFA', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, color: '#1A1A1A', fontWeight: '600' },
@@ -1293,7 +1293,7 @@ const styles = StyleSheet.create({
   addSpecBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2E7D32',
+    color: '#1FAA59',
   },
   discountToggle: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -1302,7 +1302,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   discountToggleActive: { backgroundColor: '#E65100', borderColor: '#E65100' },
-  discountToggleText: { fontSize: 13, fontWeight: '600', color: '#2E7D32', flex: 1 },
+  discountToggleText: { fontSize: 13, fontWeight: '600', color: '#1FAA59', flex: 1 },
   discountToggleTextActive: { color: '#fff' },
   discountFields: { paddingTop: 8, paddingHorizontal: 4 },
   dateRow: { flexDirection: 'row', alignItems: 'flex-start' },
@@ -1311,9 +1311,9 @@ const styles = StyleSheet.create({
   tagChipActive: { backgroundColor: '#F1F8F3', borderColor: '#81C784' },
   tagEmoji: { fontSize: 13 },
   tagLabel: { fontSize: 12.5, color: '#555', fontWeight: '500' },
-  tagLabelActive: { color: '#2E7D32', fontWeight: '700' },
+  tagLabelActive: { color: '#1FAA59', fontWeight: '700' },
   tagCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-  tagCountText: { fontSize: 12, color: '#2E7D32', fontWeight: '600', flex: 1 },
+  tagCountText: { fontSize: 12, color: '#1FAA59', fontWeight: '600', flex: 1 },
   tagClearText: { fontSize: 12, color: '#E53935', fontWeight: '600' },
 
   // ── Skip-step link (for optional steps) ─────────────────────────────────
@@ -1331,13 +1331,13 @@ const styles = StyleSheet.create({
   },
   reviewCoverImg: { width: 64, height: 64, borderRadius: 12, backgroundColor: '#F5F5F5' },
   reviewName: { fontSize: 14, fontWeight: '700', color: '#1A1A1A', marginBottom: 3 },
-  reviewPrice: { fontSize: 13, fontWeight: '800', color: '#1B5E20', marginBottom: 2 },
+  reviewPrice: { fontSize: 13, fontWeight: '800', color: '#128244', marginBottom: 2 },
   reviewPhotoCount: { fontSize: 11, color: '#9E9E9E' },
   reviewEditBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' },
 
-  summaryCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1.5, borderColor: '#C8E6C9', shadowColor: '#2E7D32', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 2 },
+  summaryCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#EFEFEF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  summaryTitle: { fontSize: 14, fontWeight: '800', color: '#1B5E20' },
+  summaryTitle: { fontSize: 14, fontWeight: '800', color: '#128244' },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
   summaryKey: { fontSize: 12, color: '#9E9E9E', fontWeight: '600', flex: 0.4 },
   summaryVal: { fontSize: 13, color: '#1A1A1A', fontWeight: '700', flex: 0.6, textAlign: 'right' },
@@ -1356,12 +1356,12 @@ const styles = StyleSheet.create({
 
   bottomNav: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 18, paddingTop: 14,
+    paddingHorizontal: 18, paddingVertical: 14,
     backgroundColor: '#fff',
     borderTopWidth: 1, borderTopColor: '#F0F0F0',
     shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.05, shadowRadius: 8, elevation: 6,
-    bottom: 50,
+    bottom:45,
   },
   backNavBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -1371,14 +1371,14 @@ const styles = StyleSheet.create({
   backNavBtnText: { fontSize: 14, fontWeight: '700', color: '#424242' },
   nextBtn: {
     flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
-    backgroundColor: '#1B5E20', paddingVertical: 15, borderRadius: 14,
-    shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 5,
+    backgroundColor: '#128244', paddingVertical: 15, borderRadius: 14,
+    shadowColor: '#128244', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 5,
   },
   nextBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
   publishBtn: {
     flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10,
-    backgroundColor: '#1B5E20', paddingVertical: 15, borderRadius: 14,
-    shadowColor: '#1B5E20', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.32, shadowRadius: 10, elevation: 6,
+    backgroundColor: '#128244', paddingVertical: 15, borderRadius: 14,
+    shadowColor: '#128244', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.32, shadowRadius: 10, elevation: 6,
   },
   publishBtnDisabled: { backgroundColor: '#81C784', shadowOpacity: 0 },
   publishBtnText: { fontSize: 15.5, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },

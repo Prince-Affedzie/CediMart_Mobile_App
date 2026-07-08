@@ -118,7 +118,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ── Helper: Store auth data after successful login/signup ─────────────────
-
   const storeAuthData = async (tokenData, userData, roleData) => {
     await setWithExpiry('@cedimart_token', tokenData, TOKEN_EXPIRY_HOURS);
     await setWithExpiry('@cedimart_user', typeof userData === 'string' ? userData : JSON.stringify(userData), USER_EXPIRY_HOURS);

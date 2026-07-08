@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import productService from '../services/productService';
 import {styles} from '../styles/guesthome'
+import SupportFAB from '../components/SupportFAB';
 
 const { width } = Dimensions.get('window');
 
@@ -702,6 +703,7 @@ const GuestHomeScreen = () => {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+       <SupportFAB />
     </SafeAreaView>
   );
 };

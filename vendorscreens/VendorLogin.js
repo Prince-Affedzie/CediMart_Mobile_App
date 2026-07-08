@@ -156,7 +156,7 @@ const VendorLoginScreen = ({ navigation }) => {
       const response = await getOTP(trimmed);
       if (response?.data?.success || response?.status === 200) {
         setStep(STEPS.OTP);
-        setResendCooldown(60);
+        setResendCooldown(180);
       } else {
         Alert.alert(
           'Error',
@@ -223,7 +223,7 @@ const VendorLoginScreen = ({ navigation }) => {
       const trimmed = phone.trim().replace(/\s/g, '');
       const response = await getOTP(trimmed);
       if (response?.data?.success || response?.status === 200) {
-        setResendCooldown(60);
+        setResendCooldown(180);
         Alert.alert('Code Sent', 'A new verification code has been sent to your phone.');
       } else {
         Alert.alert('Error', 'Failed to resend code. Please try again.');
@@ -353,7 +353,9 @@ const VendorLoginScreen = ({ navigation }) => {
         <Text style={styles.resendPrompt}>Didn't receive a code? </Text>
         <TouchableOpacity onPress={handleResendOTP} disabled={resendCooldown > 0 || loading}>
           <Text style={[styles.resendLink, (resendCooldown > 0 || loading) && styles.resendLinkDisabled]}>
-            {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
+             {resendCooldown > 0 
+          ? `Resend in ${Math.floor(resendCooldown / 60)}:${String(resendCooldown % 60).padStart(2, '0')}` 
+          : 'Resend Code'}
           </Text>
         </TouchableOpacity>
       </View>
