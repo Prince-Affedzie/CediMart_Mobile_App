@@ -9,6 +9,8 @@ const API = axios.create({
   timeout: 30000,
 });
 
+const AUTH_KEYS = ["@cedimart_token", "@cedimart_user", "@cedimart_role"];
+
 const getStoredToken = async () => {
   try {
     const itemStr = await AsyncStorage.getItem("@cedimart_token");
@@ -32,6 +34,15 @@ const getStoredToken = async () => {
   }
 };
 
+// ── Optional hook so AuthContext (or navigation) can react immediately ──────
+// Call API.registerSessionExpiredHandler(fn) once, e.g. inside AuthProvider,
+// so a 401 can flip isAuthenticated to false and redirect to login right away
+// instead of the user sitting on a broken screen until they force-reopen the app.
+let onSessionExpired = null;
+API.registerSessionExpiredHandler = (fn) => {
+  onSessionExpired = fn;
+};
+
 API.interceptors.request.use(async (config) => {
   const token = await getStoredToken();
   if (token) {
@@ -39,5 +50,19 @@ API.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+API.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Session is no longer valid (e.g. secret rotation, real expiry, tampering).
+      // Clear the stale local session so the user isn't stuck retrying with a
+      // token that will never verify again.
+      await AsyncStorage.multiRemove(AUTH_KEYS);
+      if (onSessionExpired) onSessionExpired();
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default API;

@@ -414,7 +414,7 @@ const CategoryScreen = () => {
     try {
       append ? setLoadingMore(true) : setLoading(true);
 
-      const params = { sort, page: pageNum, limit: 20 };
+      const params = { sort, page: pageNum, limit: 200 };
       if (selectedSubcategory) params.subcategory = selectedSubcategory;
       if (selectedCampus) params.campus = selectedCampus;
 

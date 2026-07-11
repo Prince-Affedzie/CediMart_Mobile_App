@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuthService from '../services/authService';
+import API from '../apis/apiClient'; 
 import { updateProfile, deleteProfile, logout, loginByGoogle, signUpByGoogle, apple_signUp, vendorLogin } from '../apis/userApi';
 
 const AuthContext = createContext();
@@ -80,6 +81,17 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     checkAuthStatus();
   }, []);
+
+
+
+useEffect(() => {
+  API.registerSessionExpiredHandler(() => {
+    setToken(null);
+    setUser(null);
+    setRole(null);
+    setIsAuthenticated(false);
+  });
+}, []);
 
   // ── Check stored auth on app start ────────────────────────────────────────
 
