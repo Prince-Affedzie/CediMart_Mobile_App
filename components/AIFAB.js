@@ -154,7 +154,7 @@ const AIFAB = ({
         >
           <View style={styles.fabContent}>
             <Ionicons name="sparkles" size={20} color="#FFFFFF" style={styles.fabIcon} />
-            {label && <Text style={styles.fabText}>Ask CediAI</Text>}
+            {label && <Text style={styles.fabText}>Shop with CediAI</Text>}
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -167,8 +167,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    width: 120,
-    height: 72,
+    width: 145,
+    height: 82,
   },
   // Outer pulse ring
   glowRingOuter: {
