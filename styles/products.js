@@ -26,7 +26,7 @@ export const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 20 },
 
   // ── Hero ──────────────────────────────────────────────────────────────────
-  heroWrap: { height: 240, overflow: 'hidden', backgroundColor: '#1B5E20', position: 'relative' },
+  heroWrap: { height: 240, overflow: 'hidden', backgroundColor: 'rgba(10,20,60,0.50)', position: 'relative' },
   heroImg: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   heroScrimTop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.28)' },
   heroScrimBottom: {
@@ -303,6 +303,33 @@ export const styles = StyleSheet.create({
   },
   listCartBtnOos: { backgroundColor: '#9E9E9E', shadowOpacity: 0 },
   listCartBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  categorySwitchOverlay: {
+  position: 'absolute',
+  top: 0, left: 0, right: 0, bottom: 0,
+  backgroundColor: 'rgba(255,255,255,0.6)',
+  justifyContent: 'flex-start',
+  alignItems: 'center',
+  paddingTop: 40,
+},
+categorySwitchCard: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+  backgroundColor: '#fff',
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderRadius: 20,
+  elevation: 3,
+  shadowColor: '#000',
+  shadowOpacity: 0.1,
+  shadowRadius: 6,
+  shadowOffset: { width: 0, height: 2 },
+},
+categorySwitchText: {
+  fontSize: 13,
+  fontWeight: '600',
+  color: '#2E7D32',
+},
 
   // ── Bottom sheets ───────────────────────────────────────────────────────────
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.46)' },

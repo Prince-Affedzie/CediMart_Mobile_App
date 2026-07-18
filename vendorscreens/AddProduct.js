@@ -22,178 +22,57 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { createProduct } from '../apis/vendorApi';
+import { aiProductDetailsGenerator } from '../apis/aiApi';
 import Toast from 'react-native-toast-message';
-
+import {CONDITION_OPTIONS,SUBCATEGORIES_MAP,VALID_CATEGORIES,CAMPUS_OPTIONS,AVAILABLE_TAGS } from '../data/General'
+import AIProductGeneratorFAB from '../components/AIProductGeneratorFAB';
 const { width, height } = Dimensions.get('window');
 
-const VALID_CATEGORIES = [
-  { key: 'electronics',         icon: '🔌' },
-  { key: 'phones and tablets',      icon: '📱' },
-  { key: 'computers and laptops',   icon: '💻' },
-  { key: 'gaming',              icon: '🎮' },
-  { key: 'fashion',             icon: '👕' },
-  { key: 'books-course-materials', icon: '📚' },
-  { key: 'hostel-items',        icon: '🏠' },
-  { key: 'appliances',          icon: '🔧' },
-  { key: 'furniture',           icon: '🪑' },
-  { key: 'beauty and grooming',     icon: '💄' },
-  { key: 'sports and fitness',      icon: '⚽' },
-  { key: 'accessories',         icon: '⌚' },
-  { key: 'food and drinks',         icon: '🍕' },
-  { key: 'services',            icon: '🛠️' },
-  { key: 'other',               icon: '📦' },
-];
-
-const SUBCATEGORIES_MAP = {
-  'electronics': [
-    { key: 'headphones-earbuds', label: 'Headphones & Earbuds' },
-    { key: 'speakers', label: 'Speakers' },
-    { key: 'chargers-cables', label: 'Chargers & Cables' },
-    { key: 'power-banks', label: 'Power Banks' },
-    { key: 'smartwatches', label: 'Smartwatches' },
-    { key: 'cameras', label: 'Cameras' },
-    { key: 'other-electronics', label: 'Other Electronics' },
-  ],
-  'phones and tablets': [
-    { key: 'smartphones', label: 'Smartphones' },
-    { key: 'tablets', label: 'Tablets' },
-    { key: 'ipads', label: 'iPads' },
-    { key: 'phone-cases', label: 'Phone Cases' },
-    { key: 'screen-protectors', label: 'Screen Protectors' },
-    { key: 'other-phone-accessories', label: 'Other Accessories' },
-  ],
-  'computers and laptops': [
-    { key: 'laptops', label: 'Laptops' },
-    { key: 'desktops', label: 'Desktops' },
-    { key: 'monitors', label: 'Monitors' },
-    { key: 'keyboards', label: 'Keyboards' },
-    { key: 'mouse', label: 'Mouse' },
-    { key: 'laptop-bags', label: 'Laptop Bags' },
-    { key: 'software', label: 'Software' },
-    { key: 'other-computer-accessories', label: 'Other Accessories' },
-  ],
-  'gaming': [
-    { key: 'consoles', label: 'Consoles' },
-    { key: 'games', label: 'Games' },
-    { key: 'controllers', label: 'Controllers' },
-    { key: 'gaming-accessories', label: 'Gaming Accessories' },
-  ],
-  'fashion': [
-    { key: 'men-clothing', label: 'Men Clothing' },
-    { key: 'women-clothing', label: 'Women Clothing' },
-    { key: 'unisex-clothing', label: 'Unisex Clothing' },
-    { key: 'shoes', label: 'Shoes' },
-    { key: 'bags', label: 'Bags' },
-    { key: 'watches', label: 'Watches' },
-    { key: 'jewelry', label: 'Jewelry' },
-    { key: 'other-fashion', label: 'Other Fashion' },
-  ],
-  'books-course-materials': [
-    { key: 'textbooks', label: 'Textbooks' },
-    { key: 'course-notes', label: 'Course Notes' },
-    { key: 'past-questions', label: 'Past Questions' },
-    { key: 'stationery', label: 'Stationery' },
-    { key: 'novels', label: 'Novels' },
-    { key: 'other-books', label: 'Other Books' },
-  ],
-  'hostel-items': [
-    { key: 'bedding', label: 'Bedding' },
-    { key: 'kitchenware', label: 'Kitchenware' },
-    { key: 'cleaning-supplies', label: 'Cleaning Supplies' },
-    { key: 'storage', label: 'Storage' },
-    { key: 'lighting', label: 'Lighting' },
-    { key: 'other-hostel', label: 'Other Hostel Items' },
-  ],
-  'appliances': [
-    { key: 'fans', label: 'Fans' },
-    { key: 'heaters', label: 'Heaters' },
-    { key: 'irons', label: 'Irons' },
-    { key: 'kettles', label: 'Kettles' },
-    { key: 'blenders', label: 'Blenders' },
-    { key: 'microwaves', label: 'Microwaves' },
-    { key: 'other-appliances', label: 'Other Appliances' },
-  ],
-  'furniture': [
-    { key: 'chairs', label: 'Chairs' },
-    { key: 'tables-desks', label: 'Tables & Desks' },
-    { key: 'beds-mattresses', label: 'Beds & Mattresses' },
-    { key: 'shelves', label: 'Shelves' },
-    { key: 'other-furniture', label: 'Other Furniture' },
-  ],
-  'beauty and grooming': [
-    { key: 'skincare', label: 'Skincare' },
-    { key: 'makeup', label: 'Makeup' },
-    { key: 'hair-care', label: 'Hair Care' },
-    { key: 'perfumes', label: 'Perfumes' },
-    { key: 'nail-care', label: 'Nail Care' },
-    { key: 'other-beauty', label: 'Other Beauty' },
-  ],
-  'sports and fitness': [
-    { key: 'sports-equipment', label: 'Sports Equipment' },
-    { key: 'gym-gear', label: 'Gym Gear' },
-    { key: 'activewear', label: 'Activewear' },
-    { key: 'other-sports', label: 'Other Sports' },
-  ],
-  'accessories': [
-    { key: 'phone-accessories', label: 'Phone Accessories' },
-    { key: 'laptop-accessories', label: 'Laptop Accessories' },
-    { key: 'fashion-accessories', label: 'Fashion Accessories' },
-    { key: 'other-accessories', label: 'Other Accessories' },
-  ],
-  'food and drinks': [
-    { key: 'snacks', label: 'Snacks' },
-    { key: 'drinks', label: 'Drinks' },
-    { key: 'homemade-meals', label: 'Homemade Meals' },
-    { key: 'baked-goods', label: 'Baked Goods' },
-    { key: 'other-food', label: 'Other Food' },
-  ],
-  'services': [
-    { key: 'tutoring', label: 'Tutoring' },
-    { key: 'graphic-design', label: 'Graphic Design' },
-    { key: 'photography', label: 'Photography' },
-    { key: 'printing-photocopy', label: 'Printing & Photocopy' },
-    { key: 'laundry', label: 'Laundry' },
-    { key: 'barbering-hairdressing', label: 'Barbering & Hairdressing' },
-    { key: 'tech-repairs', label: 'Tech Repairs' },
-    { key: 'other-services', label: 'Other Services' },
-  ],
-  'other': [
-    { key: 'miscellaneous', label: 'Miscellaneous' },
-  ],
-};
-
-const CONDITION_OPTIONS = [
-  { key: 'new',            label: 'Brand New',     hint: 'Unopened or unused' },
-  { key: 'like-new',       label: 'Like New',       hint: 'Used briefly, no visible wear' },
-  { key: 'excellent',      label: 'Excellent',      hint: 'Minimal signs of use' },
-  { key: 'good',           label: 'Good',           hint: 'Normal wear, works perfectly' },
-  { key: 'fair',           label: 'Fair',           hint: 'Visible wear, fully functional' },
-  { key: 'slightly-used',  label: 'Slightly Used',  hint: 'Light use, minor marks' },
-  { key: 'for-parts',      label: 'For Parts',      hint: 'Not fully working' },
-];
-
-const CAMPUS_OPTIONS = [
-  { key: 'UG',     label: 'University of Ghana' },
-  { key: 'KNUST',  label: 'KNUST' },
-  { key: 'UCC',    label: 'University of Cape Coast' },
-  { key: 'UEW',    label: 'University of Education, Winneba' },
-  { key: 'UPSA',   label: 'UPSA' },
-  { key: 'GIMPA',  label: 'GIMPA' },
-  { key: 'ASHESI', label: 'Ashesi University' },
-  { key: 'ATU',    label: 'Accra Technical University' },
-  { key: 'OTHER',  label: 'Other' },
-];
-
-const AVAILABLE_TAGS = [
-  { key: 'urgent-sale',      icon: '⚡' },
-  { key: 'popular',          icon: '🔥' },
-  { key: 'discounted',       icon: '🏷️' },
-  { key: 'new-arrival',      icon: '🆕' },
-  { key: 'student-favorite', icon: '❤️' },
-];
 
 const formatDisplayName = (str) =>
   str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ').replace(/-/g, ' ');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI AUTOFILL MATCHING HELPERS
+// Gemini returns free-text category/subcategory guesses that won't always
+// equal one of our schema keys exactly, so these normalize and fuzzy-match
+// the suggestion against our known options. If nothing matches confidently,
+// callers should leave the field blank rather than force an invalid value.
+// ─────────────────────────────────────────────────────────────────────────────
+const normalizeForMatch = (str = '') =>
+  String(str).toLowerCase().trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+
+const matchCategoryKey = (suggestion) => {
+  if (!suggestion) return null;
+  const norm = normalizeForMatch(suggestion);
+
+  let found = VALID_CATEGORIES.find((c) => normalizeForMatch(c.key) === norm);
+  if (found) return found.key;
+
+  found = VALID_CATEGORIES.find((c) => {
+    const key = normalizeForMatch(c.key);
+    return norm.includes(key) || key.includes(norm);
+  });
+  return found ? found.key : null;
+};
+
+const matchSubcategoryKey = (suggestion, categoryKey) => {
+  if (!suggestion || !categoryKey) return null;
+  const options = SUBCATEGORIES_MAP[categoryKey] || [];
+  const norm = normalizeForMatch(suggestion);
+
+  let found = options.find(
+    (o) => normalizeForMatch(o.key) === norm || normalizeForMatch(o.label) === norm
+  );
+  if (found) return found.key;
+
+  found = options.find((o) => {
+    const key = normalizeForMatch(o.key);
+    const label = normalizeForMatch(o.label);
+    return norm.includes(key) || key.includes(norm) || norm.includes(label) || label.includes(norm);
+  });
+  return found ? found.key : null;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WIZARD STEP DEFINITIONS
@@ -225,8 +104,16 @@ const FieldError = ({ children }) => (
   </View>
 );
 
+// ── Small "this came from Ask Cedi, please check it" pill ──────────────────
+const AiDraftBadge = () => (
+  <View style={styles.aiDraftBadge}>
+    <Ionicons name="sparkles" size={10} color="#8E5FD9" />
+    <Text style={styles.aiDraftBadgeText}>AI draft</Text>
+  </View>
+);
+
 const DropdownSelector = ({
-  label, placeholder, items, selectedValue, onSelect, required, renderItem, style, disabled, error,
+  label, placeholder, items, selectedValue, onSelect, required, renderItem, style, disabled, error, badge,
 }) => {
   const [visible, setVisible] = useState(false);
   const slideAnim    = useRef(new Animated.Value(0)).current;
@@ -268,10 +155,13 @@ const DropdownSelector = ({
   return (
     <View style={style}>
       {label && (
-        <Text style={styles.dropdownLabel}>
-          {label}
-          {required && <Text style={styles.required}> *</Text>}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <Text style={[styles.dropdownLabel, { marginBottom: 0 }]}>
+            {label}
+            {required && <Text style={styles.required}> *</Text>}
+          </Text>
+          {badge}
+        </View>
       )}
       <TouchableOpacity
         style={[
@@ -411,7 +301,7 @@ const ProgressStepper = ({ steps, currentIndex, furthestIndex, onStepPress }) =>
   </View>
 );
 
-const FloatingInput = ({ label, icon, value, onChangeText, placeholder, keyboardType, multiline, required, error, maxLength }) => {
+const FloatingInput = ({ label, icon, value, onChangeText, placeholder, keyboardType, multiline, required, error, maxLength, badge }) => {
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ marginBottom: 14 }}>
@@ -427,6 +317,7 @@ const FloatingInput = ({ label, icon, value, onChangeText, placeholder, keyboard
           <Text style={[styles.floatLabel, focused && styles.floatLabelFocused, error && styles.floatLabelError]}>
             {label}{required ? ' *' : ''}
           </Text>
+          {badge}
           {maxLength && (
             <Text style={styles.charCount}>{(value?.length || 0)}/{maxLength}</Text>
           )}
@@ -495,6 +386,14 @@ const AddProductScreen = ({ navigation }) => {
   // Field-level errors — populated only after a "Next"/submit attempt on that step
   const [errors, setErrors] = useState({});
 
+  // AI-assisted listing draft — generated from the cover photo. Fields stay
+  // fully editable; `aiDraftFields` just tracks which ones are still an
+  // unreviewed suggestion so we can show a small badge next to them, and we
+  // clear that flag the moment the vendor edits the field themselves.
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiDraftFields, setAiDraftFields] = useState({});
+  const [aiUsedOnce, setAiUsedOnce] = useState(false);
+
   // ── Wizard state ────────────────────────────────────────────────────────────
   const [stepIndex, setStepIndex] = useState(0);
   const [furthestIndex, setFurthestIndex] = useState(0); // lets user tap back to any visited step
@@ -506,6 +405,7 @@ const AddProductScreen = ({ navigation }) => {
     setCategory(cat);
     setSubcategory('');
     setErrors(prev => ({ ...prev, category: null }));
+    setAiDraftFields(prev => ({ ...prev, category: false, subcategory: false }));
   };
 
   const pickImages = () => {
@@ -560,6 +460,85 @@ const AddProductScreen = ({ navigation }) => {
     setSpecifications(prev => prev.map((spec, i) =>
       i === index ? { ...spec, [field]: value } : spec
     ));
+  };
+
+  // ── AI autofill: analyzes the cover photo and drafts name/description/
+  // category/subcategory. Never overwrites silently without the vendor
+  // seeing an "AI draft" badge, and never sets a category/subcategory that
+  // doesn't confidently match our own schema options.
+  const handleAiAutofill = async () => {
+    if (images.length === 0 || aiLoading) return;
+    setAiLoading(true);
+
+    try {
+      const cover = images[0];
+      const formData = new FormData();
+      formData.append('productImage', {
+        uri: Platform.OS === 'ios' ? cover.uri.replace('file://', '') : cover.uri,
+        type: cover.type || 'image/jpeg',
+        name: cover.name || `cover_${Date.now()}.jpg`,
+      });
+
+      const response = await aiProductDetailsGenerator(formData);
+      const data = response?.data?.data || response?.data;
+      if (!data) throw new Error('No suggestions returned');
+
+      const filled = [];
+      const nextDraftFlags = {};
+
+      if (data.name) {
+        setName(String(data.name).slice(0, 80));
+        nextDraftFlags.name = true;
+        filled.push('title');
+      }
+
+      if (data.description) {
+        setDescription(String(data.description).slice(0, 500));
+        nextDraftFlags.description = true;
+        filled.push('description');
+      }
+
+      const matchedCategory = matchCategoryKey(data.suggestedCategory);
+      let categoryWasUnmatched = !!data.suggestedCategory && !matchedCategory;
+
+      if (matchedCategory) {
+        setCategory(matchedCategory);
+        setErrors(prev => ({ ...prev, category: null }));
+        nextDraftFlags.category = true;
+        filled.push('category');
+
+        const matchedSubcategory = matchSubcategoryKey(data.suggestedSubcategory, matchedCategory);
+        if (matchedSubcategory) {
+          setSubcategory(matchedSubcategory);
+          nextDraftFlags.subcategory = true;
+          filled.push('subcategory');
+        }
+      }
+
+      setAiDraftFields(nextDraftFlags);
+      setAiUsedOnce(true);
+
+      Alert.alert(
+         'Success',
+         'CediAi drafted your listings. Click next to continue.'  
+      );
+
+      if (categoryWasUnmatched) {
+        Alert.alert(
+           "Couldn't pick a category for you",
+           'Please pick a category yourself'
+          
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'error',
+         "CediAi couldn't analyze that photo"
+      
+      );
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   // ── Per-step validation — only checks the fields relevant to that step ──────
@@ -772,6 +751,8 @@ const AddProductScreen = ({ navigation }) => {
         Clear, well-lit photos sell faster. Show any wear or damage honestly — it builds trust with buyers.
       </HelperText>
       {!!errors.images && <FieldError>{errors.images}</FieldError>}
+
+      
     </StepShell>
   );
 
@@ -785,15 +766,21 @@ const AddProductScreen = ({ navigation }) => {
         label="Product Name" icon="pricetag-outline"
         placeholder="e.g. iPhone 13 Pro Max 256GB"
         value={name}
-        onChangeText={(v) => { setName(v); if (v.trim()) setErrors(prev => ({ ...prev, name: null })); }}
+        onChangeText={(v) => {
+          setName(v);
+          setAiDraftFields(prev => ({ ...prev, name: false }));
+          if (v.trim()) setErrors(prev => ({ ...prev, name: null }));
+        }}
         required
         error={errors.name}
         maxLength={80}
+        badge={aiDraftFields.name && <AiDraftBadge />}
       />
       <DropdownSelector
         label="Category" placeholder="Select category" items={VALID_CATEGORIES}
         selectedValue={category} onSelect={handleCategoryChange} required style={{ marginBottom: 14 }}
         error={errors.category}
+        badge={aiDraftFields.category && <AiDraftBadge />}
         renderItem={({ item, isSelected }) => (
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <Text style={{ fontSize: 22, width: 32, textAlign: 'center' }}>{item.icon}</Text>
@@ -803,8 +790,11 @@ const AddProductScreen = ({ navigation }) => {
       />
       <DropdownSelector
         label="Subcategory (optional)" placeholder="Select subcategory" items={subcategoryOptions}
-        selectedValue={subcategory} onSelect={setSubcategory} style={{ marginBottom: 14 }}
+        selectedValue={subcategory}
+        onSelect={(v) => { setSubcategory(v); setAiDraftFields(prev => ({ ...prev, subcategory: false })); }}
+        style={{ marginBottom: 14 }}
         disabled={!category || subcategoryOptions.length === 0}
+        badge={aiDraftFields.subcategory && <AiDraftBadge />}
       />
       {!category && (
         <HelperText>Choose a category first to see matching subcategories.</HelperText>
@@ -932,8 +922,11 @@ const AddProductScreen = ({ navigation }) => {
       <FloatingInput
         label="Description" icon="document-text-outline"
         placeholder="Describe your item, reason for selling, what's included, etc."
-        value={description} onChangeText={setDescription} multiline
+        value={description}
+        onChangeText={(v) => { setDescription(v); setAiDraftFields(prev => ({ ...prev, description: false })); }}
+        multiline
         maxLength={500}
+        badge={aiDraftFields.description && <AiDraftBadge />}
       />
 
       <Text style={[styles.quickLabel, { marginTop: 4 }]}>Tags <Text style={styles.optional}>(optional)</Text></Text>
@@ -1136,6 +1129,21 @@ const AddProductScreen = ({ navigation }) => {
           {STEP_RENDERERS[currentStepKey]()}
           <View style={{ height: 12 }} />
         </ScrollView>
+        
+    <View style={{ marginTop: 16 }}>
+    <AIProductGeneratorFAB
+      onPress={handleAiAutofill}
+      loading={aiLoading}
+      disabled={images.length === 0}
+      hasBeenUsed={aiUsedOnce}
+      style={{ 
+      position: 'absolute',
+      right: 16,                
+      bottom: 85,                   
+     }}
+    />
+  </View>
+     
 
         {/* ── Bottom navigation bar ── */}
         <View style={styles.bottomNav}>
@@ -1168,6 +1176,7 @@ const AddProductScreen = ({ navigation }) => {
           )}
         </View>
       </KeyboardAvoidingView>
+      
     </SafeAreaView>
   );
 };
@@ -1225,6 +1234,23 @@ const styles = StyleSheet.create({
   helperText: { flex: 1, fontSize: 11.5, color: '#9E9E9E', lineHeight: 16 },
   fieldErrorRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 2 },
   fieldErrorText: { fontSize: 12, color: '#E53935', fontWeight: '600', flex: 1 },
+
+  // ── AI draft badge + autofill card ───────────────────────────────────────
+  aiDraftBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#F5F0FC', borderRadius: 20,
+    paddingHorizontal: 7, paddingVertical: 2,
+  },
+  aiDraftBadgeText: { fontSize: 9.5, fontWeight: '700', color: '#8E5FD9' },
+  aiAutofillCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#F5F0FC', borderWidth: 1.5, borderColor: '#E4D4F7',
+    borderRadius: 14, padding: 14, marginTop: 16,
+  },
+  aiAutofillTitle: { fontSize: 13, fontWeight: '700', color: '#4A2E7A', lineHeight: 18 },
+  aiAutofillSubtitle: { fontSize: 11, color: '#8E5FD9', marginTop: 2 },
+  aiAutofillBtn: { backgroundColor: '#8E5FD9', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10 },
+  aiAutofillBtnText: { fontSize: 12.5, fontWeight: '700', color: '#fff' },
 
   floatWrap: { borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, backgroundColor: '#FAFAFA' },
   floatWrapFocused: { borderColor: '#1FAA59', backgroundColor: '#fff' },

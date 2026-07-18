@@ -23,161 +23,12 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import productService from '../services/productService';
 import {styles} from '../styles/products'
+import {CONDITION_CONFIG,SUBCATEGORIES,CATEGORIES} from '../data/General'
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 44) / 2;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// STATIC DATA — mirrors schema enums exactly
-// ─────────────────────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  { id: 'all',                    label: 'All',                   icon: 'apps',                   emoji: '🛍️',  color: '#E8F5E9', accent: '#2E7D32' },
-  { id: 'electronics',            label: 'Electronics',           icon: 'hardware-chip-outline',  emoji: '🔌',  color: '#E3F2FD', accent: '#1565C0' },
-  { id: 'phones and tablets',     label: 'Phones & Tablets',      icon: 'phone-portrait-outline', emoji: '📱',  color: '#F3E5F5', accent: '#6A1B9A' },
-  { id: 'computers and laptops',  label: 'Computers & Laptops',   icon: 'laptop-outline',         emoji: '💻',  color: '#E8EAF6', accent: '#283593' },
-  { id: 'gaming',                 label: 'Gaming',                icon: 'game-controller-outline',emoji: '🎮',  color: '#FCE4EC', accent: '#880E4F' },
-  { id: 'fashion',                label: 'Fashion',               icon: 'shirt-outline',          emoji: '👗',  color: '#FFF3E0', accent: '#E65100' },
-  { id: 'books-course-materials', label: 'Books & Notes',         icon: 'book-outline',           emoji: '📚',  color: '#FFF9C4', accent: '#F57F17' },
-  { id: 'hostel-items',           label: 'Hostel Items',          icon: 'bed-outline',            emoji: '🛏️',  color: '#E8F5E9', accent: '#2E7D32' },
-  { id: 'appliances',             label: 'Appliances',            icon: 'flash-outline',          emoji: '🔧',  color: '#EFEBE9', accent: '#4E342E' },
-  { id: 'furniture',              label: 'Furniture',             icon: 'home-outline',           emoji: '🪑',  color: '#F1F8E9', accent: '#33691E' },
-  { id: 'beauty and grooming',    label: 'Beauty & Grooming',     icon: 'sparkles-outline',       emoji: '💄',  color: '#FCE4EC', accent: '#AD1457' },
-  { id: 'sports and fitness',     label: 'Sports & Fitness',      icon: 'bicycle-outline',        emoji: '⚽',  color: '#E8F5E9', accent: '#1B5E20' },
-  { id: 'accessories',            label: 'Accessories',           icon: 'watch-outline',          emoji: '👜',  color: '#FFF9C4', accent: '#827717' },
-  { id: 'food and drinks',        label: 'Food & Drinks',         icon: 'fast-food-outline',      emoji: '🍱',  color: '#FBE9E7', accent: '#BF360C' },
-  { id: 'services',               label: 'Services',              icon: 'construct-outline',      emoji: '🛠️',  color: '#E3F2FD', accent: '#01579B' },
-  { id: 'other',                  label: 'Other',                 icon: 'grid-outline',           emoji: '📦',  color: '#F5F5F5', accent: '#616161' },
-];
-
-// Subcategories grouped by parent category id
-const SUBCATEGORIES = {
-  'electronics': [
-    { id: 'headphones-earbuds', label: 'Headphones & Earbuds' },
-    { id: 'speakers',           label: 'Speakers' },
-    { id: 'chargers-cables',    label: 'Chargers & Cables' },
-    { id: 'power-banks',        label: 'Power Banks' },
-    { id: 'smartwatches',       label: 'Smartwatches' },
-    { id: 'cameras',            label: 'Cameras' },
-    { id: 'other-electronics',  label: 'Other Electronics' },
-  ],
-  'phones and tablets': [
-    { id: 'smartphones',              label: 'Smartphones' },
-    { id: 'tablets',                  label: 'Tablets' },
-    { id: 'ipads',                    label: 'iPads' },
-    { id: 'phone-cases',              label: 'Phone Cases' },
-    { id: 'screen-protectors',        label: 'Screen Protectors' },
-    { id: 'other-phone-accessories',  label: 'Other Accessories' },
-  ],
-  'computers and laptops': [
-    { id: 'laptops',                    label: 'Laptops' },
-    { id: 'desktops',                   label: 'Desktops' },
-    { id: 'monitors',                   label: 'Monitors' },
-    { id: 'keyboards',                  label: 'Keyboards' },
-    { id: 'mouse',                      label: 'Mouse' },
-    { id: 'laptop-bags',                label: 'Laptop Bags' },
-    { id: 'software',                   label: 'Software' },
-    { id: 'other-computer-accessories', label: 'Other' },
-  ],
-  'gaming': [
-    { id: 'consoles',           label: 'Consoles' },
-    { id: 'games',              label: 'Games' },
-    { id: 'controllers',        label: 'Controllers' },
-    { id: 'gaming-accessories', label: 'Accessories' },
-  ],
-  'fashion': [
-    { id: 'men-clothing',    label: "Men's Clothing" },
-    { id: 'women-clothing',  label: "Women's Clothing" },
-    { id: 'unisex-clothing', label: 'Unisex Clothing' },
-    { id: 'shoes',           label: 'Shoes' },
-    { id: 'bags',            label: 'Bags' },
-    { id: 'watches',         label: 'Watches' },
-    { id: 'jewelry',         label: 'Jewelry' },
-    { id: 'other-fashion',   label: 'Other Fashion' },
-  ],
-  'books-course-materials': [
-    { id: 'textbooks',      label: 'Textbooks' },
-    { id: 'course-notes',   label: 'Course Notes' },
-    { id: 'past-questions', label: 'Past Questions' },
-    { id: 'stationery',     label: 'Stationery' },
-    { id: 'novels',         label: 'Novels' },
-    { id: 'other-books',    label: 'Other Books' },
-  ],
-  'hostel-items': [
-    { id: 'bedding',          label: 'Bedding' },
-    { id: 'kitchenware',      label: 'Kitchenware' },
-    { id: 'cleaning-supplies',label: 'Cleaning Supplies' },
-    { id: 'storage',          label: 'Storage' },
-    { id: 'lighting',         label: 'Lighting' },
-    { id: 'other-hostel',     label: 'Other' },
-  ],
-  'appliances': [
-    { id: 'fans',             label: 'Fans' },
-    { id: 'heaters',          label: 'Heaters' },
-    { id: 'irons',            label: 'Irons' },
-    { id: 'kettles',          label: 'Kettles' },
-    { id: 'blenders',         label: 'Blenders' },
-    { id: 'microwaves',       label: 'Microwaves' },
-    { id: 'other-appliances', label: 'Other' },
-  ],
-  'furniture': [
-    { id: 'chairs',          label: 'Chairs' },
-    { id: 'tables-desks',    label: 'Tables & Desks' },
-    { id: 'beds-mattresses', label: 'Beds & Mattresses' },
-    { id: 'shelves',         label: 'Shelves' },
-    { id: 'other-furniture', label: 'Other' },
-  ],
-  'beauty and grooming': [
-    { id: 'skincare',      label: 'Skincare' },
-    { id: 'makeup',        label: 'Makeup' },
-    { id: 'hair-care',     label: 'Hair Care' },
-    { id: 'perfumes',      label: 'Perfumes' },
-    { id: 'nail-care',     label: 'Nail Care' },
-    { id: 'other-beauty',  label: 'Other' },
-  ],
-  'sports and fitness': [
-    { id: 'sports-equipment', label: 'Sports Equipment' },
-    { id: 'gym-gear',          label: 'Gym Gear' },
-    { id: 'activewear',        label: 'Activewear' },
-    { id: 'other-sports',      label: 'Other' },
-  ],
-  'accessories': [
-    { id: 'phone-accessories',   label: 'Phone Accessories' },
-    { id: 'laptop-accessories',  label: 'Laptop Accessories' },
-    { id: 'fashion-accessories', label: 'Fashion Accessories' },
-    { id: 'other-accessories',   label: 'Other' },
-  ],
-  'food and drinks': [
-    { id: 'snacks',        label: 'Snacks' },
-    { id: 'drinks',        label: 'Drinks' },
-    { id: 'homemade-meals',label: 'Homemade Meals' },
-    { id: 'baked-goods',   label: 'Baked Goods' },
-    { id: 'other-food',    label: 'Other Food' },
-  ],
-  'services': [
-    { id: 'tutoring',               label: 'Tutoring' },
-    { id: 'graphic-design',         label: 'Graphic Design' },
-    { id: 'photography',            label: 'Photography' },
-    { id: 'printing-photocopy',     label: 'Printing & Photocopy' },
-    { id: 'laundry',                label: 'Laundry' },
-    { id: 'barbering-hairdressing', label: 'Barbing & Hairdressing' },
-    { id: 'tech-repairs',           label: 'Tech Repairs' },
-    { id: 'other-services',         label: 'Other Services' },
-  ],
-  'other': [
-    { id: 'miscellaneous', label: 'Miscellaneous' },
-  ],
-};
-
-const CONDITION_CONFIG = {
-  'new':          { label: 'Brand New',    textColor: '#1B5E20', bg: '#E8F5E9' },
-  'like-new':     { label: 'Like New',     textColor: '#1565C0', bg: '#E3F2FD' },
-  'excellent':    { label: 'Excellent',    textColor: '#4527A0', bg: '#EDE7F6' },
-  'good':         { label: 'Good',         textColor: '#E65100', bg: '#FFF3E0' },
-  'fair':         { label: 'Fair',         textColor: '#827717', bg: '#F9FBE7' },
-  'slightly-used':{ label: 'Slight Used',  textColor: '#4E342E', bg: '#EFEBE9' },
-  'for-parts':    { label: 'For Parts',    textColor: '#B71C1C', bg: '#FFEBEE' },
-};
 
 const SORT_OPTIONS = [
   { id: 'newest',     label: 'Newest First',        icon: 'time-outline' },
@@ -1344,47 +1195,40 @@ const ProductsScreen = ({ navigation, route }) => {
         )}
 
         {/* ════════════════════════════════
-            PRODUCTS
-            ════════════════════════════════ */}
-        {loading && products.length === 0 ? (
-          <View style={styles.loadingWrap}>
-            <ActivityIndicator size="large" color="#4CAF50" />
-            <Text style={styles.loadingText}>Finding listings…</Text>
-          </View>
-        ) : products.length === 0 ? (
-          renderEmptyState()
-        ) : viewMode === 'grid' ? (
-          <View style={styles.gridWrap}>
-            {products.map(item => (
-              <GridCard
-                key={item._id}
-                item={item}
-                onPress={p => navigation.navigate('ProductDetail', { productId: p._id, product: p })}
-                onAddToCart={handleAddToCart}
-                onQtyChange={handleQtyChange}
-                qtyInCart={getQtyInCart(item._id)}
-                isAdding={addingProductId === item._id}
-                isUpdating={updatingProductId === item._id}
-              />
-            ))}
-          </View>
-        ) : (
-          <View style={styles.listWrap}>
-            {products.map(item => (
-              <ListCard
-                key={item._id}
-                item={item}
-                onPress={p => navigation.navigate('ProductDetail', { productId: p._id, product: p })}
-                onAddToCart={handleAddToCart}
-                onQtyChange={handleQtyChange}
-                qtyInCart={getQtyInCart(item._id)}
-                isAdding={addingProductId === item._id}
-                isUpdating={updatingProductId === item._id}
-              />
-            ))}
-          </View>
-        )}
+    PRODUCTS
+    ════════════════════════════════ */}
+<View style={{ position: 'relative', minHeight: loading && products.length > 0 ? 200 : undefined }}>
+  {loading && products.length === 0 ? (
+    <View style={styles.loadingWrap}>
+      <ActivityIndicator size="large" color="#4CAF50" />
+      <Text style={styles.loadingText}>Finding listings…</Text>
+    </View>
+  ) : products.length === 0 ? (
+    renderEmptyState()
+  ) : viewMode === 'grid' ? (
+    <View style={styles.gridWrap}>
+      {products.map(item => (
+        <GridCard key={item._id} item={item} onPress={p => navigation.navigate('ProductDetail', { productId: p._id, product: p })} onAddToCart={handleAddToCart} onQtyChange={handleQtyChange} qtyInCart={getQtyInCart(item._id)} isAdding={addingProductId === item._id} isUpdating={updatingProductId === item._id} />
+      ))}
+    </View>
+  ) : (
+    <View style={styles.listWrap}>
+      {products.map(item => (
+        <ListCard key={item._id} item={item} onPress={p => navigation.navigate('ProductDetail', { productId: p._id, product: p })} onAddToCart={handleAddToCart} onQtyChange={handleQtyChange} qtyInCart={getQtyInCart(item._id)} isAdding={addingProductId === item._id} isUpdating={updatingProductId === item._id} />
+      ))}
+    </View>
+  )}
 
+  {/* Category-switch overlay — shows over EXISTING products while a new page loads */}
+  {loading && products.length > 0 && (
+    <View style={styles.categorySwitchOverlay}>
+      <View style={styles.categorySwitchCard}>
+        <ActivityIndicator size="small" color="#4CAF50" />
+        <Text style={styles.categorySwitchText}>Loading…</Text>
+      </View>
+    </View>
+  )}
+</View>
         {/* Load more */}
         {!loading && pagination.hasNextPage && (
           <TouchableOpacity style={styles.loadMoreBtn} onPress={handleLoadMore} activeOpacity={0.8}>

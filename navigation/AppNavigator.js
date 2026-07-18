@@ -43,6 +43,8 @@ import TagProductsScreen from '../screens/TagProductsScreen'
 import ChatScreen from '../screens/ChatScreen'
 import InboxScreen from '../screens/InboxScreen'
 
+import AIShoppingScreen from '../screens/AIShoppingScreen'
+
 
 // ── Vendor screens ──
 import VendorSignUpScreen from '../vendorscreens/VendorSignUp'
@@ -111,6 +113,7 @@ function AuthNavigator() {
       <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <AuthStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
       <AuthStack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+       <AuthStack.Screen name="CediAi" component={AIShoppingScreen} />
     </AuthStack.Navigator>
   );
 }
@@ -187,8 +190,7 @@ function MainTabNavigator() {
             case 'Home':       iconName = focused ? 'home' : 'home-outline'; break;
             case 'Products':   iconName = focused ? 'basket' : 'basket-outline'; break;
             case 'Cart':       iconName = focused ? 'cart' : 'cart-outline'; break;
-            case 'Vendors':    iconName = focused ? 'storefront' : 'storefront-outline'; break;
-            case 'Orders':     iconName = focused ? 'receipt':'receipt-outline'; break;
+            case 'CediAi':     iconName = focused ? 'sparkles' : 'sparkles-outline'; break;
             case 'Profile':    iconName = focused ? 'person' : 'person-outline'; break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -208,6 +210,7 @@ function MainTabNavigator() {
       })}
     >
       <Tab.Screen name="Home"     component={HomeScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="CediAi" component={AIShoppingScreen} options={{ title: 'CediAi' }} />
       {/*<Tab.Screen name="Vendors"  component={MarketsScreen} options={{ title: 'Vendors' }} />*/}
       <Tab.Screen name="Products" component={ProductsScreen} options={{ title: 'Products' }} />
       <Tab.Screen
@@ -219,7 +222,7 @@ function MainTabNavigator() {
           tabBarBadgeStyle: { backgroundColor: '#FF3B30', fontSize: 12, minWidth: 20, height: 20 },
         }}
       />
-      <Tab.Screen name="Orders" component={OrdersScreen} options={{ title: 'Orders' }} />
+      
       <Tab.Screen name="Profile"  component={AccountScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );

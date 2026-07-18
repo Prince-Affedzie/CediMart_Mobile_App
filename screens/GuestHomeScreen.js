@@ -23,93 +23,13 @@ import { useNavigation } from '@react-navigation/native';
 import productService from '../services/productService';
 import {styles} from '../styles/guesthome'
 import SupportFAB from '../components/SupportFAB';
+import AIFAB from '../components/AIFAB';
+import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES,HERO_SLIDES} from '../data/General'
+
 
 const { width } = Dimensions.get('window');
 
-const ALL_CAMPUSES = [
-  { id: 'UG',     label: 'University of Ghana',           icon: '🎓', palette: { bg: '#E8F5E9', accent: '#1B5E20', border: '#A5D6A7' } },
-  { id: 'KNUST',  label: 'KNUST',                         icon: '⚙️', palette: { bg: '#FFF3E0', accent: '#E65100', border: '#FFCC80' } },
-  { id: 'UCC',    label: 'Univ. of Cape Coast',           icon: '🌊', palette: { bg: '#E3F2FD', accent: '#1565C0', border: '#90CAF9' } },
-  { id: 'ASHESI', label: 'Ashesi University',             icon: '💡', palette: { bg: '#F3E5F5', accent: '#6A1B9A', border: '#CE93D8' } },
-  { id: 'GIMPA',  label: 'GIMPA',                         icon: '📊', palette: { bg: '#E0F2F1', accent: '#00695C', border: '#80CBC4' } },
-  { id: 'UEW',    label: 'Univ. of Education',            icon: '📚', palette: { bg: '#FFF9C4', accent: '#F57F17', border: '#FFF176' } },
-  { id: 'UPSA',   label: 'UPSA',                         icon: '📈', palette: { bg: '#FCE4EC', accent: '#880E4F', border: '#F48FB1' } },
-  { id: 'ATU',    label: 'Accra Technical Univ.',         icon: '🔧', palette: { bg: '#EFEBE9', accent: '#4E342E', border: '#BCAAA4' } },
-];
 
-const HERO_SLIDES = [
-  {
-    id: '1',
-    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780782982/flyer13_1_fyp0xj.png',
-    tag: '🎓  Campus Marketplace',
-    title: 'Buy & Sell on\n Campus',
-    subtitle: "Connect with students across Ghana's top universities",
-    btnText: 'Start Shopping',
-    accentColor: '#fff',
-    overlayColor: 'rgba(10,20,60,0.50)',
-    nav: { screen: 'Products', params: {} },
-  },
-  {
-    id: '2',
-    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780771354/flyer11_qkxwpv.jpg',
-    tag: '💻  Electronics & Gadgets',
-    title: 'Laptops, Phones\n& More',
-    subtitle: 'Student-priced tech from trusted campus sellers',
-    btnText: 'Browse Electronics',
-    accentColor: '#90CAF9',
-    overlayColor: 'rgba(10,20,60,0.50)',
-    nav: { screen: 'Products', params: { category: 'electronics' } },
-  },
-  {
-    id: '3',
-    image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1781101245/fashion_banner_ibwmaz.png',
-    tag: '👗  Fashion & Style',
-    title: 'Upgrade Your\nWardrobe',
-    subtitle: 'Trendy outfits, accessories & vintage finds at great prices',
-    btnText: 'Shop Fashion',
-    accentColor: '#FFCC80',
-    overlayColor: 'rgba(10,20,60,0.50)',
-    nav: { screen: 'Products', params: { category: 'fashion' } },
-  },
-  {
-     id: '4',
-     image: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1781891792/food_nad_provisions_1_m6fvfn.png',
-      tag: '🍽️  Food & Provisions',
-      title: 'Stock Up on\nFood & Provisions',
-      subtitle: 'Groceries, snacks, drinks and daily essentials delivered to your doorstep',
-      btnText: 'Shop Food Items',
-      accentColor: '#FFB74D',  // Warm orange/amber for food
-      overlayColor: 'rgba(10,20,60,0.50)',
-      nav: { screen: 'Products', params: { category: 'food and drinks' } },
-  },
-];
-const CATEGORY_CONFIG = {
-  electronics:   { icon: '🔌', label: 'Electronics',    color: '#E3F2FD', accent: '#1565C0' },
-  'phones and tablets':        { icon: '📱', label: 'Phones & Tablets',          color: '#F3E5F5', accent: '#6A1B9A' },
-  'computers and laptops':       { icon: '💻', label: 'Computers & Laptops',         color: '#E8EAF6', accent: '#283593' },
-  gaming:        { icon: '🎮', label: 'Gaming',          color: '#FCE4EC', accent: '#880E4F' },
-  fashion:       { icon: '👗', label: 'Fashion',         color: '#FFF3E0', accent: '#E65100' },
-  'books-course-materials': { icon: '📚', label: 'Books', color: '#FFF9C4', accent: '#F57F17' },
-  'hostel-items':{ icon: '🛏️', label: 'Hostel Items',   color: '#E8F5E9', accent: '#2E7D32' },
-  appliances:    { icon: '🔧', label: 'Appliances',      color: '#EFEBE9', accent: '#4E342E' },
-  furniture:     { icon: '🪑', label: 'Furniture',       color: '#F1F8E9', accent: '#33691E' },
-  'beauty and grooming': { icon: '💄', label: 'Beauty', color: '#FCE4EC', accent: '#AD1457' },
-  'sports and fitness': { icon: '⚽', label: 'Sports', color: '#E8F5E9', accent: '#1B5E20' },
-  accessories:   { icon: '👜', label: 'Accessories',     color: '#FFF9C4', accent: '#827717' },
-  'food and drinks': { icon: '🍱', label: 'Food', color: '#FBE9E7', accent: '#BF360C' },
-  services:      { icon: '🛠️', label: 'Services',        color: '#E3F2FD', accent: '#01579B' },
-  other:         { icon: '📦', label: 'Other',           color: '#F5F5F5', accent: '#616161' },
-};
-
-const CONDITION_LABELS = {
-  'new': { label: 'Brand New', color: '#1B5E20', bg: '#E8F5E9' },
-  'like-new': { label: 'Like New', color: '#1565C0', bg: '#E3F2FD' },
-  'excellent': { label: 'Excellent', color: '#4527A0', bg: '#EDE7F6' },
-  'good': { label: 'Good', color: '#E65100', bg: '#FFF3E0' },
-  'fair': { label: 'Fair', color: '#827717', bg: '#F9FBE7' },
-  'slightly-used': { label: 'Slight Used', color: '#4E342E', bg: '#EFEBE9' },
-  'for-parts': { label: 'For Parts', color: '#B71C1C', bg: '#FFEBEE' },
-};
 
 const AUTO_SCROLL_INTERVAL = 4200;
 
@@ -703,7 +623,15 @@ const GuestHomeScreen = () => {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+      <AIFAB 
+          style={{ 
+          position: 'absolute', 
+          bottom: 124, 
+          right: 16,
+            }}
+           />
        <SupportFAB />
+       
     </SafeAreaView>
   );
 };

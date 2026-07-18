@@ -181,7 +181,7 @@ export default function PaymentScreen({ route, navigation }) {
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#4CAF50" />
-          <Text style={styles.loadingText}>Connecting to Paystack…</Text>
+          <Text style={styles.loadingText}>Processing…</Text>
         </View>
       )}
 
