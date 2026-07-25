@@ -563,7 +563,7 @@ const HomeScreen = () => {
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2E7D32" />
+        <ActivityIndicator size="large" color="#0D9488" />
         <Text style={styles.loadingText}>Loading…</Text>
       </View>
     );
@@ -625,7 +625,7 @@ const HomeScreen = () => {
                 <Ionicons name="heart-outline" size={24} color="#2E7D32" />
               </TouchableOpacity>*/}
               <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Notification')}>
-                <Ionicons name={unreadCount > 0 ? 'notifications' : 'notifications-outline'} size={24} color="#2E7D32" />
+                <Ionicons name={unreadCount > 0 ? 'notifications' : 'notifications-outline'} size={24} color="#3a3b3a" />
                 {unreadCount > 0 && (
                   <View style={styles.notifBadge}>
                     <Text style={styles.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -633,7 +633,7 @@ const HomeScreen = () => {
                 )}
               </TouchableOpacity>
               <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Inbox')}>
-                <Ionicons name="mail-outline" size={24} color="#2E7D32" />
+                <Ionicons name="mail-outline" size={24} color="#3a3b3a" />
                 {totalUnread > 0 && (
                   <View style={styles.notifBadge}>
                     <Text style={styles.notifBadgeText}>{totalUnread > 9 ? '9+' : totalUnread}</Text>

@@ -8,6 +8,7 @@ import AppNavigator from './navigation/AppNavigator';
 import { SafeAreaProvider,SafeAreaView } from 'react-native-safe-area-context';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import { VendorProvider } from './context/VendorContext';
 import {ChatProvider} from './context/ChatContext';
 import { PaystackProvider } from "react-native-paystack-webview";
 import * as Updates from 'expo-updates';
@@ -53,6 +54,7 @@ export default function App() {
       <SafeAreaProvider>
         <StatusBar style="light" backgroundColor="#2E7D32" translucent={true} />
         <AuthProvider>
+          <VendorProvider>
           <NotificationProvider>
            <ChatProvider>
 
@@ -72,13 +74,14 @@ export default function App() {
           }}
          > 
          <PushNotificationInitializer/>
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#2E7D32' }} edges={['top']}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#008080' }} edges={['top']}>
         <AppNavigator />
         </SafeAreaView>
         </PaystackProvider>
         </CartProvider>
          </ChatProvider>
         </NotificationProvider>
+        </VendorProvider>
         </AuthProvider>
         
       </SafeAreaProvider>

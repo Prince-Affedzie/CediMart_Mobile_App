@@ -24,7 +24,7 @@ export const createVendorProfile = async (data) => {
   }
 };
 
-export const getVendorsByMarket = ()=>API.get('/api/vendors/by_market')
+
 export const getVendors =(params = {}) => API.get('/api/vendor', { params });
 export const getVendorById =(id)=>API.get(`/api/vendor/${id}`)
 ///api/vendor_profile

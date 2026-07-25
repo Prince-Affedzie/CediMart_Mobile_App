@@ -1,23 +1,13 @@
 // src/components/SearchResults.js
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  Image, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const SearchResults = ({ 
-  results, 
-  query, 
-  onClose, 
-  navigation, 
-  addToCart, 
-  addingProductId 
+  results, query, onClose, navigation, addToCart, addingProductId 
 }) => {
   if (results.length === 0) {
     return (
@@ -55,12 +45,8 @@ const SearchResults = ({
           resizeMode="cover"
         />
         <View style={styles.productInfo}>
-          <Text style={styles.productName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={styles.productUnit} numberOfLines={1}>
-            {item.unit || 'piece'}
-          </Text>
+          <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.productUnit} numberOfLines={1}>{item.unit || 'piece'}</Text>
           <View style={styles.productFooter}>
             <Text style={styles.productPrice}>
               GH₵ {item.price?.toFixed(2) || item.price}
@@ -103,10 +89,11 @@ const SearchResults = ({
   );
 };
 
+// ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -120,7 +107,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#424242',
+    color: '#0F172A',
   },
   closeButton: {
     padding: 4,
@@ -130,15 +117,15 @@ const styles = StyleSheet.create({
   },
   resultItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginBottom: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -155,12 +142,12 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#212121',
+    color: '#0F172A',
     marginBottom: 4,
   },
   productUnit: {
     fontSize: 13,
-    color: '#757575',
+    color: '#475569',
     marginBottom: 8,
   },
   productFooter: {
@@ -171,10 +158,10 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#2E7D32',
+    color: '#F97316',           // Coral for prices
   },
   addButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#0D9488',  // Teal
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -182,7 +169,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addingButton: {
-    backgroundColor: '#81C784',
+    backgroundColor: '#99F6E4',  // Teal border/light
   },
   emptyContainer: {
     padding: 40,
@@ -192,24 +179,24 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#424242',
+    color: '#0F172A',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 15,
-    color: '#757575',
+    color: '#475569',
     textAlign: 'center',
     marginBottom: 24,
   },
   clearButton: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   clearButtonText: {
-    color: '#2E7D32',
+    color: '#0D9488',            // Teal
     fontWeight: '600',
     fontSize: 15,
   },

@@ -371,7 +371,7 @@ const GuestHomeScreen = () => {
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2E7D32" />
+        <ActivityIndicator size="large" color="#0D9488" />
         <Text style={styles.loadingText}>Loading…</Text>
       </View>
     );
@@ -379,7 +379,7 @@ const GuestHomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar backgroundColor="#1B5E20" barStyle="light-content" />
+      <StatusBar backgroundColor="#0D9488" barStyle="light-content" />
 
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2E7D32" colors={['#2E7D32']} />}
@@ -426,7 +426,7 @@ const GuestHomeScreen = () => {
       autoCorrect={false} 
     />
     {searching ? (
-      <ActivityIndicator size="small" color="#2E7D32" />
+      <ActivityIndicator size="small" color="#0D9488" />
     ) : searchQuery.length > 0 ? (
       <TouchableOpacity 
         onPress={clearSearch} 

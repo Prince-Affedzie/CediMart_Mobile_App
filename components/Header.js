@@ -6,21 +6,27 @@ import { Ionicons } from '@expo/vector-icons';
 const Header = ({ title, showBack = false, onBackPress, rightComponent }) => {
   return (
     <View style={styles.container}>
-      <View style={styles.leftSection}>
+      {/* Left section — back button with fixed width for balance */}
+      <View style={styles.sideSection}>
         {showBack && (
           <TouchableOpacity onPress={onBackPress} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#2E7D32" />
+            <Ionicons name="arrow-back" size={24} color="#0D9488" />
           </TouchableOpacity>
         )}
-        <Text style={styles.title}>{title}</Text>
       </View>
-      <View style={styles.rightSection}>
+
+      {/* Center — title, absolutely positioned for perfect centering */}
+      <Text style={styles.title} numberOfLines={1}>{title}</Text>
+
+      {/* Right section — same fixed width as left for balance */}
+      <View style={styles.sideSection}>
         {rightComponent}
       </View>
     </View>
   );
 };
 
+// ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
@@ -30,23 +36,22 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#E2E8F0',
   },
-  leftSection: {
+  sideSection: {
+    width: 44,           // Fixed width for balance on both sides
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
-    marginRight: 12,
+    padding: 4,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1B5E20',
-  },
-  rightSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'center',  // Center the title text
   },
 });
 

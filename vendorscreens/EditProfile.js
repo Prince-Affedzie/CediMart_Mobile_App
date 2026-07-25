@@ -1,5 +1,5 @@
 // src/vendorscreens/AccountScreen.js
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
-import { getMyProfileDetails, updateProfile } from '../apis/vendorApi';
+import { updateProfile } from '../apis/vendorApi';
+import { useVendor } from '../context/VendorContext';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
@@ -33,39 +34,22 @@ const AVATAR_SIZE = 90;
 const AVATAR_OFFSET = AVATAR_SIZE / 2;
 
 const CAMPUS_LABELS = {
-  UG: 'University of Ghana',
-  KNUST: 'KNUST',
-  UCC: 'University of Cape Coast',
-  UEW: 'University of Education, Winneba',
-  UPSA: 'UPSA',
-  GIMPA: 'GIMPA',
-  ASHESI: 'Ashesi University',
-  ATU: 'Accra Technical University',
-  OTHER: 'Other',
+  UG: 'University of Ghana', KNUST: 'KNUST', UCC: 'University of Cape Coast',
+  UEW: 'University of Education, Winneba', UPSA: 'UPSA', GIMPA: 'GIMPA',
+  ASHESI: 'Ashesi University', ATU: 'Accra Technical University', OTHER: 'Other',
 };
 
 const CATEGORY_LABELS = {
-  'electronics': 'Electronics',
-  'phones and tablets': 'Phones & Tablets',
-  'computers and laptops': 'Computers & Laptops',
-  'gaming': 'Gaming',
-  'fashion': 'Fashion',
-  'books-course-materials': 'Books & Course Materials',
-  'hostel-items': 'Hostel Items',
-  'appliances': 'Appliances',
-  'furniture': 'Furniture',
-  'beauty and grooming': 'Beauty & Grooming',
-  'sports and fitness': 'Sports & Fitness',
-  'accessories': 'Accessories',
-  'food and drinks': 'Food & Drinks',
-  'services': 'Services',
-  'other': 'Other',
+  'electronics': 'Electronics', 'phones and tablets': 'Phones & Tablets',
+  'computers and laptops': 'Computers & Laptops', 'gaming': 'Gaming',
+  'fashion': 'Fashion', 'books-course-materials': 'Books & Course Materials',
+  'hostel-items': 'Hostel Items', 'appliances': 'Appliances',
+  'furniture': 'Furniture', 'beauty and grooming': 'Beauty & Grooming',
+  'sports and fitness': 'Sports & Fitness', 'accessories': 'Accessories',
+  'food and drinks': 'Food & Drinks', 'services': 'Services', 'other': 'Other',
 };
 
-const SettingsRow = ({
-  iconName, iconBg, iconColor,
-  label, value, onPress, isLast = false,
-}) => (
+const SettingsRow = ({ iconName, iconBg, iconColor, label, value, onPress, isLast = false }) => (
   <TouchableOpacity
     style={[styles.settingsRow, isLast && styles.settingsRowLast]}
     onPress={onPress}
@@ -111,25 +95,27 @@ const VendorAccountScreen = () => {
   const navigation = useNavigation();
   const { logoutUser } = useAuth();
 
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  // ✅ Use context for profile data
+  const {
+    profile,
+    loading: contextLoading,
+    refreshing: contextRefreshing,
+    refreshVendorData,
+    refetchProfile,
+  } = useVendor();
+
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [sharing, setSharing] = useState(false);
 
+  // Local form state (initialized from context profile)
   const [name, setName] = useState('');
   const [storeName, setStoreName] = useState('');
   const [phone, setPhone] = useState('');
   const [campus, setCampus] = useState('');
   const [campusArea, setCampusArea] = useState('');
   const [hostel, setHostel] = useState('');
-  const [categories, setCategories] = useState([]);
   const [bio, setBio] = useState('');
-  const [isVerified, setIsVerified] = useState(false);
-  const [productCount, setProductCount] = useState(0);
-  const [rating, setRating] = useState(0);
-  const [totalSales, setTotalSales] = useState(0);
-  const [vendorId, setVendorId] = useState('');
 
   const [existingBanner, setExistingBanner] = useState('');
   const [existingProfile, setExistingProfile] = useState('');
@@ -142,61 +128,45 @@ const VendorAccountScreen = () => {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const fetchProfile = async () => {
-    try {
-      const res = await getMyProfileDetails();
-      if (res?.status === 200 || res?.data?.success) {
-        const vendor = res.data.data || res.data;
-        setVendorId(vendor._id || vendor.id || '');
-        setName(vendor.name || '');
-        setStoreName(vendor.storeName || '');
-        setPhone(vendor.phone || '');
-        setCampus(vendor.campus || '');
-        setCampusArea(vendor.location?.campusArea || '');
-        setHostel(vendor.location?.hostel || '');
-        setCategories(vendor.categories || []);
-        setBio(vendor.bio || '');
-        setIsVerified(vendor.isVerified || false);
-        setProductCount(vendor.products?.length || vendor.productCount || 0);
-        setRating(vendor.rating || 0);
-        setTotalSales(vendor.totalSales || 0);
-        setExistingBanner(vendor.storeBanner || '');
-        setExistingProfile(vendor.profileImage || '');
-        setBannerPreview(vendor.storeBanner || '');
-        setProfilePreview(vendor.profileImage || '');
-      }
-    } catch {
-      Toast.show({ type: 'error', text1: 'Failed to load profile' });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  // ✅ Initialize local state from context profile
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setStoreName(profile.storeName || '');
+      setPhone(profile.phone || '');
+      setCampus(profile.campus || '');
+      setCampusArea(profile.location?.campusArea || '');
+      setHostel(profile.location?.hostel || '');
+      setBio(profile.bio || '');
+      setExistingBanner(profile.storeBanner || '');
+      setExistingProfile(profile.profileImage || '');
+      setBannerPreview(profile.storeBanner || '');
+      setProfilePreview(profile.profileImage || '');
+      
       Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
     }
-  };
+  }, [profile]);
 
-  useEffect(() => { fetchProfile(); }, []);
-  const onRefresh = useCallback(() => { setRefreshing(true); fetchProfile(); }, []);
+  // ✅ Pull-to-refresh uses context
+  const onRefresh = () => refreshVendorData();
 
   const handleShareProfile = async () => {
-    if (sharing) return;
-    
+    if (sharing || !profile) return;
     setSharing(true);
     try {
       const vendorData = {
-        _id: vendorId,
-        id: vendorId,
-        name: storeName || name || 'Vendor',
-        shopName: storeName,
-        description: bio,
-        avatar: profilePreview || existingProfile,
-        logo: profilePreview || existingProfile,
-        image: bannerPreview || existingBanner,
-        rating: rating,
-        totalProducts: productCount,
+        _id: profile._id || profile.id || '',
+        id: profile._id || profile.id || '',
+        name: profile.storeName || profile.name || 'Vendor',
+        shopName: profile.storeName,
+        description: profile.bio,
+        avatar: profile.profileImage || profile.profileImage,
+        logo: profile.profileImage || profile.profileImage,
+        image: profile.storeBanner || profile.storeBanner,
+        rating: profile.rating || 0,
+        totalProducts: profile.products?.length || 0,
       };
-      
       const result = await shareVendorProfile(vendorData);
-      
       if (result?.success) {
         Toast.show({ type: 'success', text1: 'Profile shared successfully!' });
       } else if (!result?.cancelled) {
@@ -289,25 +259,20 @@ const VendorAccountScreen = () => {
       if (campusArea.trim()) formData.append('campusArea', campusArea.trim());
       if (hostel.trim()) formData.append('hostel', hostel.trim());
       if (bio.trim()) formData.append('bio', bio.trim());
-
       if (newBanner) formData.append('storeBanner', newBanner);
       else if (removeBanner) formData.append('removeStoreBanner', 'true');
-
       if (newProfile) formData.append('profileImage', newProfile);
       else if (removeProfile) formData.append('removeProfileImage', 'true');
 
-      const res = await updateProfile(formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await updateProfile(formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
       if (res.status === 200 || res.data?.success) {
         Toast.show({ type: 'success', text1: 'Profile updated' });
         setIsEditing(false);
-        setNewBanner(null);
-        setNewProfile(null);
-        setRemoveBanner(false);
-        setRemoveProfile(false);
-        fetchProfile();
+        setNewBanner(null); setNewProfile(null);
+        setRemoveBanner(false); setRemoveProfile(false);
+        // ✅ Refetch from context after save
+        refetchProfile();
       }
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || 'Update failed';
@@ -318,41 +283,35 @@ const VendorAccountScreen = () => {
   };
 
   const handleCancelEdit = () => {
-    setBannerPreview(existingBanner);
-    setProfilePreview(existingProfile);
-    setNewBanner(null);
-    setNewProfile(null);
-    setRemoveBanner(false);
-    setRemoveProfile(false);
-    fetchProfile();
+    // Reset to profile values from context
+    if (profile) {
+      setName(profile.name || '');
+      setStoreName(profile.storeName || '');
+      setPhone(profile.phone || '');
+      setCampus(profile.campus || '');
+      setCampusArea(profile.location?.campusArea || '');
+      setHostel(profile.location?.hostel || '');
+      setBio(profile.bio || '');
+      setBannerPreview(profile.storeBanner || '');
+      setProfilePreview(profile.profileImage || '');
+      setExistingBanner(profile.storeBanner || '');
+      setExistingProfile(profile.profileImage || '');
+    }
+    setNewBanner(null); setNewProfile(null);
+    setRemoveBanner(false); setRemoveProfile(false);
     setIsEditing(false);
   };
 
   const handleLogout = () => {
     Alert.alert('Log out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log out', style: 'destructive',
-        onPress: async () => {
-          try { await logoutUser(); }
-          catch { Alert.alert('Error', 'Could not log out.'); }
-        },
-      },
+      { text: 'Log out', style: 'destructive', onPress: async () => {
+        try { await logoutUser(); } catch { Alert.alert('Error', 'Could not log out.'); }
+      }},
     ]);
   };
 
-  const handleHelpFAQ = () => navigation.navigate('VendorSupport');
-  const handleContactSupport = () => navigation.navigate('VendorSupport');
-  const handlePrivacyPolicy = () => {
-    navigation.navigate('PrivacyPolicy');
-  };
-  const handleTermsOfService = () => {
-    Linking.openURL('https://cedimart.com/terms').catch(() =>
-      Alert.alert('Error', 'Could not open terms of service.')
-    );
-  };
-
-  if (loading) {
+  if (contextLoading && !profile) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
@@ -368,6 +327,12 @@ const VendorAccountScreen = () => {
       </SafeAreaView>
     );
   }
+
+  const isVerified = profile?.isVerified;
+  const productCount = profile?.products?.length || 0;
+  const rating = profile?.rating || 0;
+  const totalSales = profile?.totalSales || 0;
+  const categories = profile?.categories || [];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -397,7 +362,7 @@ const VendorAccountScreen = () => {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2E7D32" colors={['#2E7D32']} />}
+          refreshControl={<RefreshControl refreshing={contextRefreshing} onRefresh={onRefresh} tintColor="#2E7D32" colors={['#2E7D32']} />}
         >
           <Animated.View style={{ opacity: fadeAnim }}>
             {/* Profile Hero */}
@@ -417,17 +382,8 @@ const VendorAccountScreen = () => {
                         </TouchableOpacity>
                       </View>
                     ) : (
-                      <TouchableOpacity 
-                        style={styles.shareBannerBtn}
-                        onPress={handleShareProfile}
-                        disabled={sharing}
-                        activeOpacity={0.8}
-                      >
-                        {sharing ? (
-                          <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                          <Ionicons name="share-outline" size={18} color="#fff" />
-                        )}
+                      <TouchableOpacity style={styles.shareBannerBtn} onPress={handleShareProfile} disabled={sharing} activeOpacity={0.8}>
+                        {sharing ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="share-outline" size={18} color="#fff" />}
                       </TouchableOpacity>
                     )}
                   </>
@@ -463,18 +419,9 @@ const VendorAccountScreen = () => {
                     </TouchableOpacity>
                   )}
                 </View>
-                
-                {/* Share Button in Avatar Row (when not editing) */}
                 {!isEditing && (
-                  <TouchableOpacity 
-                    style={styles.shareProfileBtn}
-                    onPress={handleShareProfile}
-                    disabled={sharing}
-                    activeOpacity={0.8}
-                  >
-                    {sharing ? (
-                      <ActivityIndicator size="small" color="#2E7D32" />
-                    ) : (
+                  <TouchableOpacity style={styles.shareProfileBtn} onPress={handleShareProfile} disabled={sharing} activeOpacity={0.8}>
+                    {sharing ? <ActivityIndicator size="small" color="#2E7D32" /> : (
                       <>
                         <Ionicons name="share-social-outline" size={16} color="#2E7D32" />
                         <Text style={styles.shareProfileBtnText}>Share Profile</Text>
@@ -554,40 +501,14 @@ const VendorAccountScreen = () => {
                 </View>
               </Section>
 
-              {/* Support */}
               <Section label="Support">
-                <SettingsRow
-                  iconName="help-circle-outline"
-                  iconBg="#FFF3E0" iconColor="#E65100"
-                  label="Help & FAQ"
-                  value="Common questions answered"
-                  onPress={handleHelpFAQ}
-                />
-                <SettingsRow
-                  iconName="chatbubble-ellipses-outline"
-                  iconBg="#E8F5E9" iconColor="#2E7D32"
-                  label="Contact support"
-                  value="Chat with our team"
-                  onPress={handleContactSupport}
-                />
-                <SettingsRow
-                  iconName="document-text-outline"
-                  iconBg="#F5F5F5" iconColor="#616161"
-                  label="Privacy policy"
-                  value="Terms & conditions"
-                  onPress={handlePrivacyPolicy}
-                />
+                <SettingsRow iconName="help-circle-outline" iconBg="#FFF3E0" iconColor="#E65100" label="Help & FAQ" value="Common questions answered" onPress={() => navigation.navigate('VendorSupport')} />
+                <SettingsRow iconName="chatbubble-ellipses-outline" iconBg="#E8F5E9" iconColor="#2E7D32" label="Contact support" value="Chat with our team" onPress={() => navigation.navigate('VendorSupport')} />
+                <SettingsRow iconName="document-text-outline" iconBg="#F5F5F5" iconColor="#616161" label="Privacy policy" value="Terms & conditions" onPress={() => navigation.navigate('PrivacyPolicy')} />
               </Section>
 
-              {/* Account */}
               <Section label="Account">
-                <SettingsRow
-                  iconName="log-out-outline"
-                  iconBg="#FFEBEE" iconColor="#D32F2F"
-                  label="Log out"
-                  onPress={handleLogout}
-                  isLast
-                />
+                <SettingsRow iconName="log-out-outline" iconBg="#FFEBEE" iconColor="#D32F2F" label="Log out" onPress={handleLogout} isLast />
               </Section>
 
               <Text style={styles.versionText}>CediMart Vendor · v1.0.0</Text>
@@ -600,155 +521,61 @@ const VendorAccountScreen = () => {
   );
 };
 
+// ─── Styles (unchanged from original) ─────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F0F2EE' },
-  header: {
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
-  },
-  headerIconBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center', alignItems: 'center',
-  },
+  header: { backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  headerIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
   headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  editIconBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#1A1A1A',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  cancelBtn: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-    borderWidth: 1.5, borderColor: '#E0E0E0',
-  },
+  editIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1A1A1A', justifyContent: 'center', alignItems: 'center' },
+  cancelBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0E0E0' },
   cancelBtnText: { fontSize: 13, fontWeight: '600', color: '#1A1A1A' },
-  saveBtn: {
-    backgroundColor: '#2E7D32', paddingHorizontal: 18, paddingVertical: 7,
-    borderRadius: 20, minWidth: 68, alignItems: 'center',
-  },
+  saveBtn: { backgroundColor: '#2E7D32', paddingHorizontal: 18, paddingVertical: 7, borderRadius: 20, minWidth: 68, alignItems: 'center' },
   saveBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
   scrollContent: { paddingBottom: 20 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F2EE' },
   profileHeroBlock: { backgroundColor: '#fff', marginBottom: 16 },
-  bannerContainer: {
-    width: '100%', height: BANNER_HEIGHT,
-    backgroundColor: '#C8E6C9', position: 'relative', overflow: 'hidden',
-  },
+  bannerContainer: { width: '100%', height: BANNER_HEIGHT, backgroundColor: '#C8E6C9', position: 'relative', overflow: 'hidden' },
   bannerImage: { width: '100%', height: '100%', position: 'absolute' },
   bannerControls: { position: 'absolute', bottom: 12, right: 12, flexDirection: 'row', gap: 8 },
-  bannerCtrlBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-  },
+  bannerCtrlBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
   bannerCtrlBtnRed: { backgroundColor: 'rgba(198,40,40,0.8)', paddingHorizontal: 10 },
   bannerCtrlText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  bannerEmpty: {
-    flex: 1, justifyContent: 'center', alignItems: 'center', gap: 6,
-    borderBottomWidth: 1.5, borderStyle: 'dashed', borderColor: '#A5D6A7',
-  },
-  bannerEmptyIconWrap: {
-    width: 54, height: 54, borderRadius: 27,
-    backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center',
-  },
+  bannerEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 6, borderBottomWidth: 1.5, borderStyle: 'dashed', borderColor: '#A5D6A7' },
+  bannerEmptyIconWrap: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' },
   bannerEmptyText: { fontSize: 13, fontWeight: '600', color: '#2E7D32' },
   avatarRow: { paddingHorizontal: 20, marginTop: -AVATAR_OFFSET, flexDirection: 'row', alignItems: 'flex-end' },
   avatarPosWrap: { position: 'relative', marginBottom: 4 },
-  avatarRing: {
-    width: AVATAR_SIZE + 6, height: AVATAR_SIZE + 6,
-    borderRadius: (AVATAR_SIZE + 6) / 2, backgroundColor: '#fff',
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15, shadowRadius: 6, elevation: 5,
-  },
+  avatarRing: { width: AVATAR_SIZE + 6, height: AVATAR_SIZE + 6, borderRadius: (AVATAR_SIZE + 6) / 2, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5 },
   avatarImage: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2 },
-  avatarPlaceholder: {
-    width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2,
-    backgroundColor: '#C8E6C9', justifyContent: 'center', alignItems: 'center',
-  },
+  avatarPlaceholder: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, backgroundColor: '#C8E6C9', justifyContent: 'center', alignItems: 'center' },
   avatarInitial: { fontSize: 34, fontWeight: '800', color: '#1B5E20' },
-  avatarCameraBtn: {
-    position: 'absolute', bottom: 4, right: 0,
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: '#2E7D32', justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: '#fff',
-  },
+  avatarCameraBtn: { position: 'absolute', bottom: 4, right: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: '#2E7D32', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
   profileMeta: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 18, alignItems: 'flex-start' },
-  profileNameRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
+  profileNameRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' },
   profileName: { fontSize: 20, fontWeight: '800', color: '#1B2714', letterSpacing: -0.3 },
   profileStoreName: { fontSize: 14, color: '#757575', fontWeight: '500', marginTop: 2 },
   profileLocation: { fontSize: 13, color: '#757575', marginTop: 2, marginBottom: 12 },
-  statsRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F8FAF8', borderRadius: 12, padding: 14,
-    marginBottom: 12, width: '100%',
-  },
+  statsRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAF8', borderRadius: 12, padding: 14, marginBottom: 12, width: '100%' },
   statItem: { flex: 1, alignItems: 'center' },
   statValue: { fontSize: 18, fontWeight: '800', color: '#1B5E20' },
   statLabel: { fontSize: 10, color: '#9E9E9E', fontWeight: '500', marginTop: 2 },
   statDivider: { width: 1, height: 30, backgroundColor: '#E8E8E8' },
-  verifiedChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#E8F5E9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-  },
+  verifiedChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E8F5E9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
   pendingChip: { backgroundColor: '#FFF3E0' },
   chipDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#2E7D32' },
   chipDotPending: { backgroundColor: '#E65100' },
   chipText: { fontSize: 12, fontWeight: '600', color: '#1B5E20' },
   chipTextPending: { color: '#E65100' },
-  
-  // Share button styles
-  shareBannerBtn: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  shareProfileBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
-    marginLeft: 'auto',
-    marginBottom: 4,
-  },
-  shareProfileBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#2E7D32',
-  },
-  
+  shareBannerBtn: { position: 'absolute', top: 12, right: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  shareProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E8F5E9', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#C8E6C9', marginLeft: 'auto', marginBottom: 4 },
+  shareProfileBtnText: { fontSize: 13, fontWeight: '700', color: '#2E7D32' },
   body: { paddingHorizontal: 16 },
   section: { marginBottom: 22 },
-  sectionLabel: {
-    fontSize: 11, fontWeight: '700', color: '#9E9E9E',
-    letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8, paddingLeft: 4,
-  },
+  sectionLabel: { fontSize: 11, fontWeight: '700', color: '#9E9E9E', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8, paddingLeft: 4 },
   sectionCard: { backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden' },
-  settingsRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 13, paddingHorizontal: 16,
-    borderBottomWidth: 0.5, borderBottomColor: '#F0F0F0',
-  },
+  settingsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, borderBottomWidth: 0.5, borderBottomColor: '#F0F0F0' },
   settingsRowLast: { borderBottomWidth: 0 },
   rowIcon: { width: 36, height: 36, borderRadius: 11, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   rowBody: { flex: 1 },
@@ -757,19 +584,12 @@ const styles = StyleSheet.create({
   fieldsContainer: { padding: 16, gap: 14 },
   fieldGroup: {},
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#424242', marginBottom: 7 },
-  fieldInput: {
-    backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#E8E8E8',
-    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, color: '#1B2714',
-  },
+  fieldInput: { backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#E8E8E8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: '#1B2714' },
   fieldInputDisabled: { backgroundColor: '#F5F5F5', color: '#9E9E9E' },
   fieldInputMultiline: { height: 80, textAlignVertical: 'top', paddingTop: 12 },
   categoriesContainer: { padding: 16 },
   categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  categoryChip: {
-    backgroundColor: '#E8F5E9', paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 20, borderWidth: 1, borderColor: '#C8E6C9',
-  },
+  categoryChip: { backgroundColor: '#E8F5E9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#C8E6C9' },
   categoryChipText: { fontSize: 12, fontWeight: '600', color: '#2E7D32' },
   noDataText: { fontSize: 13, color: '#BDBDBD', fontStyle: 'italic' },
   versionText: { textAlign: 'center', fontSize: 12, color: '#BDBDBD', marginTop: 8 },

@@ -1,58 +1,59 @@
 // src/screens/main/PrivacyPolicyScreen.js
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Linking,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/Header';
 
+// ─── Teal + Coral Palette ──────────────────────────────────────────────────
+const C = {
+  brand:        '#0D9488',
+  brandL:       '#14B8A6',
+  brandD:       '#0F766E',
+  brandBg:      '#F0FDFA',
+  brandBorder:  '#99F6E4',
+  accent:       '#F97316',
+  accentBg:     '#FFF7ED',
+  accentBorder: '#FED7AA',
+  success:      '#059669',
+  successBg:    '#ECFDF5',
+  danger:       '#DC2626',
+  dangerBg:     '#FEF2F2',
+  info:         '#0284C7',
+  infoBg:       '#F0F9FF',
+  white:        '#FFFFFF',
+  black:        '#000000',
+  t1:           '#0F172A',
+  t2:           '#475569',
+  t3:           '#94A3B8',
+};
+
 const PrivacyPolicyScreen = ({ navigation }) => {
   const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+    year: 'numeric', month: 'long', day: 'numeric',
   });
 
-  const handleEmailPress = () => {
-    Linking.openURL('mailto:privacy@freshyfood.com');
-  };
-
-  const handleWebsitePress = () => {
-    Linking.openURL('https://freshyfood.com');
-  };
+  const handleEmailPress = () => Linking.openURL('mailto:privacy@cedimart.com');
+  const handleWebsitePress = () => Linking.openURL('https://cedimart.com');
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header
-        title="Privacy Policy"
-        showBack
-        onBackPress={() => navigation.goBack()}
-      />
+      {/*<Header title="Privacy Policy" showBack onBackPress={() => navigation.goBack()} />*/}
 
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Ionicons name="leaf" size={40} color="#4CAF50" />
+              
               <Text style={styles.appName}>CediMart</Text>
             </View>
-            <Text style={styles.lastUpdated}>
-              Last Updated: {currentDate}
-            </Text>
+            <Text style={styles.lastUpdated}>Last Updated: {currentDate}</Text>
           </View>
 
-          {/* Introduction */}
+          {/* 1. Introduction */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>1. Introduction</Text>
             <Text style={styles.paragraph}>
@@ -63,296 +64,140 @@ const PrivacyPolicyScreen = ({ navigation }) => {
             </Text>
           </View>
 
-          {/* Information We Collect */}
+          {/* 2. Information We Collect */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>2. Information We Collect</Text>
-            
+
             <Text style={styles.subsectionTitle}>2.1 Personal Information</Text>
-            <Text style={styles.paragraph}>
-              When you create an account or use our services, we may collect:
-            </Text>
+            <Text style={styles.paragraph}>When you create an account or use our services, we may collect:</Text>
             <View style={styles.bulletList}>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Name and contact details (first name, last name, email address, phone number)</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Delivery address and location information</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Payment information (processed securely through our payment partners)</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Account credentials</Text>
-              </View>
+              {['Name and contact details (first name, last name, email address, phone number)', 'Delivery address and location information', 'Payment information (processed securely through our payment partners)', 'Account credentials'].map((text, i) => (
+                <View key={i} style={styles.bulletItem}><Text style={styles.bullet}>•</Text><Text style={styles.bulletText}>{text}</Text></View>
+              ))}
             </View>
 
             <Text style={styles.subsectionTitle}>2.2 Usage Information</Text>
-            <Text style={styles.paragraph}>
-              We automatically collect information about your interaction with our application:
-            </Text>
+            <Text style={styles.paragraph}>We automatically collect information about your interaction with our application:</Text>
             <View style={styles.bulletList}>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Device information (type, operating system, unique device identifiers)</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Log data (IP address, browser type, pages visited, access times)</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>App usage patterns and preferences</Text>
-              </View>
+              {['Device information (type, operating system, unique device identifiers)', 'Log data (IP address, browser type, pages visited, access times)', 'App usage patterns and preferences'].map((text, i) => (
+                <View key={i} style={styles.bulletItem}><Text style={styles.bullet}>•</Text><Text style={styles.bulletText}>{text}</Text></View>
+              ))}
             </View>
 
             <Text style={styles.subsectionTitle}>2.3 Order Information</Text>
-            <Text style={styles.paragraph}>
-              When you place orders, we collect:
-            </Text>
+            <Text style={styles.paragraph}>When you place orders, we collect:</Text>
             <View style={styles.bulletList}>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Order history and preferences</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Product preferences and favorites</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Shopping cart information</Text>
-              </View>
+              {['Order history and preferences', 'Product preferences and favorites', 'Shopping cart information'].map((text, i) => (
+                <View key={i} style={styles.bulletItem}><Text style={styles.bullet}>•</Text><Text style={styles.bulletText}>{text}</Text></View>
+              ))}
             </View>
           </View>
 
-          {/* How We Use Your Information */}
+          {/* 3. How We Use Your Information */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>3. How We Use Your Information</Text>
-            <Text style={styles.paragraph}>
-              We use the information we collect for various purposes:
-            </Text>
+            <Text style={styles.paragraph}>We use the information we collect for various purposes:</Text>
             <View style={styles.bulletList}>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  <Text style={styles.bold}>To provide our services:</Text> Process orders, manage your account, and deliver products
-                </Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  <Text style={styles.bold}>To communicate with you:</Text> Send order confirmations, delivery updates, and customer support
-                </Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  <Text style={styles.bold}>To improve our services:</Text> Analyze usage patterns and enhance user experience
-                </Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  <Text style={styles.bold}>For security:</Text> Protect against fraud and unauthorized access
-                </Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  <Text style={styles.bold}>For personalization:</Text> Recommend products based on your preferences
-                </Text>
-              </View>
+              {[
+                { b: 'To provide our services:', t: 'Process orders, manage your account, and deliver products' },
+                { b: 'To communicate with you:', t: 'Send order confirmations, delivery updates, and customer support' },
+                { b: 'To improve our services:', t: 'Analyze usage patterns and enhance user experience' },
+                { b: 'For security:', t: 'Protect against fraud and unauthorized access' },
+                { b: 'For personalization:', t: 'Recommend products based on your preferences' },
+              ].map((item, i) => (
+                <View key={i} style={styles.bulletItem}>
+                  <Text style={styles.bullet}>•</Text>
+                  <Text style={styles.bulletText}><Text style={styles.bold}>{item.b}</Text> {item.t}</Text>
+                </View>
+              ))}
             </View>
           </View>
 
-          {/* Data Sharing and Disclosure */}
+          {/* 4. Data Sharing and Disclosure */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>4. Data Sharing and Disclosure</Text>
-            <Text style={styles.paragraph}>
-              We may share your information in the following circumstances:
-            </Text>
-
+            <Text style={styles.paragraph}>We may share your information in the following circumstances:</Text>
             <Text style={styles.subsectionTitle}>4.1 Service Providers</Text>
-            <Text style={styles.paragraph}>
-              We share information with third-party vendors who perform services on our behalf:
-            </Text>
+            <Text style={styles.paragraph}>We share information with third-party vendors who perform services on our behalf:</Text>
             <View style={styles.bulletList}>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Payment processors</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Delivery and logistics partners</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Cloud hosting services</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Analytics providers</Text>
-              </View>
+              {['Payment processors', 'Delivery and logistics partners', 'Cloud hosting services', 'Analytics providers'].map((text, i) => (
+                <View key={i} style={styles.bulletItem}><Text style={styles.bullet}>•</Text><Text style={styles.bulletText}>{text}</Text></View>
+              ))}
             </View>
-
             <Text style={styles.subsectionTitle}>4.2 Legal Requirements</Text>
-            <Text style={styles.paragraph}>
-              We may disclose your information if required by law or in response to valid requests by public authorities.
-            </Text>
-
+            <Text style={styles.paragraph}>We may disclose your information if required by law or in response to valid requests by public authorities.</Text>
             <Text style={styles.subsectionTitle}>4.3 Business Transfers</Text>
-            <Text style={styles.paragraph}>
-              In the event of a merger, acquisition, or asset sale, your personal information may be transferred.
-            </Text>
+            <Text style={styles.paragraph}>In the event of a merger, acquisition, or asset sale, your personal information may be transferred.</Text>
           </View>
 
-          {/* Data Security */}
+          {/* 5-10. (Kept same structure, just color updates) */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>5. Data Security</Text>
-            <Text style={styles.paragraph}>
-              We implement appropriate technical and organizational security measures to protect your personal information. These include:
-            </Text>
+            <Text style={styles.paragraph}>We implement appropriate technical and organizational security measures to protect your personal information. These include:</Text>
             <View style={styles.bulletList}>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Encryption of sensitive data</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Secure server infrastructure</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Regular security assessments</Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>Access controls and authentication</Text>
-              </View>
+              {['Encryption of sensitive data', 'Secure server infrastructure', 'Regular security assessments', 'Access controls and authentication'].map((text, i) => (
+                <View key={i} style={styles.bulletItem}><Text style={styles.bullet}>•</Text><Text style={styles.bulletText}>{text}</Text></View>
+              ))}
             </View>
-            <Text style={styles.paragraph}>
-              While we strive to protect your personal information, no method of transmission over the Internet or electronic storage is 100% secure.
-            </Text>
+            <Text style={styles.paragraph}>While we strive to protect your personal information, no method of transmission over the Internet or electronic storage is 100% secure.</Text>
           </View>
 
-          {/* Your Rights */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>6. Your Rights</Text>
-            <Text style={styles.paragraph}>
-              Depending on your location, you may have the following rights regarding your personal information:
-            </Text>
+            <Text style={styles.paragraph}>Depending on your location, you may have the following rights regarding your personal information:</Text>
             <View style={styles.bulletList}>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  <Text style={styles.bold}>Access:</Text> Request a copy of your personal data
-                </Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  <Text style={styles.bold}>Correction:</Text> Update or correct inaccurate information
-                </Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  <Text style={styles.bold}>Deletion:</Text> Request deletion of your personal data
-                </Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  <Text style={styles.bold}>Objection:</Text> Object to certain data processing activities
-                </Text>
-              </View>
-              <View style={styles.bulletItem}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>
-                  <Text style={styles.bold}>Portability:</Text> Request transfer of your data to another service
-                </Text>
-              </View>
+              {[
+                { b: 'Access:', t: 'Request a copy of your personal data' },
+                { b: 'Correction:', t: 'Update or correct inaccurate information' },
+                { b: 'Deletion:', t: 'Request deletion of your personal data' },
+                { b: 'Objection:', t: 'Object to certain data processing activities' },
+                { b: 'Portability:', t: 'Request transfer of your data to another service' },
+              ].map((item, i) => (
+                <View key={i} style={styles.bulletItem}><Text style={styles.bullet}>•</Text><Text style={styles.bulletText}><Text style={styles.bold}>{item.b}</Text> {item.t}</Text></View>
+              ))}
             </View>
-            <Text style={styles.paragraph}>
-              To exercise these rights, please contact us using the information provided below.
-            </Text>
+            <Text style={styles.paragraph}>To exercise these rights, please contact us using the information provided below.</Text>
           </View>
 
-          {/* Data Retention */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>7. Data Retention</Text>
-            <Text style={styles.paragraph}>
-              We retain your personal information only for as long as necessary to fulfill the purposes outlined in this Privacy Policy, unless a longer retention period is required or permitted by law.
-            </Text>
-            <Text style={styles.paragraph}>
-              Account information is retained while your account is active. Transaction records are kept for legal and accounting purposes as required by applicable laws.
-            </Text>
+            <Text style={styles.paragraph}>We retain your personal information only for as long as necessary to fulfill the purposes outlined in this Privacy Policy, unless a longer retention period is required or permitted by law.</Text>
+            <Text style={styles.paragraph}>Account information is retained while your account is active. Transaction records are kept for legal and accounting purposes as required by applicable laws.</Text>
           </View>
 
-          {/* Children's Privacy */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>8. Children's Privacy</Text>
-            <Text style={styles.paragraph}>
-              Our services are not directed to individuals under the age of 16. We do not knowingly collect personal information from children. If you become aware that a child has provided us with personal information, please contact us immediately.
-            </Text>
+            <Text style={styles.paragraph}>Our services are not directed to individuals under the age of 16. We do not knowingly collect personal information from children. If you become aware that a child has provided us with personal information, please contact us immediately.</Text>
           </View>
 
-          {/* International Transfers */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>9. International Transfers</Text>
-            <Text style={styles.paragraph}>
-              Your information may be transferred to and processed in countries other than your country of residence. These countries may have data protection laws that are different from those in your country.
-            </Text>
-            <Text style={styles.paragraph}>
-              We take appropriate safeguards to ensure that your personal information remains protected in accordance with this Privacy Policy.
-            </Text>
+            <Text style={styles.paragraph}>Your information may be transferred to and processed in countries other than your country of residence. These countries may have data protection laws that are different from those in your country.</Text>
+            <Text style={styles.paragraph}>We take appropriate safeguards to ensure that your personal information remains protected in accordance with this Privacy Policy.</Text>
           </View>
 
-          {/* Changes to This Policy */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>10. Changes to This Policy</Text>
-            <Text style={styles.paragraph}>
-              We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.
-            </Text>
-            <Text style={styles.paragraph}>
-              You are advised to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.
-            </Text>
+            <Text style={styles.paragraph}>We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.</Text>
+            <Text style={styles.paragraph}>You are advised to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.</Text>
           </View>
 
-          {/* Contact Us */}
+          {/* 11. Contact Us */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>11. Contact Us</Text>
-            <Text style={styles.paragraph}>
-              If you have any questions or concerns about this Privacy Policy or our data practices, please contact us:
-            </Text>
-            
+            <Text style={styles.paragraph}>If you have any questions or concerns about this Privacy Policy or our data practices, please contact us:</Text>
             <View style={styles.contactInfo}>
-              <TouchableOpacity 
-                style={styles.contactItem}
-                onPress={handleEmailPress}
-              >
-                <Ionicons name="mail-outline" size={20} color="#4CAF50" />
-                <Text style={styles.contactText}>privacy@freshyfood.com</Text>
+              <TouchableOpacity style={styles.contactItem} onPress={handleEmailPress}>
+                <Ionicons name="mail-outline" size={20} color={C.brand} />
+                <Text style={styles.contactText}>privacy@cedimart.com</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.contactItem}
-                onPress={handleWebsitePress}
-              >
-                <Ionicons name="globe-outline" size={20} color="#4CAF50" />
-                <Text style={styles.contactText}>www.freshyfood.com</Text>
+              <TouchableOpacity style={styles.contactItem} onPress={handleWebsitePress}>
+                <Ionicons name="globe-outline" size={20} color={C.brand} />
+                <Text style={styles.contactText}>www.cedimart.com</Text>
               </TouchableOpacity>
-              
               <View style={styles.contactItem}>
-                <Ionicons name="location-outline" size={20} color="#4CAF50" />
-                <Text style={styles.contactText}>
-                  CediMart Headquarters{'\n'}
-                  Accra, Ghana
-                </Text>
+                <Ionicons name="location-outline" size={20} color={C.brand} />
+                <Text style={styles.contactText}>CediMart Headquarters{'\n'}Accra, Ghana</Text>
               </View>
             </View>
           </View>
@@ -369,125 +214,30 @@ const PrivacyPolicyScreen = ({ navigation }) => {
   );
 };
 
+// ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 30,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  appName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1B5E20',
-    marginLeft: 10,
-  },
-  lastUpdated: {
-    fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic',
-  },
-  section: {
-    marginBottom: 25,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1B5E20',
-    marginBottom: 12,
-    lineHeight: 24,
-  },
-  subsectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2E7D32',
-    marginTop: 15,
-    marginBottom: 8,
-    lineHeight: 22,
-  },
-  paragraph: {
-    fontSize: 15,
-    color: '#333',
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  bulletList: {
-    marginLeft: 10,
-    marginBottom: 12,
-  },
-  bulletItem: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  bullet: {
-    fontSize: 16,
-    color: '#4CAF50',
-    marginRight: 8,
-    lineHeight: 22,
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#333',
-    lineHeight: 22,
-  },
-  bold: {
-    fontWeight: '600',
-    color: '#1B5E20',
-  },
-  contactInfo: {
-    backgroundColor: '#F9F9F9',
-    borderRadius: 10,
-    padding: 16,
-    marginTop: 12,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  contactText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#333',
-    marginLeft: 12,
-    lineHeight: 22,
-  },
-  acceptanceSection: {
-    backgroundColor: '#F1F8E9',
-    borderRadius: 10,
-    padding: 20,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
-  },
-  acceptanceText: {
-    fontSize: 15,
-    color: '#2E7D32',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+  container: { flex: 1, backgroundColor: C.white },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: 40 },
+  content: { paddingHorizontal: 20, paddingTop: 20 },
+  header: { alignItems: 'center', marginBottom: 30, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  logoContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  appName: { fontSize: 24, fontWeight: '700', color: C.brand, marginLeft: 10 },
+  lastUpdated: { fontSize: 14, color: C.t2, fontStyle: 'italic' },
+  section: { marginBottom: 25 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: C.brandD, marginBottom: 12, lineHeight: 24 },
+  subsectionTitle: { fontSize: 16, fontWeight: '600', color: C.brand, marginTop: 15, marginBottom: 8, lineHeight: 22 },
+  paragraph: { fontSize: 15, color: '#333', lineHeight: 22, marginBottom: 12 },
+  bulletList: { marginLeft: 10, marginBottom: 12 },
+  bulletItem: { flexDirection: 'row', marginBottom: 8 },
+  bullet: { fontSize: 16, color: C.brand, marginRight: 8, lineHeight: 22 },
+  bulletText: { flex: 1, fontSize: 15, color: '#333', lineHeight: 22 },
+  bold: { fontWeight: '600', color: C.brandD },
+  contactInfo: { backgroundColor: '#F9F9F9', borderRadius: 10, padding: 16, marginTop: 12 },
+  contactItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  contactText: { flex: 1, fontSize: 15, color: '#333', marginLeft: 12, lineHeight: 22 },
+  acceptanceSection: { backgroundColor: C.brandBg, borderRadius: 10, padding: 20, marginTop: 20, borderWidth: 1, borderColor: C.brandBorder },
+  acceptanceText: { fontSize: 15, color: C.brand, fontStyle: 'italic', textAlign: 'center', lineHeight: 22 },
 });
 
 export default PrivacyPolicyScreen;

@@ -8,17 +8,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { openConversation } from '../apis/chatApi';
 
-const GREEN      = '#1FAA59';
-const GREEN_GLOW = 'rgba(31, 170, 89, 0.28)';
+// ─── Teal Palette ──────────────────────────────────────────────────────────
+const GREEN      = '#0D9488';
+const GREEN_GLOW = 'rgba(13, 148, 136, 0.28)';
 
 const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversationOpened }) => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
 
-  // Press feedback
   const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  // Soft breathing glow on the shadow — calm, not noisy
   const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -32,7 +30,6 @@ const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversatio
     return () => breathe.stop();
   }, []);
 
-  // Interpolate shadow radius and opacity from the glow value
   const shadowRadius = glowAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [6, 20],
@@ -46,12 +43,7 @@ const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversatio
     Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true }).start();
 
   const pressOut = () =>
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 4,
-      tension: 50,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(scaleAnim, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }).start();
 
   const handlePress = async () => {
     if (loading) return;
@@ -69,7 +61,6 @@ const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversatio
       return;
     }
 
-    // Prevent owner from chatting about their own listing
     const sellerId = product?.vendor?._id;
     if (sellerId && currentUserId && sellerId.toString() === currentUserId.toString()) {
       Alert.alert("That's your listing", "You can't start a chat about your own product.");
@@ -102,11 +93,6 @@ const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversatio
 
   return (
     <View style={[styles.wrap, style]}>
-      {/*
-        The animated shadow lives on a dedicated sibling view.
-        This lets Animated drive non-native shadow props (shadowRadius, shadowOpacity)
-        without touching the button's layout or transform.
-      */}
       <Animated.View
         style={[
           styles.glowLayer,
@@ -140,13 +126,12 @@ const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversatio
   );
 };
 
+// ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  // Glow layer sits behind the button, absolutely centred
   glowLayer: {
     position: 'absolute',
     width: '88%',
@@ -155,10 +140,8 @@ const styles = StyleSheet.create({
     backgroundColor: GREEN,
     shadowColor: GREEN,
     shadowOffset: { width: 0, height: 4 },
-    bottom:46,
-    // shadowRadius and shadowOpacity come from Animated above
+    bottom: 46,
   },
-
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -168,15 +151,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     borderRadius: 26,
     backgroundColor: GREEN,
-    bottom:46,
-    // Static Android elevation
+    bottom: 46,
     elevation: 5,
   },
-
   pillLoading: {
-    backgroundColor: '#178A47',
+    backgroundColor: '#0F766E', // Teal dark
   },
-
   label: {
     color: '#fff',
     fontSize: 15,

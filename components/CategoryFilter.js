@@ -1,12 +1,7 @@
 // src/components/CategoryFilter.js
 import React from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 
 const CategoryFilter = ({ 
@@ -15,37 +10,25 @@ const CategoryFilter = ({
   onSelectCategory,
   loading = false 
 }) => {
-  // Map category IDs to display names
   const getCategoryDisplay = (categoryId) => {
     if (categoryId === 'all') return 'All';
     const category = categories.find(c => c.id === categoryId || c._id === categoryId);
     return category ? category.name : categoryId;
   };
 
-  // Map category IDs to emoji icons
   const getCategoryIcon = (categoryId) => {
     const icons = {
       'all': '🛒',
-      'vegetables': '🥦',
-      'fruits': '🍎',
-      'staples': '🌾',
-      'vegetable': '🥬',
-      'fruit': '🍓',
-      'staple': '🍚',
-      'herb': '🌿',
-      'tuber': '🥔',
-      'other': '📦',
+      'vegetables': '🥦', 'fruits': '🍎', 'staples': '🌾',
+      'vegetable': '🥬', 'fruit': '🍓', 'staple': '🍚',
+      'herb': '🌿', 'tuber': '🥔', 'other': '📦',
     };
     return icons[categoryId] || '📦';
   };
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <TouchableOpacity
           key="all"
           style={[
@@ -57,19 +40,11 @@ const CategoryFilter = ({
           disabled={loading && selectedCategory === 'all'}
         >
           {loading && selectedCategory === 'all' ? (
-            <ActivityIndicator size="small" color="#4CAF50" style={styles.loadingIndicator} />
+            <ActivityIndicator size="small" color="#0D9488" style={styles.loadingIndicator} />
           ) : (
-            <Text style={styles.categoryIcon}>
-              {getCategoryIcon('all')}
-            </Text>
+            <Text style={styles.categoryIcon}>{getCategoryIcon('all')}</Text>
           )}
-          <Text
-            style={[
-              styles.categoryName,
-              selectedCategory === 'all' && styles.categoryNameSelected,
-            ]}
-            numberOfLines={1}
-          >
+          <Text style={[styles.categoryName, selectedCategory === 'all' && styles.categoryNameSelected]} numberOfLines={1}>
             All
           </Text>
         </TouchableOpacity>
@@ -91,19 +66,11 @@ const CategoryFilter = ({
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#4CAF50" style={styles.loadingIndicator} />
+                <ActivityIndicator size="small" color="#0D9488" style={styles.loadingIndicator} />
               ) : (
-                <Text style={styles.categoryIcon}>
-                  {category.icon || getCategoryIcon(categoryId)}
-                </Text>
+                <Text style={styles.categoryIcon}>{category.icon || getCategoryIcon(categoryId)}</Text>
               )}
-              <Text
-                style={[
-                  styles.categoryName,
-                  isSelected && styles.categoryNameSelected,
-                ]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.categoryName, isSelected && styles.categoryNameSelected]} numberOfLines={1}>
                 {category.name || getCategoryDisplay(categoryId)}
               </Text>
             </TouchableOpacity>
@@ -114,12 +81,13 @@ const CategoryFilter = ({
   );
 };
 
+// ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#E2E8F0',
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -127,19 +95,19 @@ const styles = StyleSheet.create({
   categoryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F1F5F9',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E8F0',
     minWidth: 80,
     maxWidth: 120,
   },
   categoryButtonSelected: {
-    backgroundColor: '#E8F5E8',
-    borderColor: '#4CAF50',
+    backgroundColor: '#F0FDFA',
+    borderColor: '#0D9488',
     borderWidth: 2,
   },
   categoryButtonLoading: {
@@ -151,12 +119,12 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     fontSize: 12,
-    color: '#666',
+    color: '#475569',
     fontWeight: '500',
     flexShrink: 1,
   },
   categoryNameSelected: {
-    color: '#2E7D32',
+    color: '#0D9488',
     fontWeight: '600',
   },
   loadingIndicator: {
