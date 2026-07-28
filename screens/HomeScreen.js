@@ -28,6 +28,7 @@ import { useNavigation } from '@react-navigation/native';
 import {styles} from '../styles/home'
 import AIFAB from '../components/AIFAB';
 import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES,HERO_SLIDES} from '../data/General'
+import RecommendEarnBanner from '../components/RecommendEarnNotice'
 
 const { width } = Dimensions.get('window');
 
@@ -752,6 +753,8 @@ const HomeScreen = () => {
                   
         </View>
 
+         <RecommendEarnBanner  />
+
         {/* ════════════════════════════════
             HERO CAROUSEL
             ════════════════════════════════ */}
@@ -1009,6 +1012,7 @@ const HomeScreen = () => {
       right: 16,
      }}
     />
+     
     </SafeAreaView>
   );
 };

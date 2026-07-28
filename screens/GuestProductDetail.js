@@ -11,6 +11,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { getProductById } from '../apis/productApi';
 import { shareGuestProduct } from '../utils/shareUtils';
 import ChatFAB from '../components/ChatFAB';
+import RecommendEarnButton from '../components/RecommendEarnButton';
 
 const { width } = Dimensions.get('window');
 
@@ -514,6 +515,10 @@ const GuestProductDetailScreen = () => {
               <Text style={styles.qtyTotal}>GH₵ {lineTotal}</Text>
             </View>
           )}
+
+          <View style={{ paddingHorizontal: 24, marginTop: 4, marginBottom: 16 }}>
+              <RecommendEarnButton product={product} />
+         </View>
 
           <CollapsibleSection title="Product Details" defaultOpen>
             <View style={styles.infoRowsWrap}>{infoItems.map((item, i) => <InfoRow key={i} icon={item.icon} label={item.label} value={item.value} isLast={i === infoItems.length - 1} />)}</View>

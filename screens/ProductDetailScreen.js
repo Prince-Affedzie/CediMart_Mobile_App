@@ -12,7 +12,10 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { addToFavorites, removeFromFavorites } from '../apis/userActionsApi';
 import { shareProduct } from '../utils/shareUtils';
+import { saveReferralCode } from '../utils/referralStorage'; 
 import ChatFAB from '../components/ChatFAB';
+import RecommendEarnButton from '../components/RecommendEarnButton';
+
 
 const { width } = Dimensions.get('window');
 
@@ -351,7 +354,7 @@ const spS = StyleSheet.create({
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const ProductDetailScreen = ({ route, navigation }) => {
-  const { productId, product: initialProduct } = route.params;
+  const { productId, product: initialProduct, ref: referralCode } = route.params;
   const [product, setProduct] = useState(initialProduct || null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [vendorProducts, setVendorProducts] = useState([]);
@@ -373,6 +376,13 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => { loadProduct(); checkIfFavorite(); }, [productId]);
+  useEffect(() => {
+  if (referralCode) {
+    saveReferralCode(referralCode, productId);
+    console.log(referralCode)
+    
+  }
+}, [referralCode, productId]);
 
   const animateIn = () => Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
 
@@ -568,7 +578,9 @@ const ProductDetailScreen = ({ route, navigation }) => {
               <Text style={styles.qtyTotal}>GH₵ {lineTotal}</Text>
             </View>
           )}
-
+           <View style={{ paddingHorizontal: 24, marginTop: 4, marginBottom: 16 }}>
+             <RecommendEarnButton product={product} />
+           </View>
           <CollapsibleSection title="Product Details" defaultOpen><View style={styles.infoRowsWrap}>{infoItems.map((item, i) => <InfoRow key={i} icon={item.icon} label={item.label} value={item.value} isLast={i === infoItems.length - 1} />)}</View></CollapsibleSection>
           {specifications && <CollapsibleSection title="Specifications" defaultOpen><SpecsTable specifications={specifications} /></CollapsibleSection>}
           {!!product.description && <CollapsibleSection title="Description" defaultOpen><Text style={styles.descText}>{product.description}</Text></CollapsibleSection>}

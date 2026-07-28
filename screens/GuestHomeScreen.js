@@ -25,6 +25,7 @@ import {styles} from '../styles/guesthome'
 import SupportFAB from '../components/SupportFAB';
 import AIFAB from '../components/AIFAB';
 import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES,HERO_SLIDES} from '../data/General'
+import RecommendEarnBanner from '../components/RecommendEarnNotice'
 
 
 const { width } = Dimensions.get('window');
@@ -515,8 +516,9 @@ const GuestHomeScreen = () => {
       </View>
     </>
   )}
-</View>
+  </View>
         </View>
+        <RecommendEarnBanner />
 
         {/* HERO CAROUSEL */}
         <View style={styles.carouselSection}><HeroCarousel onSlidePress={handleSlidePress} /></View>
@@ -630,6 +632,7 @@ const GuestHomeScreen = () => {
           right: 16,
             }}
            />
+       
        <SupportFAB />
        
     </SafeAreaView>

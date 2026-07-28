@@ -144,13 +144,8 @@ const AccountScreen = ({ navigation }) => {
 
         <View style={styles.heroHeader}>
           <View style={styles.heroTopRow}>
-            <TouchableOpacity style={styles.heroIconBtn} onPress={() => navigation.goBack()}>
-              <Ionicons name="chevron-back" size={22} color="#fff" />
-            </TouchableOpacity>
             <Text style={styles.heroScreenLabel}>My Account</Text>
-            <TouchableOpacity style={styles.heroIconBtn} onPress={() => navigation.navigate('Support')}>
-              <Ionicons name="help-circle-outline" size={22} color="#fff" />
-            </TouchableOpacity>
+            
           </View>
 
           <View style={styles.heroIdentity}>
@@ -261,6 +256,7 @@ const AccountScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Account</Text>
           <View style={styles.menuCard}>
             {renderMenuItem('Order History', 'receipt-outline', () => navigation.navigate('Orders'))}
+            {renderMenuItem('Earning & Rewards', 'gift-outline', () => navigation.navigate('Earnings'))}
             {renderMenuItem('Help & Support', 'help-circle-outline', () => navigation.navigate('Support'))}
             {renderMenuItem('About App', 'information-circle-outline', () => navigation.navigate('About'))}
             {renderMenuItem('Terms & Privacy', 'shield-checkmark-outline', () => navigation.navigate('PrivacyPolicy'))}
@@ -346,7 +342,7 @@ const styles = StyleSheet.create({
   signupButtonText: { color: C.brand, fontSize: 16, fontWeight: '700' },
 
   // Hero header
-  heroHeader: { backgroundColor: C.brand, paddingHorizontal: 16, paddingBottom: 20, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  heroHeader: { backgroundColor: C.brand, paddingHorizontal: 16, paddingBottom: 20, borderRadius: 24,marginHorizontal:12 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, paddingBottom: 18 },
   heroIconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
   heroScreenLabel: { fontSize: 17, fontWeight: '700', color: '#fff', letterSpacing: 0.3 },
@@ -363,7 +359,7 @@ const styles = StyleSheet.create({
   heroRoleText: { fontSize: 11, color: '#99F6E4', fontWeight: '700' },
   heroActions: { flexDirection: 'row', gap: 8 },
   heroActionPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.16)', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
-  heroActionPillLogout: { backgroundColor: C.dangerBg.replace(')', ',0.18)').replace('rgb', 'rgba'), borderColor: 'rgba(220,38,38,0.3)' }, // approximation
+  heroActionPillLogout: {  borderColor: 'rgba(220,38,38,0.3)' }, // approximation
   heroActionText: { fontSize: 12, color: '#fff', fontWeight: '700' },
 
   // Stats

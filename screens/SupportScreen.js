@@ -160,7 +160,7 @@ const SupportScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar backgroundColor="#1B5E20" barStyle="light-content" />
+      <StatusBar backgroundColor="#0F766E" barStyle="light-content" />
 
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
@@ -331,11 +331,7 @@ const SupportScreen = ({ navigation }) => {
 
         {/* CTA Footer */}
         <View style={styles.ctaFooter}>
-          <View style={styles.ctaIconRow}>
-            <View style={styles.ctaIcon}>
-              <Ionicons name="shield-checkmark" size={22} color="#2E7D32" />
-            </View>
-          </View>
+         
           <Text style={styles.ctaTitle}>Still need help?</Text>
           <Text style={styles.ctaSub}>
             Our dedicated support team is standing by to resolve any issue quickly and professionally.
@@ -360,13 +356,13 @@ const SupportScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F4F6F4' },
-  topBar: { backgroundColor: '#1B5E20', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
+  topBar: { backgroundColor: '#0F766E', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
   backBtn: { padding: 4, width: 36 },
   topBarTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700', color: '#fff', letterSpacing: 0.3 },
   homeBtn: { padding: 4, width: 36, alignItems: 'flex-end' },
   scrollContent: { paddingBottom: 20 },
 
-  hero: { backgroundColor: '#1B5E20', paddingTop: 32, paddingBottom: 52, alignItems: 'center', overflow: 'hidden', position: 'relative' },
+  hero: { backgroundColor: '#0F766E', paddingTop: 32, paddingBottom: 52, alignItems: 'center', overflow: 'hidden', position: 'relative' },
   heroCircle1: { position: 'absolute', width: 220, height: 220, borderRadius: 110, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', top: -60, right: -60 },
   heroCircle2: { position: 'absolute', width: 160, height: 160, borderRadius: 80, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', top: 40, left: -50 },
   heroCircle3: { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.04)', bottom: 10, right: 30 },
@@ -393,13 +389,13 @@ const styles = StyleSheet.create({
 
   vendorInfoText: { fontSize: 13, color: '#6B7280', lineHeight: 20, marginBottom: 14 },
   vendorLinkBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: '#F0FDF4', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#BBF7D0' },
-  vendorLinkText: { fontSize: 13, fontWeight: '700', color: '#2E7D32' },
+  vendorLinkText: { fontSize: 13, fontWeight: '700', color: '#0F766E' },
 
   faqHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  seeAll: { fontSize: 13, color: '#2E7D32', fontWeight: '600' },
+  seeAll: { fontSize: 13, color: '#0F766E', fontWeight: '600' },
   topicsScroll: { paddingBottom: 16, gap: 8 },
   topicChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20 },
-  topicChipActive: { backgroundColor: '#2E7D32' },
+  topicChipActive: { backgroundColor: '#0F766E' },
   topicChipText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
   topicChipTextActive: { color: '#fff' },
   faqList: {},
@@ -421,12 +417,12 @@ const styles = StyleSheet.create({
   hoursDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#4ADE80' },
   hoursDotOff: { backgroundColor: '#D1D5DB' },
   hoursDay: { fontSize: 14, fontWeight: '500', color: '#374151' },
-  hoursTime: { fontSize: 14, fontWeight: '700', color: '#1B5E20' },
+  hoursTime: { fontSize: 14, fontWeight: '700', color: '#0F766E' },
   hoursTimeOff: { color: '#9CA3AF' },
   holidayBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFBEB', padding: 12, borderRadius: 12, gap: 8, borderWidth: 1, borderColor: '#FDE68A' },
   holidayBannerText: { fontSize: 12, color: '#92400E', fontWeight: '500', flex: 1 },
 
-  ctaFooter: { marginHorizontal: 16, marginBottom: 8, borderRadius: 22, overflow: 'hidden', backgroundColor: '#1B5E20', padding: 28, alignItems: 'center', position: 'relative' },
+  ctaFooter: { marginHorizontal: 16, marginBottom: 8, borderRadius: 22, overflow: 'hidden', backgroundColor: '#0F766E', padding: 28, alignItems: 'center', position: 'relative' },
   ctaIconRow: { marginBottom: 14 },
   ctaIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)' },
   ctaTitle: { fontSize: 20, fontWeight: '800', color: '#fff', letterSpacing: -0.3, marginBottom: 8 },
@@ -435,7 +431,7 @@ const styles = StyleSheet.create({
   ctaPrimary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#25D366', paddingVertical: 14, borderRadius: 14, gap: 8 },
   ctaPrimaryText: { fontSize: 14, fontWeight: '700', color: '#fff' },
   ctaSecondary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.95)', paddingVertical: 14, borderRadius: 14, gap: 8 },
-  ctaSecondaryText: { fontSize: 14, fontWeight: '700', color: '#2E7D32' },
+  ctaSecondaryText: { fontSize: 14, fontWeight: '700', color: '#0F766E' },
 });
 
 export default SupportScreen;

@@ -15,6 +15,7 @@ import { triggerPayment } from '../services/paymentService';
 import { usePaystack } from 'react-native-paystack-webview';
 import { order } from '../apis/orderApi';
 import { verifyPayment } from '../apis/paymentApi';
+import { getReferralCode, clearReferralCode } from '../utils/referralStorage';
 
 const { width } = Dimensions.get('window');
 
@@ -115,6 +116,7 @@ const OrderScreen = ({ route }) => {
   const [paymentEmail, setPaymentEmail] = useState('');
   const [paymentEmailError, setPaymentEmailError] = useState('');
   const [currentStep] = useState(1);
+  const [referralCode, setReferralCode] = useState(null);
   const [newAddress, setNewAddress] = useState({ address: '', city: '', region: '', nearestLandmark: '', phone: user?.phone || '' });
   const [bottomBarHeight, setBottomBarHeight] = useState(200);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -131,6 +133,14 @@ const OrderScreen = ({ route }) => {
     setDeliveryTime('afternoon');
     refreshCart();
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      const code = await getReferralCode();
+      setReferralCode(code);
+    })();
+  }, []);
+
 
   const total = cartTotal;
   const deliveryDays = [
@@ -173,6 +183,7 @@ const OrderScreen = ({ route }) => {
     product: item.product?._id || item.productId || item.id,
   }));
 
+  
   const prepareOrderData = (paymentReference, paymentStatus) => ({
     orderItems: prepareOrderItems(),
     shippingAddress: { address: selectedAddress.address, city: selectedAddress.city, region: selectedAddress.region || '', nearestLandmark: selectedAddress.nearestLandmark || '', phone: selectedAddress.phone || user?.phone },
@@ -180,7 +191,7 @@ const OrderScreen = ({ route }) => {
     paymentMethod: 'paystack',
     paymentReference,
     paymentStatus,
-    ...(packageInfo && { package: { id: packageInfo.id || packageInfo._id, name: packageInfo.name, basePrice: packageInfo.price, valuePrice: packageInfo.originalPrice || null } }),
+    ...(referralCode && { referralCode }),
   });
 
   const isFormValid = () => {
@@ -205,6 +216,9 @@ const OrderScreen = ({ route }) => {
         { text: 'View Order', onPress: () => navigation.navigate('OrderDetail', { orderId: res.data.data?._id || res.data.data?.id }) },
         { text: 'Continue Shopping', onPress: () => navigation.navigate('MainTabs', { screen: 'Home' }) },
       ]);
+      if (referralCode) {
+     await clearReferralCode();
+     }
     } else {
       Alert.alert('Order Failed', res.data?.message || 'Your payment was processed but we couldn\'t create your order. Please contact support.', [{ text: 'Contact Support', onPress: () => navigation.navigate('Support') }]);
     }
@@ -559,7 +573,7 @@ const styles = StyleSheet.create({
   payBtn: { backgroundColor: C.brand, paddingVertical: 16, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, shadowColor: C.brand, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 6, bottom: 12 },
   payBtnLoading: { backgroundColor: C.brandBorder, shadowOpacity: 0 },
   payBtnIncomplete: { backgroundColor: C.brandBorder, shadowOpacity: 0.1 },
-  payBtnText: { color: '#080707', fontSize: 16, fontWeight: '800', flex: 1, textAlign: 'center' },
+  payBtnText: { color: '#fff', fontSize: 16, fontWeight: '800', flex: 1, textAlign: 'center' },
   termsText: { fontSize: 11, color: C.t3, textAlign: 'center', marginTop: 6, lineHeight: 16 },
 });
 

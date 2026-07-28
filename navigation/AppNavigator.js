@@ -43,6 +43,7 @@ import TagProductsScreen from '../screens/TagProductsScreen'
 import ChatScreen from '../screens/ChatScreen'
 import InboxScreen from '../screens/InboxScreen'
 import AIShoppingScreen from '../screens/AIShoppingScreen'
+import EarningsScreen from '../screens/EarningsScreen'
 
 // ── Vendor screens ──
 import VendorSignUpScreen from '../vendorscreens/VendorSignUp'
@@ -56,6 +57,7 @@ import VendorOrdersScreen from '../vendorscreens/VendorOrders'
 import VendorOrderDetailScreen from '../vendorscreens/OrderDetail'
 import UpdateProductScreen from '../vendorscreens/EditProduct'
 import VendorSupportScreen from '../vendorscreens/VendorSupport'
+import VendorReferralStatsScreen from '../vendorscreens/Vendorreferralstatsscreen'
 
 import * as Linking from 'expo-linking';
 import { DEEP_LINK_PREFIXES, DEEP_LINK_CONFIG } from '../config/deepLinks';
@@ -231,6 +233,7 @@ function MainStackNavigator() {
               <Stack.Screen name="Notification" component={NotificationScreen} options={{ headerShown: false }} />
               <Stack.Screen name="VendorSupport" component={VendorSupportScreen} options={{ headerShown: false }} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="ReferralStats" component={VendorReferralStatsScreen} options={{ headerShown: false }} />
             </>
           ) : (
             <>
@@ -252,6 +255,7 @@ function MainStackNavigator() {
               <Stack.Screen name="MarketDetail" component={MarketDetailScreen} options={{ headerShown: false }} />
               <Stack.Screen name="VendorDetail" component={VendorDetailScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Inbox" component={InboxScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="Earnings" component={EarningsScreen} options={{ headerShown: false }} />
             </>
           )}
           <Stack.Screen name="ChatScreen" component={ChatScreen} />

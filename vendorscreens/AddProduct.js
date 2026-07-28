@@ -27,6 +27,9 @@ import Toast from 'react-native-toast-message';
 import {CONDITION_OPTIONS,SUBCATEGORIES_MAP,VALID_CATEGORIES,CAMPUS_OPTIONS,AVAILABLE_TAGS } from '../data/General'
 import AIProductGeneratorFAB from '../components/AIProductGeneratorFAB';
 const { width, height } = Dimensions.get('window');
+import ReferralProgramNotice from '../components/Referralprogramnotice'
+import { useVendor } from '../context/VendorContext';
+
 
 // ─── Teal + Coral Palette (matches UpdateProductScreen) ────────────────────
 const C = {
@@ -342,6 +345,11 @@ const AddProductScreen = ({ navigation }) => {
   const [discountStartDate,setDiscountStartDate] = useState('');
   const [discountEndDate,  setDiscountEndDate]  = useState('');
 
+
+  const {
+      profile,
+    } = useVendor();
+
   // Specifications fields
   const [specifications, setSpecifications] = useState([{ key: '', value: '' }]);
   // Specs are tucked behind a toggle inside the "Description & Tags" section so it
@@ -654,7 +662,10 @@ const AddProductScreen = ({ navigation }) => {
               {completionPct}%
             </Text>
           </View>
+
         </View>
+
+        <ReferralProgramNotice vendorId={profile._id}/>
 
         <ScrollView
           ref={scrollRef}
@@ -937,6 +948,8 @@ const AddProductScreen = ({ navigation }) => {
           </View>
           <View style={{ height: 40 }} />
         </ScrollView>
+
+        
 
         {/* ── AI autofill FAB ── */}
         <AIProductGeneratorFAB

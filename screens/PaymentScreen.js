@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   Modal,
+  BackHandler,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +31,7 @@ export default function PaymentScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [successOverlay, setSuccessOverlay] = useState(false); // shown the instant success is detected
 
   // ── DEBUG LOGGING ──
   useEffect(() => {
@@ -39,14 +41,38 @@ export default function PaymentScreen({ route, navigation }) {
     console.log('[PAYSTACK DEBUG] Auth URL:', authorization_url);
   }, []);
 
+  // ── Block the Android hardware back button ──────────────────────────────
+  // Without this, physical back skips the cancel-confirmation modal entirely.
+  // Once payment has succeeded (or is in the process of succeeding), block
+  // back completely — a redirect is already coming.
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (successOverlay || hasResolvedRef.current) {
+        return true; // swallow — do nothing, redirect is imminent
+      }
+      setShowCancelModal(true);
+      return true; // swallow default back — route through the confirm modal instead
+    });
+    return () => backHandler.remove();
+  }, [successOverlay]);
+
   const handleSuccess = async () => {
     console.log('[PAYSTACK EVENT] handleSuccess triggered');
     if (hasResolvedRef.current) return;
     hasResolvedRef.current = true;
 
+    // Cover the screen immediately so nobody sees a stale Paystack success
+    // page (or a dead screen) and is tempted to back out while we finish up.
+    setSuccessOverlay(true);
+
     const { onSuccess } = getPaymentCallbacks(callbackId);
     onSuccess?.({ reference });
-    navigation.goBack();
+
+    // Give the "please wait" message a moment to actually register before
+    // popping the screen — an instant redirect would just skip past it.
+    setTimeout(() => {
+      navigation.goBack();
+    }, 900);
   };
 
   const handleCancel = () => {
@@ -165,22 +191,30 @@ export default function PaymentScreen({ route, navigation }) {
     <View style={styles.screen}>
       <SafeAreaView edges={['top']} style={styles.navSafe}>
         <View style={styles.navRow}>
-          <TouchableOpacity style={styles.navBtn} onPress={() => setShowCancelModal(true)}>
-            <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
+          <TouchableOpacity
+            style={[styles.navBtn, successOverlay && styles.navBtnDisabled]}
+            onPress={() => !successOverlay && setShowCancelModal(true)}
+            disabled={successOverlay}
+          >
+            <Ionicons name="chevron-back" size={22} color={successOverlay ? '#C4C4C4' : '#1A1A1A'} />
           </TouchableOpacity>
           <View style={styles.navCenter}>
-            <Ionicons name="shield-checkmark" size={14} color="#2E7D32" />
+            <Ionicons name="shield-checkmark" size={14} color="#0D9488" />
             <Text style={styles.navTitle}>Secure Payment</Text>
           </View>
-          <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCancelModal(true)}>
-            <Text style={styles.cancelBtnText}>Cancel</Text>
+          <TouchableOpacity
+            style={[styles.cancelBtn, successOverlay && styles.cancelBtnDisabled]}
+            onPress={() => !successOverlay && setShowCancelModal(true)}
+            disabled={successOverlay}
+          >
+            <Text style={[styles.cancelBtnText, successOverlay && styles.cancelBtnTextDisabled]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
 
-      {loading && (
+      {loading && !successOverlay && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color="#0D9488" />
           <Text style={styles.loadingText}>Processing…</Text>
         </View>
       )}
@@ -219,6 +253,23 @@ export default function PaymentScreen({ route, navigation }) {
         }}
       />
 
+      {/* ── Success / "please wait" overlay ──────────────────────────────── */}
+      {/* Covers the WebView the instant success is detected, so nobody sees
+          Paystack's own success screen sitting idle, and there's nothing
+          tappable underneath that could cancel the order. */}
+      {successOverlay && (
+        <View style={styles.successOverlay}>
+          <View style={styles.successIconRing}>
+            <Ionicons name="checkmark-circle" size={64} color="#0D9488" />
+          </View>
+          <Text style={styles.successTitle}>Payment Successful!</Text>
+          <Text style={styles.successSub}>
+            Please wait, you'll be redirected shortly…
+          </Text>
+          <ActivityIndicator size="small" color="#0D9488" style={{ marginTop: 18 }} />
+        </View>
+      )}
+
       {/* Cancel confirmation modal */}
       <Modal visible={showCancelModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -253,13 +304,27 @@ const styles = StyleSheet.create({
   navSafe: {  borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EBEBEB' },
   navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 10 },
   navBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
+  navBtnDisabled: { opacity: 0.5 },
   navCenter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   navTitle: { fontSize: 15, fontWeight: '700', color: '#1A1A1A' },
   cancelBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FFEBEE' },
+  cancelBtnDisabled: { backgroundColor: '#F5F5F5' },
   cancelBtnText: { fontSize: 13, color: '#E53935', fontWeight: '700' },
+  cancelBtnTextDisabled: { color: '#C4C4C4' },
   webView: { flex: 1,opacity: 0.99 },
   loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', zIndex: 10, gap: 14 },
   loadingText: { fontSize: 14, color: '#9E9E9E', fontWeight: '500' },
+  successOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+    zIndex: 20, paddingHorizontal: 40,
+  },
+  successIconRing: {
+    width: 96, height: 96, borderRadius: 48, backgroundColor: '#F0FDFA',
+    justifyContent: 'center', alignItems: 'center', marginBottom: 20,
+  },
+  successTitle: { fontSize: 20, fontWeight: '800', color: '#1A1A1A', marginBottom: 8, textAlign: 'center' },
+  successSub: { fontSize: 14, color: '#9E9E9E', textAlign: 'center', lineHeight: 20 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 30 },
   modalCard: { backgroundColor: '#fff', borderRadius: 20, padding: 28, alignItems: 'center', width: '100%', maxWidth: 320 },
   modalIconBg: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#FFEBEE', justifyContent: 'center', alignItems: 'center', marginBottom: 14 },

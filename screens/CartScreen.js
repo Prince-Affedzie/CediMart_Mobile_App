@@ -251,10 +251,7 @@ const CartScreen = () => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.brand]} tintColor={C.brand} />}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={[styles.pageHeader, { opacity: fadeAnim }]}>
-          <Text style={styles.pageTitle}>Cart</Text>
-          <Text style={styles.pageSubtitle}>{cartCount} item{cartCount !== 1 ? 's' : ''} ready to order</Text>
-        </Animated.View>
+        
         <View style={styles.itemsBlock}>{cartItems.map((item, index) => renderCartItem(item, index))}</View>
 
         <Animated.View style={[styles.deliveryCard, { opacity: fadeAnim }]}>

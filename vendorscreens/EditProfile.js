@@ -501,7 +501,19 @@ const VendorAccountScreen = () => {
                 </View>
               </Section>
 
-              <Section label="Support">
+              
+              <Section label="Referrals">
+                <SettingsRow 
+                  iconName="people-outline" 
+                  iconBg="#F0FDF4" 
+                  iconColor="#16A34A" 
+                  label="Referral Stats" 
+                  value="Track your referrals & earnings" 
+                  onPress={() => navigation.navigate('ReferralStats')} 
+                />
+              </Section>
+
+                            <Section label="Support">
                 <SettingsRow iconName="help-circle-outline" iconBg="#FFF3E0" iconColor="#E65100" label="Help & FAQ" value="Common questions answered" onPress={() => navigation.navigate('VendorSupport')} />
                 <SettingsRow iconName="chatbubble-ellipses-outline" iconBg="#E8F5E9" iconColor="#2E7D32" label="Contact support" value="Chat with our team" onPress={() => navigation.navigate('VendorSupport')} />
                 <SettingsRow iconName="document-text-outline" iconBg="#F5F5F5" iconColor="#616161" label="Privacy policy" value="Terms & conditions" onPress={() => navigation.navigate('PrivacyPolicy')} />

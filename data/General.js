@@ -312,7 +312,7 @@ export const HERO_SLIDES = [
 
 
 export const CATEGORIES = [
-  { id: 'all',                     label: 'All',                   icon: 'apps',                   emoji: '🛍️',  color: '#E8F5E9', accent: '#2E7D32' },
+  { id: 'all',                     label: 'All',                   icon: 'apps',                   emoji: '🛍️',  color: '#E8F5E9', accent: '#0D9488' },
   { id: 'electronics',            label: 'Electronics',           icon: 'hardware-chip-outline',  emoji: '🔌',  color: '#E3F2FD', accent: '#1565C0' },
   { id: 'phones and tablets',     label: 'Phones & Tablets',      icon: 'phone-portrait-outline', emoji: '📱',  color: '#F3E5F5', accent: '#6A1B9A' },
   { id: 'computers and laptops',  label: 'Computers & Laptops',   icon: 'laptop-outline',         emoji: '💻',  color: '#E8EAF6', accent: '#283593' },

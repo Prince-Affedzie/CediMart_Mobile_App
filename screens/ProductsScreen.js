@@ -754,7 +754,7 @@ const ProductsScreen = ({ navigation, route }) => {
                   <Ionicons name={opt.icon} size={16} color={isActive ? '#fff' : '#757575'} />
                 </View>
                 <Text style={[styles.sheetRowText, isActive && styles.sheetRowTextActive]}>{opt.label}</Text>
-                {isActive && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
+                {isActive && <Ionicons name="checkmark-circle" size={20} color="#0D9488" />}
               </TouchableOpacity>
             );
           })}
@@ -776,7 +776,7 @@ const ProductsScreen = ({ navigation, route }) => {
                   <Ionicons name="school-outline" size={16} color={isActive ? '#fff' : '#757575'} />
                 </View>
                 <Text style={[styles.sheetRowText, isActive && styles.sheetRowTextActive]}>{opt.label}</Text>
-                {isActive && <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />}
+                {isActive && <Ionicons name="checkmark-circle" size={20} color="#0D9488" />}
               </TouchableOpacity>
             );
           })}
@@ -875,7 +875,7 @@ const ProductsScreen = ({ navigation, route }) => {
       {/* ── MAIN SCROLL ─────────────────────────────────────────────────────── */}
       <ScrollView
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4CAF50" colors={['#4CAF50']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" colors={['#0D9488']} />
         }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -926,7 +926,7 @@ const ProductsScreen = ({ navigation, route }) => {
           <View style={styles.heroSearchWrap}>
             {showSearch ? (
               <View style={styles.heroSearchActive}>
-                <Ionicons name="search-outline" size={17} color="#4CAF50" style={{ marginLeft: 13 }} />
+                <Ionicons name="search-outline" size={17} color="#0D9488" style={{ marginLeft: 13 }} />
                 <TextInput
                   ref={searchInputRef}
                   style={styles.heroSearchInput}
@@ -957,7 +957,7 @@ const ProductsScreen = ({ navigation, route }) => {
                   </TouchableOpacity>
                 ) : (
                   <View style={styles.heroSearchMic}>
-                    <Ionicons name="mic-outline" size={15} color="#4CAF50" />
+                    <Ionicons name="mic-outline" size={15} color="#0D9488" />
                   </View>
                 )}
               </TouchableOpacity>
@@ -968,7 +968,7 @@ const ProductsScreen = ({ navigation, route }) => {
               <View style={styles.liveDropdown}>
                 {liveSearching ? (
                   <View style={{ padding: 16, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color="#4CAF50" />
+                    <ActivityIndicator size="small" color="#0D9488" />
                   </View>
                 ) : liveSearchResults.length > 0 ? (
                   <>
@@ -1082,7 +1082,7 @@ const ProductsScreen = ({ navigation, route }) => {
           {/* Left: count + active search tag */}
           <View style={styles.toolbarLeft}>
             {loading ? (
-              <ActivityIndicator size="small" color="#4CAF50" />
+              <ActivityIndicator size="small" color="#0D94880" />
             ) : (
               <Text style={styles.toolbarCount}>
                 <Text style={styles.toolbarCountBold}>{totalProducts}</Text> listings
@@ -1105,20 +1105,20 @@ const ProductsScreen = ({ navigation, route }) => {
               style={[styles.toolbarChip, selectedCampus && styles.toolbarChipActive]}
               onPress={() => setCampusSheetVisible(true)}
             >
-              <Ionicons name="school-outline" size={13} color={selectedCampus ? '#fff' : '#2E7D32'} />
+              <Ionicons name="school-outline" size={13} color={selectedCampus ? '#fff' : '#0D9488'} />
               <Text style={[styles.toolbarChipText, selectedCampus && styles.toolbarChipTextActive]} numberOfLines={1}>
                 {selectedCampus || 'Campus'}
               </Text>
-              <Ionicons name="chevron-down" size={11} color={selectedCampus ? '#fff' : '#2E7D32'} />
+              <Ionicons name="chevron-down" size={11} color={selectedCampus ? '#fff' : '#0D9488'} />
             </TouchableOpacity>
 
             {/* Sort */}
             <TouchableOpacity style={styles.toolbarChip} onPress={() => setSortSheetVisible(true)}>
-              <Ionicons name="swap-vertical-outline" size={13} color="#2E7D32" />
+              <Ionicons name="swap-vertical-outline" size={13} color="#0D9488" />
               <Text style={styles.toolbarChipText} numberOfLines={1}>
                 {activeSortLabel.split(':')[0].split('→')[0].trim()}
               </Text>
-              <Ionicons name="chevron-down" size={11} color="#2E7D32" />
+              <Ionicons name="chevron-down" size={11} color="#0D9488" />
             </TouchableOpacity>
 
             {/* Advanced filter */}
@@ -1126,7 +1126,7 @@ const ProductsScreen = ({ navigation, route }) => {
               style={[styles.toolbarIconBtn, activeFilterCount > 0 && styles.toolbarIconBtnActive]}
               onPress={() => setFilterSheetVisible(true)}
             >
-              <Ionicons name="options-outline" size={16} color={activeFilterCount > 0 ? '#fff' : '#2E7D32'} />
+              <Ionicons name="options-outline" size={16} color={activeFilterCount > 0 ? '#fff' : '#0D9488'} />
               {activeFilterCount > 0 && (
                 <View style={styles.filterBadge}>
                   <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
@@ -1140,13 +1140,13 @@ const ProductsScreen = ({ navigation, route }) => {
                 style={[styles.viewBtn, viewMode === 'grid' && styles.viewBtnOn]}
                 onPress={() => setViewMode('grid')}
               >
-                <Ionicons name="grid" size={15} color={viewMode === 'grid' ? '#2E7D32' : '#BDBDBD'} />
+                <Ionicons name="grid" size={15} color={viewMode === 'grid' ? '#0D9488' : '#BDBDBD'} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.viewBtn, viewMode === 'list' && styles.viewBtnOn]}
                 onPress={() => setViewMode('list')}
               >
-                <Ionicons name="list" size={15} color={viewMode === 'list' ? '#2E7D32' : '#BDBDBD'} />
+                <Ionicons name="list" size={15} color={viewMode === 'list' ? '#0D9488' : '#BDBDBD'} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1200,7 +1200,7 @@ const ProductsScreen = ({ navigation, route }) => {
 <View style={{ position: 'relative', minHeight: loading && products.length > 0 ? 200 : undefined }}>
   {loading && products.length === 0 ? (
     <View style={styles.loadingWrap}>
-      <ActivityIndicator size="large" color="#4CAF50" />
+      <ActivityIndicator size="large" color="#0D9488" />
       <Text style={styles.loadingText}>Finding listings…</Text>
     </View>
   ) : products.length === 0 ? (
@@ -1223,7 +1223,7 @@ const ProductsScreen = ({ navigation, route }) => {
   {loading && products.length > 0 && (
     <View style={styles.categorySwitchOverlay}>
       <View style={styles.categorySwitchCard}>
-        <ActivityIndicator size="small" color="#4CAF50" />
+        <ActivityIndicator size="small" color="#0D9488" />
         <Text style={styles.categorySwitchText}>Loading…</Text>
       </View>
     </View>
@@ -1232,7 +1232,7 @@ const ProductsScreen = ({ navigation, route }) => {
         {/* Load more */}
         {!loading && pagination.hasNextPage && (
           <TouchableOpacity style={styles.loadMoreBtn} onPress={handleLoadMore} activeOpacity={0.8}>
-            <Ionicons name="chevron-down-circle-outline" size={17} color="#4CAF50" />
+            <Ionicons name="chevron-down-circle-outline" size={17} color="#0D9488" />
             <Text style={styles.loadMoreText}>Load More Listings</Text>
           </TouchableOpacity>
         )}
@@ -1240,7 +1240,7 @@ const ProductsScreen = ({ navigation, route }) => {
         {/* Loading more indicator */}
         {loading && products.length > 0 && (
           <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-            <ActivityIndicator size="small" color="#4CAF50" />
+            <ActivityIndicator size="small" color="#0D9488" />
           </View>
         )}
 
