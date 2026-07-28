@@ -516,9 +516,7 @@ const GuestProductDetailScreen = () => {
             </View>
           )}
 
-          <View style={{ paddingHorizontal: 24, marginTop: 4, marginBottom: 16 }}>
-              <RecommendEarnButton product={product} />
-         </View>
+          
 
           <CollapsibleSection title="Product Details" defaultOpen>
             <View style={styles.infoRowsWrap}>{infoItems.map((item, i) => <InfoRow key={i} icon={item.icon} label={item.label} value={item.value} isLast={i === infoItems.length - 1} />)}</View>
@@ -570,6 +568,9 @@ const GuestProductDetailScreen = () => {
             <Ionicons name="bag-add-outline" size={20} color="#fff" />
             <Text style={styles.addToCartBtnText}>{isAvailable ? `Add to Cart · GH₵ ${lineTotal}` : 'Sold Out'}</Text>
           </TouchableOpacity>
+          
+              <RecommendEarnButton product={product} />
+         
           <ChatFAB product={product} isAuthenticated={false} style={{ position: 'absolute', bottom: 100, right: 20, zIndex: 20 }} onConversationOpened={(conversation) => { console.log('Conversation opened:', conversation._id); }} />
         </SafeAreaView>
       </View>

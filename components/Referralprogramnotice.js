@@ -1,4 +1,4 @@
-// src/components/ReferralProgramNotice.js
+// src/components/CommissionNotice.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,17 +9,26 @@ const C = {
   accentBg:     '#FFF7ED',
   accentBorder: '#FED7AA',
   brand:        '#0D9488',
+  brandBg:      '#F0FDFA',
   t1:           '#0F172A',
   t2:           '#475569',
   t3:           '#94A3B8',
   surface:      '#FFFFFF',
+  info:         '#0284C7',
+  infoBg:       '#F0F9FF',
 };
 
+const PLATFORM_COMMISSION_PCT = 7;
 const REFERRAL_COMMISSION_PCT = 3;
+const TOTAL_COMMISSION_PCT = PLATFORM_COMMISSION_PCT + REFERRAL_COMMISSION_PCT;
 
-const storageKey = (vendorId) => `cm_referral_notice_ack_${vendorId || 'default'}`;
+const storageKey = (vendorId) => `cm_commission_notice_ack_${vendorId || 'default'}`;
 
-export default function ReferralProgramNotice({ vendorId, commissionPct = REFERRAL_COMMISSION_PCT }) {
+export default function CommissionNotice({ 
+  vendorId, 
+  platformPct = PLATFORM_COMMISSION_PCT, 
+  referralPct = REFERRAL_COMMISSION_PCT 
+}) {
   const [checking, setChecking] = useState(true);
   const [visible, setVisible] = useState(false);
   const slideAnim = useState(new Animated.Value(100))[0];
@@ -88,7 +97,7 @@ export default function ReferralProgramNotice({ vendorId, commissionPct = REFERR
       try {
         await AsyncStorage.setItem(storageKey(vendorId), 'true');
       } catch (err) {
-        console.warn('[ReferralProgramNotice] Failed to save acknowledgment:', err);
+        console.warn('[CommissionNotice] Failed to save acknowledgment:', err);
       }
     });
   };
@@ -108,17 +117,38 @@ export default function ReferralProgramNotice({ vendorId, commissionPct = REFERR
     >
       <View style={styles.card}>
         <View style={styles.iconWrap}>
-          <Ionicons name="megaphone-outline" size={18} color={C.accent} />
+          <Ionicons name="information-circle-outline" size={18} color={C.info} />
         </View>
 
         <View style={styles.body}>
-          <Text style={styles.title}>Referral Program Policy</Text>
+          <Text style={styles.title}>How Commissions Work</Text>
+          
           <Text style={styles.text}>
-            Others can recommend your products and earn rewards for referred sales.
-            When an order comes through a shared link, a{' '}
-            <Text style={styles.textBold}>{commissionPct}% commission</Text> is
-            deducted from your listed price to pay the referrer — your other
-            orders are unaffected.
+            When you receive an order through CediMart, a total of{' '}
+            <Text style={styles.textBold}>{TOTAL_COMMISSION_PCT}%</Text> is deducted 
+            from your listed price:
+          </Text>
+
+          {/* Commission breakdown */}
+          <View style={styles.breakdownBox}>
+            <View style={styles.breakdownRow}>
+              <View style={[styles.breakdownDot, { backgroundColor: C.info }]} />
+              <Text style={styles.breakdownText}>
+                <Text style={styles.breakdownBold}>{platformPct}%</Text> platform fee
+              </Text>
+            </View>
+            <View style={styles.breakdownRow}>
+              <View style={[styles.breakdownDot, { backgroundColor: C.accent }]} />
+              <Text style={styles.breakdownText}>
+                <Text style={styles.breakdownBold}>{referralPct}%</Text> referrer reward 
+                (only on orders from shared links)
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.note}>
+            Orders placed directly (not through a referral link) are only charged 
+            the {platformPct}% platform fee.
           </Text>
 
           <TouchableOpacity style={styles.ackBtn} onPress={handleAcknowledge} activeOpacity={0.8}>
@@ -151,9 +181,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: C.accentBg,
+    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: C.accentBorder,
+    borderColor: '#E2E8F0',
     borderRadius: 16,
     padding: 14,
     shadowColor: '#000',
@@ -166,23 +196,59 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: C.surface,
+    backgroundColor: C.infoBg,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
     marginTop: 1,
   },
   body: { flex: 1 },
-  title: { fontSize: 13.5, fontWeight: '800', color: C.t1, marginBottom: 4 },
-  text: { fontSize: 12.5, color: C.t2, lineHeight: 18 },
+  title: { fontSize: 14, fontWeight: '800', color: C.t1, marginBottom: 6 },
+  text: { fontSize: 12.5, color: C.t2, lineHeight: 18, marginBottom: 10 },
   textBold: { fontWeight: '800', color: C.t1 },
+  breakdownBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 12,
+    gap: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  breakdownDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  breakdownText: {
+    fontSize: 12.5,
+    color: C.t2,
+    lineHeight: 18,
+    flex: 1,
+  },
+  breakdownBold: {
+    fontWeight: '800',
+    color: C.t1,
+  },
+  note: {
+    fontSize: 11.5,
+    color: C.t3,
+    lineHeight: 16,
+    marginBottom: 10,
+    fontStyle: 'italic',
+  },
   ackBtn: {
     alignSelf: 'flex-start',
     backgroundColor: C.brand,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 10,
-    marginTop: 10,
   },
   ackBtnText: { color: '#fff', fontWeight: '700', fontSize: 12.5 },
   closeBtn: {

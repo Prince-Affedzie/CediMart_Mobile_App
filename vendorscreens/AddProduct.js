@@ -27,7 +27,7 @@ import Toast from 'react-native-toast-message';
 import {CONDITION_OPTIONS,SUBCATEGORIES_MAP,VALID_CATEGORIES,CAMPUS_OPTIONS,AVAILABLE_TAGS } from '../data/General'
 import AIProductGeneratorFAB from '../components/AIProductGeneratorFAB';
 const { width, height } = Dimensions.get('window');
-import ReferralProgramNotice from '../components/Referralprogramnotice'
+import CommissionNotice from '../components/Referralprogramnotice'
 import { useVendor } from '../context/VendorContext';
 
 
@@ -352,17 +352,12 @@ const AddProductScreen = ({ navigation }) => {
 
   // Specifications fields
   const [specifications, setSpecifications] = useState([{ key: '', value: '' }]);
-  // Specs are tucked behind a toggle inside the "Description & Tags" section so it
-  // doesn't look like a form full of empty boxes by default.
   const [showSpecs, setShowSpecs] = useState(false);
 
   // Field-level errors — populated after a submit attempt
   const [errors, setErrors] = useState({});
 
-  // AI-assisted listing draft — generated from the cover photo. Fields stay
-  // fully editable; `aiDraftFields` just tracks which ones are still an
-  // unreviewed suggestion so we can show a small badge next to them, and we
-  // clear that flag the moment the vendor edits the field themselves.
+  // AI-assisted listing draft
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDraftFields, setAiDraftFields] = useState({});
   const [aiUsedOnce, setAiUsedOnce] = useState(false);
@@ -432,10 +427,7 @@ const AddProductScreen = ({ navigation }) => {
     ));
   };
 
-  // ── AI autofill: analyzes the cover photo and drafts name/description/
-  // category/subcategory. Never overwrites silently without the vendor
-  // seeing an "AI draft" badge, and never sets a category/subcategory that
-  // doesn't confidently match our own schema options.
+  // ── AI autofill ──
   const handleAiAutofill = async () => {
     if (images.length === 0 || aiLoading) return;
     setAiLoading(true);
@@ -488,33 +480,22 @@ const AddProductScreen = ({ navigation }) => {
       setAiDraftFields(nextDraftFlags);
       setAiUsedOnce(true);
 
-      Alert.alert(
-         'Success',
-         'CediAi have Drafted an auto fill for your Listing'  
-      );
+      Alert.alert('Success', 'CediAi have Drafted an auto fill for your Listing');
 
       if (categoryWasUnmatched) {
-        Alert.alert(
-           "Couldn't pick a category for you",
-           'Please pick a category yourself'
-          
-        );
+        Alert.alert("Couldn't pick a category for you", 'Please pick a category yourself');
       }
     } catch (error) {
-      Alert.alert(
-        'error',
-         "CediAi couldn't analyze that photo"
-      
-      );
+      Alert.alert('error', "CediAi couldn't analyze that photo");
     } finally {
       setAiLoading(false);
     }
   };
 
-  // ── Section validators — combined at submit time ───────────────────────────
+  // ── Section validators ───────────────────────────────────────────
   const validatePhotos = () => {
     const next = {};
-    if (images.length === 0) next.images = 'Add at least one photo so buyers can see what they’re getting.';
+    if (images.length === 0) next.images = "Add at least one photo so buyers can see what they're getting.";
     return next;
   };
 
@@ -543,14 +524,10 @@ const AddProductScreen = ({ navigation }) => {
 
   const validateLocation = () => {
     const next = {};
-    // Only the campus itself is required — campus area is a nice-to-have
-    // that buyers can also just ask about in chat.
-    if (!campus) next.campus = 'Select the campus where you’ll meet buyers.';
+    if (!campus) next.campus = "Select the campus where you'll meet buyers.";
     return next;
   };
 
-  // Runs the validation for every section — used right before submit, so
-  // nothing can slip through.
   const validateAll = () => ({
     ...validatePhotos(),
     ...validateDetails(),
@@ -560,11 +537,11 @@ const AddProductScreen = ({ navigation }) => {
 
   const scrollToTop = () => scrollRef.current?.scrollTo({ y: 0, animated: true });
 
-  // ── Per-section completion (drives the header completion badge) ────────────
+  // ── Per-section completion ────────────────────────────────────────────
   const photosComplete   = images.length > 0;
   const detailsComplete  = !!name.trim() && !!category && !!condition;
   const pricingComplete  = !!price && !isNaN(parseFloat(price)) && parseFloat(price) >= 0;
-  const locationComplete = !!campus; // campus area is optional, so it's not part of "required"
+  const locationComplete = !!campus;
 
   const completedCount = [photosComplete, detailsComplete, pricingComplete, locationComplete].filter(Boolean).length;
   const completionPct = Math.round((completedCount / 4) * 100);
@@ -601,7 +578,6 @@ const AddProductScreen = ({ navigation }) => {
       formData.append('countInStock', parseInt(countInStock) || 1);
       selectedTags.forEach(tag => formData.append('tags[]', tag));
 
-      // Append specifications as JSON
       const filledSpecs = specifications.filter(s => s.key.trim() && s.value.trim());
       if (filledSpecs.length > 0) {
         const specsObj = {};
@@ -609,7 +585,6 @@ const AddProductScreen = ({ navigation }) => {
         formData.append('specifications', JSON.stringify(specsObj));
       }
 
-      // Append discount fields
       if (hasDiscount) {
         if (originalPrice) formData.append('originalPrice', parseFloat(originalPrice));
         if (discountPercent) formData.append('discountPercentage', parseFloat(discountPercent));
@@ -629,10 +604,8 @@ const AddProductScreen = ({ navigation }) => {
       const response = await createProduct(formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
       if (response?.data?.success || response?.status === 201) {
-        Alert.alert( 'success',  `"${name.trim()}" is now live on CediMart.` );
-        
-         navigation.navigate('VendorMainTabs', { screen: 'MyProducts' });
-         
+        Alert.alert('success', `"${name.trim()}" is now live on CediMart.`);
+        navigation.navigate('VendorMainTabs', { screen: 'MyProducts' });
       } else {
         throw new Error('Failed to create product');
       }
@@ -646,8 +619,7 @@ const AddProductScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-
+      
         {/* ── Header ── */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -662,10 +634,9 @@ const AddProductScreen = ({ navigation }) => {
               {completionPct}%
             </Text>
           </View>
-
         </View>
 
-        <ReferralProgramNotice vendorId={profile._id}/>
+        <CommissionNotice vendorId={profile._id}/>
 
         <ScrollView
           ref={scrollRef}
@@ -858,56 +829,6 @@ const AddProductScreen = ({ navigation }) => {
               badge={aiDraftFields.description && <AiDraftBadge />}
             />
 
-            {/* Specifications are tucked behind a toggle so this section doesn't
-                open with a wall of empty inputs.
-            <TouchableOpacity
-              style={[styles.discountToggle, showSpecs && styles.discountToggleActive, { marginTop: 18 }]}
-              onPress={() => setShowSpecs(!showSpecs)}
-            >
-              <Ionicons name="list-outline" size={18} color={showSpecs ? '#fff' : C.brand} />
-              <Text style={[styles.discountToggleText, showSpecs && styles.discountToggleTextActive]}>
-                {showSpecs ? 'Specifications added' : 'Add specifications (optional)'}
-              </Text>
-              <Ionicons name={showSpecs ? 'checkmark-circle' : 'add-circle-outline'} size={20} color={showSpecs ? '#fff' : C.brand} />
-            </TouchableOpacity>
-
-            {showSpecs && (
-              <View style={styles.discountFields}>
-                {specifications.map((spec, index) => (
-                  <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <View style={{ flex: 1 }}>
-                      <TextInput
-                        style={styles.specInput}
-                        placeholder="Spec name (e.g. Color)"
-                        placeholderTextColor="#C5C5C5"
-                        value={spec.key}
-                        onChangeText={(v) => updateSpecField(index, 'key', v)}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <TextInput
-                        style={styles.specInput}
-                        placeholder="Value (e.g. Red)"
-                        placeholderTextColor="#C5C5C5"
-                        value={spec.value}
-                        onChangeText={(v) => updateSpecField(index, 'value', v)}
-                      />
-                    </View>
-                    <TouchableOpacity onPress={() => removeSpecField(index)} style={{ padding: 6 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Ionicons name="close-circle" size={22} color={C.danger} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                <TouchableOpacity style={styles.addSpecBtn} onPress={addSpecField} activeOpacity={0.8}>
-                  <Ionicons name="add-circle-outline" size={20} color={C.brand} />
-                  <Text style={styles.addSpecBtnText}>Add Specification</Text>
-                </TouchableOpacity>
-                <HelperText>
-                  Specs help buyers compare items quickly — e.g. "Storage: 256GB" or "Material: Leather".
-                </HelperText>
-              </View>
-            )} */}
-
             <Text style={[styles.quickLabel, { marginTop: 4 }]}>Tags <Text style={styles.optional}>(optional)</Text></Text>
             <View style={styles.tagsGrid}>
               {AVAILABLE_TAGS.map(({ key, icon }) => {
@@ -930,26 +851,28 @@ const AddProductScreen = ({ navigation }) => {
             )}
           </SectionCard>
 
-          {/* ── Submit ── */}
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={[styles.publishBtn, loading && styles.publishBtnDisabled]}
-              onPress={handleSubmit}
-              disabled={loading}
-              activeOpacity={0.88}
-            >
-              {loading ? <ActivityIndicator size="small" color="#fff" /> : (
-                <>
-                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-                  <Text style={styles.publishBtnText}>List Product</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-          <View style={{ height: 40 }} />
+          {/* Bottom spacing for fixed button */}
+          <View style={{ height: 100 }} />
         </ScrollView>
 
-        
+        {/* ── Fixed Bottom Button ── */}
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            style={[styles.publishBtn, loading && styles.publishBtnDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+            activeOpacity={0.88}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                <Text style={styles.publishBtnText}>List Product</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* ── AI autofill FAB ── */}
         <AIProductGeneratorFAB
@@ -960,10 +883,10 @@ const AddProductScreen = ({ navigation }) => {
           style={{
             position: 'absolute',
             right: 16,
-            bottom: 124,
+            bottom: 150,
           }}
         />
-      </KeyboardAvoidingView>
+      
     </SafeAreaView>
   );
 };
@@ -1055,34 +978,7 @@ const styles = StyleSheet.create({
   negotiableText: { fontSize: 13, fontWeight: '600', color: '#666' },
   negotiableTextActive: { color: '#fff' },
   simpleInput: { backgroundColor: '#FAFAFA', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, color: C.t1, fontWeight: '600' },
-  specInput: {
-    backgroundColor: '#FAFAFA',
-    borderWidth: 1.5,
-    borderColor: '#E8E8E8',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: C.t1,
-  },
-  addSpecBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: C.brandBorder,
-    borderStyle: 'dashed',
-    backgroundColor: C.brandBg,
-    marginTop: 4,
-  },
-  addSpecBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: C.brand,
-  },
+
   discountToggle: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12,
@@ -1104,12 +1000,34 @@ const styles = StyleSheet.create({
   tagCountText: { fontSize: 12, color: C.brand, fontWeight: '600', flex: 1 },
   tagClearText: { fontSize: 12, color: C.danger, fontWeight: '600' },
 
-  // ── Submit action ─────────────────────────────────────────────────────────
-  actionRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  // ── Fixed Bottom Bar ─────────────────────────────────────────────────────
+  bottomBar: {
+    backgroundColor: C.white,
+    bottom:32,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    shadowColor: C.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 10,
+  },
   publishBtn: {
-    flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10,
-    backgroundColor: C.brandD, paddingVertical: 18, borderRadius: 18,
-    shadowColor: C.brandD, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 14, elevation: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: C.brandD,
+    paddingVertical: 18,
+    borderRadius: 18,
+    shadowColor: C.brandD,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 8,
   },
   publishBtnDisabled: { backgroundColor: C.brandBorder, shadowOpacity: 0 },
   publishBtnText: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },

@@ -49,7 +49,7 @@ const VendorSupportScreen = ({ navigation }) => {
     { id: 1, question: 'How do I list a product for sale?', answer: 'Tap the "Add Product" button on your dashboard, upload photos, fill in the product details (name, category, condition, price), select your campus, and publish. Your listing will be visible to students on your campus immediately.', category: 'selling' },
     { id: 2, question: 'How does the escrow payment system work?', answer: 'When a customer places an order, the payment is held securely by Cedimart in escrow. The funds are only released to you after the order has been confirmed as delivered — either by our delivery team or directly from you to the customer. This protects both you and the buyer.', category: 'payments' },
     { id: 3, question: 'When do I receive my money after a sale?', answer: 'Your earnings are released to your registered mobile money account or bank account within 24-48 hours after the order is confirmed as delivered. You\'ll receive a notification when the funds have been transferred.', category: 'payments' },
-    { id: 4, question: 'Are there any fees or commissions?', answer: 'Yes, Cedimart charges a small commission on each successful sale to cover platform operations, payment processing, and delivery logistics. The exact commission rate is shown before you publish each listing and is deducted from the sale amount before your payout.', category: 'payments' },
+    { id: 4, question: 'Are there any fees or commissions?', answer: 'Yes, Cedimart charges a 7% platform fee on each successful sale to cover platform operations, payment processing, and delivery logistics. If the sale came through a referral link, an additional 3% is deducted as a reward for the person who shared your product — totaling 10% on referral sales. Direct sales only have the 7% platform fee.', category: 'payments' },
     { id: 5, question: 'How does delivery work?', answer: 'Cedimart handles all deliveries. Once an order is placed, our delivery team will pick up the item from you (or you can drop it off at our campus collection point) and deliver it to the customer. You\'ll be notified at each stage — pickup, in transit, and delivered.', category: 'delivery' },
     { id: 6, question: 'What if a customer wants to return an item?', answer: 'If a customer reports an issue within 24 hours of delivery, our support team will review the case. If the item is not as described or damaged, we facilitate a return and refund. We always contact you first to resolve the matter fairly.', category: 'selling' },
     { id: 7, question: 'How do I update my store profile?', answer: 'Go to your Account screen from the dashboard. You can update your store name, profile photo, store banner, campus area, phone number, and bio. Tap the edit icon to make changes, then save.', category: 'account' },
@@ -95,11 +95,7 @@ const VendorSupportScreen = ({ navigation }) => {
         <View style={styles.hero}>
           <View style={styles.heroCircle1} />
           <View style={styles.heroCircle2} />
-          <View style={styles.heroIconRing}>
-            <View style={styles.heroIconInner}>
-              <Ionicons name="storefront" size={34} color={C.brand} />
-            </View>
-          </View>
+          
           <Text style={styles.heroTitle}>Vendor Help Center</Text>
           <Text style={styles.heroSub}>Everything you need to know{'\n'}about selling on Cedimart</Text>
           <View style={styles.availPill}>
@@ -137,17 +133,74 @@ const VendorSupportScreen = ({ navigation }) => {
             <View style={styles.cardTitleIcon}><Ionicons name="calculator-outline" size={16} color={C.brand} /></View>
             <Text style={styles.cardTitle}>Commission & Fees</Text>
           </View>
+          
           <View style={styles.feeTable}>
-            <View style={styles.feeRow}><View style={styles.feeInfo}><Ionicons name="pricetag-outline" size={16} color={C.brand} /><Text style={styles.feeLabel}>Platform Commission</Text></View><Text style={styles.feeValue}>10% per sale</Text></View>
-            <View style={styles.feeRow}><View style={styles.feeInfo}><Ionicons name="card-outline" size={16} color={C.brand} /><Text style={styles.feeLabel}>Payment Processing</Text></View><Text style={styles.feeValue}>Included</Text></View>
-            <View style={styles.feeRow}><View style={styles.feeInfo}><Ionicons name="bicycle-outline" size={16} color={C.brand} /><Text style={styles.feeLabel}>Delivery Logistics</Text></View><Text style={styles.feeValue}>Included</Text></View>
+            <View style={styles.feeRow}>
+              <View style={styles.feeInfo}>
+                <Ionicons name="pricetag-outline" size={16} color={C.brand} />
+                <Text style={styles.feeLabel}>Platform Fee</Text>
+              </View>
+              <Text style={styles.feeValue}>7% per sale</Text>
+            </View>
+            <View style={styles.feeRow}>
+              <View style={styles.feeInfo}>
+                <Ionicons name="people-outline" size={16} color={C.accent} />
+                <Text style={styles.feeLabel}>Referrer Reward</Text>
+              </View>
+              <Text style={[styles.feeValue, { color: C.accent }]}>3% (referral sales only)</Text>
+            </View>
+            <View style={styles.feeRow}>
+              <View style={styles.feeInfo}>
+                <Ionicons name="card-outline" size={16} color={C.brand} />
+                <Text style={styles.feeLabel}>Payment Processing</Text>
+              </View>
+              <Text style={styles.feeValue}>Included</Text>
+            </View>
+            <View style={styles.feeRow}>
+              <View style={styles.feeInfo}>
+                <Ionicons name="bicycle-outline" size={16} color={C.brand} />
+                <Text style={styles.feeLabel}>Delivery Logistics</Text>
+              </View>
+              <Text style={styles.feeValue}>Included</Text>
+            </View>
           </View>
+
           <View style={styles.feeExample}>
-            <Text style={styles.feeExampleTitle}>Example Payout</Text>
-            <View style={styles.feeExampleRow}><Text style={styles.feeExampleLabel}>Product sold for</Text><Text style={styles.feeExampleValue}>GH₵ 100.00</Text></View>
-            <View style={styles.feeExampleRow}><Text style={styles.feeExampleLabel}>Commission (10%)</Text><Text style={[styles.feeExampleValue, { color: C.danger }]}>- GH₵ 10.00</Text></View>
+            <Text style={styles.feeExampleTitle}>Example Payout (Direct Sale)</Text>
+            <View style={styles.feeExampleRow}>
+              <Text style={styles.feeExampleLabel}>Product sold for</Text>
+              <Text style={styles.feeExampleValue}>GH₵ 100.00</Text>
+            </View>
+            <View style={styles.feeExampleRow}>
+              <Text style={styles.feeExampleLabel}>Platform fee (7%)</Text>
+              <Text style={[styles.feeExampleValue, { color: C.danger }]}>- GH₵ 7.00</Text>
+            </View>
             <View style={styles.feeExampleDivider} />
-            <View style={styles.feeExampleRow}><Text style={[styles.feeExampleLabel, { fontWeight: '800' }]}>You receive</Text><Text style={[styles.feeExampleValue, { color: C.brand, fontWeight: '800' }]}>GH₵ 90.00</Text></View>
+            <View style={styles.feeExampleRow}>
+              <Text style={[styles.feeExampleLabel, { fontWeight: '800' }]}>You receive</Text>
+              <Text style={[styles.feeExampleValue, { color: C.brand, fontWeight: '800' }]}>GH₵ 93.00</Text>
+            </View>
+          </View>
+
+          <View style={[styles.feeExample, { backgroundColor: C.accentBg, borderColor: C.accentBorder, marginTop: 10 }]}>
+            <Text style={[styles.feeExampleTitle, { color: '#92400E' }]}>Example Payout (Referral Sale)</Text>
+            <View style={styles.feeExampleRow}>
+              <Text style={styles.feeExampleLabel}>Product sold for</Text>
+              <Text style={styles.feeExampleValue}>GH₵ 100.00</Text>
+            </View>
+            <View style={styles.feeExampleRow}>
+              <Text style={styles.feeExampleLabel}>Platform fee (7%)</Text>
+              <Text style={[styles.feeExampleValue, { color: C.danger }]}>- GH₵ 7.00</Text>
+            </View>
+            <View style={styles.feeExampleRow}>
+              <Text style={styles.feeExampleLabel}>Referrer reward (3%)</Text>
+              <Text style={[styles.feeExampleValue, { color: C.danger }]}>- GH₵ 3.00</Text>
+            </View>
+            <View style={styles.feeExampleDivider} />
+            <View style={styles.feeExampleRow}>
+              <Text style={[styles.feeExampleLabel, { fontWeight: '800' }]}>You receive</Text>
+              <Text style={[styles.feeExampleValue, { color: C.brand, fontWeight: '800' }]}>GH₵ 90.00</Text>
+            </View>
           </View>
         </View>
 
@@ -268,12 +321,12 @@ const styles = StyleSheet.create({
   feeInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   feeLabel: { fontSize: 13, color: '#374151', fontWeight: '500' },
   feeValue: { fontSize: 13, fontWeight: '700', color: C.brand },
-  feeExample: { backgroundColor: C.accentBg, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: C.accentBorder },
-  feeExampleTitle: { fontSize: 12, fontWeight: '700', color: '#92400E', marginBottom: 10 },
+  feeExample: { backgroundColor: C.brandBg, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: C.brandBorder },
+  feeExampleTitle: { fontSize: 12, fontWeight: '700', color: C.brandD, marginBottom: 10 },
   feeExampleRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  feeExampleLabel: { fontSize: 12, color: '#92400E' },
-  feeExampleValue: { fontSize: 12, fontWeight: '700', color: '#92400E' },
-  feeExampleDivider: { height: 1, backgroundColor: C.accentBorder, marginVertical: 6 },
+  feeExampleLabel: { fontSize: 12, color: C.brandD },
+  feeExampleValue: { fontSize: 12, fontWeight: '700', color: C.brandD },
+  feeExampleDivider: { height: 1, backgroundColor: C.brandBorder, marginVertical: 6 },
 
   channelsCard: { backgroundColor: C.white, marginHorizontal: 16, marginTop: -26, borderRadius: 20, padding: 20, shadowColor: C.black, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 20, elevation: 8, marginBottom: 14 },
   channelsRow: { flexDirection: 'row', gap: 10 },

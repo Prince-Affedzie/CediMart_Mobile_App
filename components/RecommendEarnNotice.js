@@ -32,10 +32,10 @@ export default function RecommendEarnBanner({ commissionPct = REFERRAL_COMMISSIO
         when a friend or family makes a purchase through your recommendation.
       </Text>
       
-      {/* Gold arrow badge */}
+      {/* Gold arrow badge
       <View style={styles.arrowBadge}>
         <Ionicons name="arrow-forward" size={14} color={C.white} />
-      </View>
+      </View> */}
     </TouchableOpacity>
   );
 }

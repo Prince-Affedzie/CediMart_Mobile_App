@@ -578,9 +578,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
               <Text style={styles.qtyTotal}>GH₵ {lineTotal}</Text>
             </View>
           )}
-           <View style={{ paddingHorizontal: 24, marginTop: 4, marginBottom: 16 }}>
-             <RecommendEarnButton product={product} />
-           </View>
+           
           <CollapsibleSection title="Product Details" defaultOpen><View style={styles.infoRowsWrap}>{infoItems.map((item, i) => <InfoRow key={i} icon={item.icon} label={item.label} value={item.value} isLast={i === infoItems.length - 1} />)}</View></CollapsibleSection>
           {specifications && <CollapsibleSection title="Specifications" defaultOpen><SpecsTable specifications={specifications} /></CollapsibleSection>}
           {!!product.description && <CollapsibleSection title="Description" defaultOpen><Text style={styles.descText}>{product.description}</Text></CollapsibleSection>}
@@ -622,6 +620,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
           <TouchableOpacity style={[styles.addToCartBtn, (!isAvailable || addingToCart) && styles.btnDisabled]} onPress={handleAddToCart} disabled={!isAvailable || addingToCart} activeOpacity={0.88}>
             {addingToCart ? <ActivityIndicator size="small" color="#fff" /> : (<><Ionicons name="bag-add-outline" size={20} color="#fff" /><Text style={styles.addToCartBtnText}>{isAvailable ? `Add to Cart · GH₵ ${lineTotal}` : 'Sold Out'}</Text></>)}
           </TouchableOpacity>
+           <RecommendEarnButton product={product} />
           <ChatFAB product={product} isAuthenticated={isAuthenticated} style={{ position: 'absolute', bottom: 100, right: 20, zIndex: 20 }} onConversationOpened={(conversation) => { console.log('Conversation opened:', conversation._id); }} />
         </SafeAreaView>
       </View>
