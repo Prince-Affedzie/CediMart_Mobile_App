@@ -25,9 +25,9 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system';
 import * as tus from 'tus-js-client';
-import { createFeedPost } from '../apis/feedApi';
-import { uploadApi } from '../apis/uploadApi';
-import { useAuth } from '../context/AuthContext';
+import { createFeedPost } from '../../apis/feedApi';
+import { uploadApi } from '../../apis/uploadApi';
+import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 const PREVIEW_W = width - 32;

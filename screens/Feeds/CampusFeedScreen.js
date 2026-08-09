@@ -19,10 +19,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { getFeed, toggleLike, toggleSave, incrementView } from '../apis/feedApi';
-import {followUser} from '../apis/userApi'
-import { useAuth } from '../context/AuthContext';
-import CommentsSheet from '../components/feed/CommentsSheet';
+import { getFeed, toggleLike, toggleSave, incrementView } from '../../apis/feedApi';
+import {followUser} from '../../apis/userApi'
+import { useAuth } from '../../context/AuthContext';
+import CommentsSheet from '../../components/feed/CommentsSheet';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -339,15 +339,44 @@ const FeedPostItem = ({
           </View>
         </>
       )}*/}
+      
 
       {/* Bottom gradient (video/image only) */}
       {(isVideo || isImage) && (
         <LinearGradient colors={['transparent', C.overlayBottom]} style={styles.bottomGradient} pointerEvents="none" />
       )}
 
+      
+
       {/* Content area */}
       <View style={[styles.bottomContent, (isTextOnly || hasOnlyProduct) && styles.bottomContentTextOnly]}>
         <View style={styles.bottomLeft}>
+            {/* Linked Product */}
+          {post.linkedProduct && (
+            <TouchableOpacity
+              style={[styles.productChip, (isTextOnly || hasOnlyProduct) && styles.productChipTextOnly]}
+              onPress={onProductPress}
+              activeOpacity={0.85}
+            >
+              {post.linkedProduct.images?.[0] ? (
+                <Image source={{ uri: post.linkedProduct.images[0] }} style={styles.productChipImg} />
+              ) : (
+                <View style={[styles.productChipImg, styles.productChipImgPlaceholder]}>
+                  <Ionicons name="image-outline" size={14} color={isTextOnly || hasOnlyProduct ? 'rgba(0,0,0,0.3)' : C.dim} />
+                </View>
+              )}
+              <Text
+                style={[styles.productChipName, (isTextOnly || hasOnlyProduct) && { color: '#0F172A' }]}
+                numberOfLines={1}
+              >
+                {post.linkedProduct.name}
+              </Text>
+              <Text style={[styles.productChipPrice, (isTextOnly || hasOnlyProduct) && { color: '#0D9488' }]}>
+                GH₵ {Number(post.linkedProduct.price).toFixed(2)}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={isTextOnly || hasOnlyProduct ? '#64748B' : C.white} />
+            </TouchableOpacity>
+          )}
           {/* Type badge for text-only posts */}
           {(isTextOnly || hasOnlyProduct) && (
             <View style={[styles.typePill, styles.typePillTextOnly, { marginBottom: 10 }]}>
@@ -382,32 +411,7 @@ const FeedPostItem = ({
             </TouchableOpacity>
           )}
 
-          {/* Linked Product */}
-          {post.linkedProduct && (
-            <TouchableOpacity
-              style={[styles.productChip, (isTextOnly || hasOnlyProduct) && styles.productChipTextOnly]}
-              onPress={onProductPress}
-              activeOpacity={0.85}
-            >
-              {post.linkedProduct.images?.[0] ? (
-                <Image source={{ uri: post.linkedProduct.images[0] }} style={styles.productChipImg} />
-              ) : (
-                <View style={[styles.productChipImg, styles.productChipImgPlaceholder]}>
-                  <Ionicons name="image-outline" size={14} color={isTextOnly || hasOnlyProduct ? 'rgba(0,0,0,0.3)' : C.dim} />
-                </View>
-              )}
-              <Text
-                style={[styles.productChipName, (isTextOnly || hasOnlyProduct) && { color: '#0F172A' }]}
-                numberOfLines={1}
-              >
-                {post.linkedProduct.name}
-              </Text>
-              <Text style={[styles.productChipPrice, (isTextOnly || hasOnlyProduct) && { color: '#0D9488' }]}>
-                GH₵ {Number(post.linkedProduct.price).toFixed(2)}
-              </Text>
-              <Ionicons name="chevron-forward" size={14} color={isTextOnly || hasOnlyProduct ? '#64748B' : C.white} />
-            </TouchableOpacity>
-          )}
+          
         </View>
 
         <ActionRail
@@ -681,7 +685,7 @@ const styles = StyleSheet.create({
 
   // Content area
   bottomContent: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
+    position: 'absolute', bottom: 68, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'flex-end',
     paddingBottom: Platform.OS === 'ios' ? 34 : 22,
     paddingHorizontal: 14,

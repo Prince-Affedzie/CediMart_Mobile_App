@@ -47,9 +47,16 @@ import EarningsScreen from '../screens/EarningsScreen'
 
 
 // Feed
-import CampusFeedScreen from '../screens/CampusFeedScreen'
-import CreateFeedPostScreen from '../screens/CreateFeedPostScreen'
-import MyFeedPostsScreen from '../screens/MyFeedPostsScreen'
+import CampusFeedScreen from '../screens/Feeds/CampusFeedScreen'
+import CreateFeedPostScreen from '../screens/Feeds/CreateFeedPostScreen'
+import MyFeedPostsScreen from '../screens/Feeds/MyFeedPostsScreen'
+import FollowersScreen from '../screens/Feeds/FollowersScreen'
+import FollowingScreen from '../screens/Feeds/FollowingScreen'
+import SavedPostsScreen from '../screens/Feeds/SavedPostsScreen'
+import FeedPostDetailScreen from '../screens/Feeds/FeedPostDetailScreen'
+
+// Opportunities
+import  OpportunitiesScreen from '../screens/Opportunities/OpportunitiesScreen'
 
 // ── Vendor screens ──
 import VendorSignUpScreen from '../vendorscreens/VendorSignUp'
@@ -173,10 +180,11 @@ function MainTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color, size }) => { //Discover
           let iconName;
           switch (route.name) {
             case 'Shopping':     iconName = focused ? 'storefront' : 'storefront-outline'; break;
+            case 'Discover': iconName = focused ? 'compass' : 'compass-outline'; break;
             case 'Products': iconName = focused ? 'basket' : 'basket-outline'; break;
             case 'CampusFeed':iconName = focused ? 'newspaper' : 'newspaper-outline'; break;
             case 'Cart':     iconName = focused ? 'cart' : 'cart-outline'; break;
@@ -200,11 +208,14 @@ function MainTabNavigator() {
       })}
     >
       <Tab.Screen name="CampusFeed"   component={CampusFeedScreen} options={{ title: 'Feeds' }} />
+      <Tab.Screen name="Discover" component={OpportunitiesScreen} options={{ title: 'Discover' }} />
       <Tab.Screen name="Shopping"     component={HomeScreen} options={{ title: 'Shop' }} />
      
       {/*<Tab.Screen name="CediAi"   component={AIShoppingScreen} options={{ title: 'CediAi' }} />*/}
       <Tab.Screen name="Products" component={ProductsScreen} options={{ title: 'Products' }} />
-      <Tab.Screen
+      
+      
+      {/*<Tab.Screen
         name="Cart"
         component={CartScreen}
         options={{
@@ -212,7 +223,7 @@ function MainTabNavigator() {
           tabBarBadge: cartCount > 0 ? cartCount : undefined,
           tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 },
         }}
-      />
+      />*/}
       <Tab.Screen name="Profile"  component={AccountScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
@@ -272,7 +283,13 @@ function MainStackNavigator() {
               <Stack.Screen name="Earnings" component={EarningsScreen} options={{ headerShown: false }} />
               <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
               <Stack.Screen name="MyFeedPosts" component={MyFeedPostsScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="Followers" component={FollowersScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="Following" component={FollowingScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="SavedPosts" component={SavedPostsScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
               
+          
+          
             </>
           )}
           <Stack.Screen name="ChatScreen" component={ChatScreen} />

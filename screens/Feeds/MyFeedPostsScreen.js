@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { getMyFeedPosts, deleteFeedPost } from '../apis/feedApi';
+import { getMyFeedPosts, deleteFeedPost } from '../../apis/feedApi';
 
 const { width } = Dimensions.get('window');
 const GRID_GAP = 2;
