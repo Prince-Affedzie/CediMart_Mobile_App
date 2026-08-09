@@ -11,3 +11,7 @@ export const deleteProfile = ()=>API.delete('/api/delete-account')
 export const signUpByApple = (data)=>API.post('/api/apple_sign_up',data)
 export const sendPushToken = (data)=>API.post('/api/user/push-token',data)
 export const apple_signUp = (data)=>API.post('/api/apple/authenticate',data)
+
+export const followUser = (userId) => API.post(`/api/users/${userId}/follow`)
+export const getFollowers = (userId, params) => API.get(`/api/users/${userId}/followers`, { params })
+export const getFollowing = (userId, params) => API.get(`/api/users/${userId}/following`, { params })

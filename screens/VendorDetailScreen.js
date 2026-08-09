@@ -3,11 +3,13 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Image,
   StyleSheet, ActivityIndicator, RefreshControl,
-  Dimensions, Alert, Modal, Platform,
+  Dimensions, Alert, Modal, Platform, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getVendorById } from '../apis/vendorApi';
+import { getFeed } from '../apis/feedApi';
+import { followUser } from '../apis/userApi';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,68 +22,89 @@ const CAMPUS_LABELS = {
   ASHESI: 'Ashesi University', ATU: 'Accra Technical University', OTHER: 'Other',
 };
 
-const CATEGORY_LABELS = {
-  'electronics': 'Electronics', 'phones and tablets': 'Phones & Tablets',
-  'computers and laptops': 'Computers & Laptops', 'gaming': 'Gaming',
-  'fashion': 'Fashion', 'books-course-materials': 'Books & Course Materials',
-  'hostel-items': 'Hostel Items', 'appliances': 'Appliances',
-  'furniture': 'Furniture', 'beauty and grooming': 'Beauty & Grooming',
-  'sports and fitness': 'Sports & Fitness', 'accessories': 'Accessories',
-  'food and drinks': 'Food & Drinks', 'services': 'Services', 'other': 'Other',
+const FEED_TYPE_CONFIG = {
+  product_reel: { icon: 'pricetag-outline', color: '#0D9488', label: 'Product' },
+  service_reel: { icon: 'construct-outline', color: '#7C3AED', label: 'Service' },
+  lifestyle: { icon: 'camera-outline', color: '#F97316', label: 'Lifestyle' },
+  campus_event: { icon: 'calendar-outline', color: '#0284C7', label: 'Event' },
+  campus_hack: { icon: 'bulb-outline', color: '#F59E0B', label: 'Campus Hack' },
+  funny_moment: { icon: 'happy-outline', color: '#EC4899', label: 'Funny' },
+  achievement: { icon: 'trophy-outline', color: '#059669', label: 'Achievement' },
 };
 
-// ─── Teal + Coral Palette ──────────────────────────────────────────────────
 const C = {
-  brand:        '#0D9488',
-  brandL:       '#14B8A6',
-  brandD:       '#0F766E',
-  brandBg:      '#F0FDFA',
-  brandBorder:  '#99F6E4',
-  accent:       '#F97316',
-  accentBg:     '#FFF7ED',
-  accentBorder: '#FED7AA',
-  success:      '#059669',
-  successBg:    '#ECFDF5',
-  danger:       '#DC2626',
-  dangerBg:     '#FEF2F2',
-  bg:           '#F8FAFC',
-  surface:      '#FFFFFF',
-  elev:         '#F1F5F9',
-  t1:           '#0F172A',
-  t2:           '#475569',
-  t3:           '#94A3B8',
-  white:        '#FFFFFF',
-  black:        '#000000',
-  gold:         '#F59E0B',
-  goldLight:    '#FFFBEB',
+  brand: '#0D9488', brandL: '#14B8A6', brandD: '#0F766E',
+  brandBg: '#F0FDFA', brandBorder: '#99F6E4',
+  accent: '#F97316', accentBg: '#FFF7ED', accentBorder: '#FED7AA',
+  success: '#059669', successBg: '#ECFDF5',
+  danger: '#DC2626', dangerBg: '#FEF2F2',
+  bg: '#F8FAFC', surface: '#FFFFFF', elev: '#F1F5F9',
+  t1: '#0F172A', t2: '#475569', t3: '#94A3B8',
+  white: '#FFFFFF', gold: '#F59E0B',
 };
 
-const SectionLabel = ({ title, count }) => (
-  <View style={s.sectionHeader}>
-    <View style={s.sectionAccent} />
-    <Text style={s.sectionTitle}>{title}</Text>
-    {count != null && (
-      <View style={s.sectionBadge}><Text style={s.sectionBadgeText}>{count}</Text></View>
-    )}
-  </View>
-);
+const formatCount = (count) => {
+  if (!count && count !== 0) return '';
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
+  return count.toString();
+};
 
-const RatingDisplay = ({ rating = 0, size = 14 }) => {
-  const value = Number(rating) || 0;
-  const full = Math.floor(value);
-  const half = value % 1 >= 0.5;
+const getTimeAgo = (date) => {
+  if (!date) return '';
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+  if (seconds < 60) return 'now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+};
+
+// ─── Feed Post Card ─────────────────────────────────────────────────────────
+const FeedPostCard = ({ post, onPress }) => {
+  const typeCfg = FEED_TYPE_CONFIG[post.type] || FEED_TYPE_CONFIG.product_reel;
+  const hasMedia = post.media?.length > 0;
   return (
-    <View style={s.ratingWrap}>
-      <View style={s.ratingStars}>
-        {[1, 2, 3, 4, 5].map(i => (
-          <Ionicons key={i} name={i <= full ? 'star' : half && i === full + 1 ? 'star-half' : 'star-outline'} size={size} color={C.gold} style={{ marginRight: 1 }} />
-        ))}
+    <TouchableOpacity style={s.feedCard} onPress={onPress} activeOpacity={0.9}>
+      {hasMedia ? (
+        <View style={s.feedMediaWrap}>
+          <Image source={{ uri: post.media[0].url }} style={s.feedMedia} />
+          {post.media.length > 1 && (
+            <View style={s.feedMediaCount}>
+              <Ionicons name="images-outline" size={10} color="#fff" />
+              <Text style={s.feedMediaCountText}>{post.media.length}</Text>
+            </View>
+          )}
+          <View style={[s.feedTypeBadge, { backgroundColor: typeCfg.color + 'CC' }]}>
+            <Text style={s.feedTypeText}>{typeCfg.label}</Text>
+          </View>
+        </View>
+      ) : (
+        <View style={[s.feedMediaWrap, s.feedMediaTextOnly]}>
+          <Ionicons name={typeCfg.icon} size={24} color={typeCfg.color} />
+        </View>
+      )}
+      <View style={s.feedBody}>
+        <Text style={s.feedTitle} numberOfLines={2}>{post.title}</Text>
+        <View style={s.feedStats}>
+          <View style={s.feedStat}>
+            <Ionicons name="heart-outline" size={11} color={C.t3} />
+            <Text style={s.feedStatText}>{formatCount(post.likes?.length || 0)}</Text>
+          </View>
+          <View style={s.feedStat}>
+            <Ionicons name="chatbubble-outline" size={10} color={C.t3} />
+            <Text style={s.feedStatText}>{formatCount(post.comments?.length || 0)}</Text>
+          </View>
+          <Text style={s.feedTime}>{getTimeAgo(post.createdAt)}</Text>
+        </View>
       </View>
-      <Text style={s.ratingValue}>{value.toFixed(1)}</Text>
-    </View>
+    </TouchableOpacity>
   );
 };
 
+// ─── Main Screen ─────────────────────────────────────────────────────────────
 const VendorDetailScreen = ({ route, navigation }) => {
   const { vendorId } = route.params;
   const { addToCart, cartItems } = useCart();
@@ -95,14 +118,76 @@ const VendorDetailScreen = ({ route, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [addedProductName, setAddedProductName] = useState('');
 
+  // Tabs
+  const [activeTab, setActiveTab] = useState('products'); // 'products' | 'posts'
+
+  // Feed & Follow
+  const [feedPosts, setFeedPosts] = useState([]);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+
   const fetchVendor = async () => {
     try {
       setError(null);
       const res = await getVendorById(vendorId);
-      if (res.status === 200 && res.data.success) setVendor(res.data.data);
-      else setError('Vendor not found.');
-    } catch (err) { setError(err?.response?.data?.error || err.message || 'Failed to load vendor details'); }
-    finally { setLoading(false); setRefreshing(false); }
+      if (res.status === 200 && res.data.success) {
+        const vendorData = res.data.data;
+        setVendor(vendorData);
+        setFollowerCount(vendorData.followersCount || vendorData.followers?.length || 0);
+        if (vendorData.user) {
+          fetchVendorFeed(vendorData.user._id || vendorData.user);
+        }
+      } else {
+        setError('Vendor not found.');
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || err.message || 'Failed to load vendor details');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const fetchVendorFeed = async (userId) => {
+    setFeedLoading(true);
+    try {
+      const res = await getFeed({ limit: 20 });
+      const allPosts = res.data?.data?.posts || [];
+      const vendorPosts = allPosts.filter(
+        post => post.author?._id === userId || post.author === userId
+      );
+      setFeedPosts(vendorPosts);
+    } catch (err) {
+      console.error('Feed fetch error:', err);
+    } finally {
+      setFeedLoading(false);
+    }
+  };
+
+  const handleFollow = async () => {
+    if (!isAuthenticated) {
+      Alert.alert('Login Required', 'Please login to follow vendors.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Login') },
+      ]);
+      return;
+    }
+    const vendorUserId = vendor?.user?._id || vendor?.user;
+    if (!vendorUserId) return;
+    setFollowLoading(true);
+    try {
+      const res = await followUser(vendorUserId);
+      if (res.data?.success) {
+        setIsFollowing(res.data.data.isFollowing);
+        setFollowerCount(prev => res.data.data.isFollowing ? prev + 1 : Math.max(0, prev - 1));
+      }
+    } catch (err) {
+      console.error('Follow error:', err);
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   useEffect(() => { fetchVendor(); }, [vendorId]);
@@ -114,9 +199,17 @@ const VendorDetailScreen = ({ route, navigation }) => {
   };
 
   const handleAddToCart = async (product) => {
-    if (!isAuthenticated) { Alert.alert('Login Required', 'Please login to add items to cart.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Login', onPress: () => navigation.navigate('Login') }]); return; }
-    const stock = product.countInStock ?? 0;
-    if (!product.isAvailable || stock <= 0) { Alert.alert('Unavailable', `${product.name} is no longer available.`); return; }
+    if (!isAuthenticated) {
+      Alert.alert('Login Required', 'Please login to add items to cart.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Login') },
+      ]);
+      return;
+    }
+    if (!product.isAvailable || (product.countInStock ?? 0) <= 0) {
+      Alert.alert('Unavailable', `${product.name} is no longer available.`);
+      return;
+    }
     try {
       setAddingProductId(product._id); setAddedProductName(product.name);
       await addToCart(product._id, 1); setModalVisible(true);
@@ -127,13 +220,11 @@ const VendorDetailScreen = ({ route, navigation }) => {
 
   const isValidImage = (url) => url && !url.includes('default_banner') && !url.includes('default_profile');
   const products = vendor?.products || [];
-  const categories = vendor?.categories || [];
 
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={[s.container, s.centered]} edges={['top']}>
         <ActivityIndicator size="large" color={C.brand} />
-        <Text style={s.loadingText}>Loading vendor…</Text>
       </SafeAreaView>
     );
   }
@@ -169,92 +260,158 @@ const VendorDetailScreen = ({ route, navigation }) => {
         </View>
       </Modal>
 
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.brand} />}
-        showsVerticalScrollIndicator={false} contentContainerStyle={s.scrollContent}>
-
-        {/* Hero Banner */}
-        <View style={s.heroBanner}>
-          {isValidImage(vendor.storeBanner) ? <Image source={{ uri: vendor.storeBanner }} style={s.bannerImage} /> : <View style={s.bannerFallback} />}
-          <View style={s.bannerScrim} />
-          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}><Ionicons name="arrow-back" size={20} color="#fff" /></TouchableOpacity>
-          <View style={[s.heroBadge, { backgroundColor: vendor.isVerified ? C.success : C.accent }]}>
-            <Ionicons name={vendor.isVerified ? 'shield-checkmark' : 'time'} size={11} color="#fff" style={{ marginRight: 4 }} />
-            <Text style={s.heroBadgeText}>{vendor.isVerified ? 'Verified' : 'Pending'}</Text>
-          </View>
-        </View>
-
-        {/* Identity Card */}
-        <View style={s.identityCard}>
-          <View style={s.avatarRing}>
-            {isValidImage(vendor.profileImage) ? <Image source={{ uri: vendor.profileImage }} style={s.avatar} /> : (
-              <View style={s.avatarFallback}><Text style={s.avatarInitial}>{vendor.name?.charAt(0).toUpperCase() || '?'}</Text></View>
-            )}
-          </View>
-          <Text style={s.vendorName}>{vendor.name}</Text>
-          {vendor.storeName && <Text style={s.storeName}>{vendor.storeName}</Text>}
-          <RatingDisplay rating={vendor.rating} />
-          <View style={s.metaRow}>
-            {vendor.campus && (
-              <View style={s.campusPill}><Ionicons name="school-outline" size={12} color={C.brand} /><Text style={s.campusPillText}>{CAMPUS_LABELS[vendor.campus] || vendor.campus}</Text></View>
-            )}
-            {vendor.location?.campusArea && (
-              <View style={s.locationPill}><Ionicons name="location-outline" size={12} color={C.t3} /><Text style={s.locationPillText}>{vendor.location.campusArea}{vendor.location.hostel ? ` · ${vendor.location.hostel}` : ''}</Text></View>
-            )}
-          </View>
-          {vendor.bio && <Text style={s.bioText} numberOfLines={3}>{vendor.bio}</Text>}
-        </View>
-
-        {/* Categories */}
-        {categories.length > 0 && (
-          <View style={s.section}>
-            <SectionLabel title="Categories" count={categories.length} />
-            <View style={s.chipWrap}>
-              {categories.map((cat) => (
-                <View key={cat} style={s.chip}><Text style={s.chipText}>{CATEGORY_LABELS[cat] || cat}</Text></View>
-              ))}
+      <FlatList
+        data={activeTab === 'products' ? products : feedPosts}
+        keyExtractor={(item, index) => item._id || index.toString()}
+        numColumns={activeTab === 'products' ? 2 : 1}
+        key={activeTab} // Force re-render on tab change
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.brand} />}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={s.listContent}
+        ListHeaderComponent={
+          <View>
+            {/* Hero Banner */}
+            <View style={s.heroBanner}>
+              {isValidImage(vendor.storeBanner) ? (
+                <Image source={{ uri: vendor.storeBanner }} style={s.bannerImage} />
+              ) : (
+                <View style={s.bannerFallback} />
+              )}
+              <View style={s.bannerScrim} />
+              <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+                <Ionicons name="arrow-back" size={20} color="#fff" />
+              </TouchableOpacity>
             </View>
-          </View>
-        )}
 
-        <View style={s.divider} />
+            {/* Profile Info — horizontal layout like Instagram */}
+            <View style={s.profileSection}>
+              <View style={s.avatarRing}>
+                {isValidImage(vendor.profileImage) ? (
+                  <Image source={{ uri: vendor.profileImage }} style={s.avatar} />
+                ) : (
+                  <View style={s.avatarFallback}>
+                    <Text style={s.avatarInitial}>{vendor.name?.charAt(0).toUpperCase() || '?'}</Text>
+                  </View>
+                )}
+              </View>
 
-        {/* Products */}
-        <View style={s.section}>
-          <SectionLabel title="Products" count={products.length} />
-          {products.length === 0 ? (
-            <View style={s.emptyState}><Ionicons name="cube-outline" size={44} color={C.t3} /><Text style={s.emptyText}>No products listed yet</Text></View>
-          ) : (
-            <View style={s.grid}>
-              {products.map((product) => {
-                const isInCart = getQuantityInCart(product._id) > 0;
-                const isAdding = addingProductId === product._id;
-                const isAvailable = product.isAvailable && (product.countInStock ?? 0) > 0;
-                return (
-                  <TouchableOpacity key={product._id} style={s.productCard} onPress={() => navigation.navigate('ProductDetail', { productId: product._id, product })} activeOpacity={0.88}>
-                    <View style={s.productImgWrap}>
-                      <Image source={{ uri: product.images?.[0] || product.image || 'https://via.placeholder.com/300/F5F5F5/BDBDBD?text=No+Image' }} style={s.productImg} />
-                      {!isAvailable && <View style={s.outOfStockOverlay}><Text style={s.outOfStockText}>Sold Out</Text></View>}
-                      {product.condition && (
-                        <View style={s.conditionBadge}><Text style={s.conditionBadgeText}>{product.condition === 'new' ? 'New' : product.condition === 'like-new' ? 'Like New' : product.condition.replace(/-/g, ' ')}</Text></View>
-                      )}
-                      {product.negotiable && <View style={s.negotiableTag}><Text style={s.negotiableTagText}>Negotiable</Text></View>}
+              <View style={s.profileStats}>
+                {/* Stats Row */}
+                <View style={s.statsRow}>
+                  <View style={s.statItem}>
+                    <Text style={s.statValue}>{formatCount(products.length)}</Text>
+                    <Text style={s.statLabel}>Products</Text>
+                  </View>
+                  <View style={s.statItem}>
+                    <Text style={s.statValue}>{formatCount(followerCount)}</Text>
+                    <Text style={s.statLabel}>Followers</Text>
+                  </View>
+                  <View style={s.statItem}>
+                    <Text style={s.statValue}>{formatCount(feedPosts.length)}</Text>
+                    <Text style={s.statLabel}>Posts</Text>
+                  </View>
+                </View>
+
+                {/* Follow Button + Verified Badge in one row */}
+                <View style={s.actionRow}>
+                  {vendor.isVerified && (
+                    <View style={s.verifiedBadge}>
+                      <Ionicons name="shield-checkmark" size={13} color={C.success} />
+                      <Text style={s.verifiedText}>Verified</Text>
                     </View>
-                    <View style={s.productBody}>
-                      <Text style={s.productName} numberOfLines={2}>{product.name}</Text>
-                      <View style={s.productFooter}>
-                        {product.price != null && <Text style={s.productPrice}>GH₵ {product.price.toFixed(2)}</Text>}
-                        <TouchableOpacity style={[s.cartBtn, isInCart && s.cartBtnActive, !isAvailable && s.cartBtnDisabled]} onPress={() => handleAddToCart(product)} disabled={isAdding || !isAvailable} activeOpacity={0.8}>
-                          {isAdding ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name={isInCart ? 'checkmark' : 'add'} size={15} color="#fff" />}
-                        </TouchableOpacity>
-                      </View>
-                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={[s.followBtn, isFollowing && s.followBtnActive]}
+                    onPress={handleFollow}
+                    disabled={followLoading}
+                    activeOpacity={0.85}
+                  >
+                    {followLoading ? (
+                      <ActivityIndicator size="small" color={isFollowing ? C.brand : '#fff'} />
+                    ) : (
+                      <Text style={[s.followBtnText, isFollowing && s.followBtnTextActive]}>
+                        {isFollowing ? 'Following' : 'Follow'}
+                      </Text>
+                    )}
                   </TouchableOpacity>
-                );
-              })}
+                </View>
+              </View>
             </View>
-          )}
-        </View>
-      </ScrollView>
+
+            {/* Name & Bio */}
+            <View style={s.nameSection}>
+              <Text style={s.vendorName}>{vendor.name}</Text>
+              {vendor.storeName && <Text style={s.storeName}>{vendor.storeName}</Text>}
+              {vendor.campus && (
+                <Text style={s.campusText}>{CAMPUS_LABELS[vendor.campus] || vendor.campus}</Text>
+              )}
+              {vendor.bio && <Text style={s.bioText}>{vendor.bio}</Text>}
+            </View>
+
+            {/* Tabs */}
+            <View style={s.tabBar}>
+              <TouchableOpacity
+                style={[s.tab, activeTab === 'products' && s.tabActive]}
+                onPress={() => setActiveTab('products')}
+              >
+                <Ionicons name="grid-outline" size={16} color={activeTab === 'products' ? C.brand : C.t3} />
+                <Text style={[s.tabText, activeTab === 'products' && s.tabTextActive]}>Products</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.tab, activeTab === 'posts' && s.tabActive]}
+                onPress={() => setActiveTab('posts')}
+              >
+                <Ionicons name="newspaper-outline" size={16} color={activeTab === 'posts' ? C.brand : C.t3} />
+                <Text style={[s.tabText, activeTab === 'posts' && s.tabTextActive]}>Posts</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        }
+        renderItem={({ item }) => {
+          if (activeTab === 'products') {
+            const isInCart = getQuantityInCart(item._id) > 0;
+            const isAdding = addingProductId === item._id;
+            const isAvailable = item.isAvailable && (item.countInStock ?? 0) > 0;
+            return (
+              <TouchableOpacity
+                style={s.productCard}
+                onPress={() => navigation.navigate('ProductDetail', { productId: item._id, product: item })}
+                activeOpacity={0.88}
+              >
+                <View style={s.productImgWrap}>
+                  <Image source={{ uri: item.images?.[0] || 'https://via.placeholder.com/300/F5F5F5/BDBDBD?text=No+Image' }} style={s.productImg} />
+                  {!isAvailable && <View style={s.outOfStockOverlay}><Text style={s.outOfStockText}>Sold Out</Text></View>}
+                </View>
+                <View style={s.productBody}>
+                  <Text style={s.productName} numberOfLines={2}>{item.name}</Text>
+                  <View style={s.productFooter}>
+                    <Text style={s.productPrice}>GH₵ {Number(item.price).toFixed(2)}</Text>
+                    <TouchableOpacity
+                      style={[s.cartBtn, isInCart && s.cartBtnActive, !isAvailable && s.cartBtnDisabled]}
+                      onPress={() => handleAddToCart(item)}
+                      disabled={isAdding || !isAvailable}
+                      activeOpacity={0.8}
+                    >
+                      {isAdding ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name={isInCart ? 'checkmark' : 'add'} size={14} color="#fff" />}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          }
+          return <FeedPostCard post={item} onPress={() => navigation.navigate('FeedPostDetail', { postId: item._id })} />;
+        }}
+        ListEmptyComponent={
+          activeTab === 'posts' && feedLoading ? (
+            <View style={s.emptyState}><ActivityIndicator size="small" color={C.brand} /></View>
+          ) : (
+            <View style={s.emptyState}>
+              <Ionicons name={activeTab === 'products' ? 'cube-outline' : 'newspaper-outline'} size={40} color={C.t3} />
+              <Text style={s.emptyText}>{activeTab === 'products' ? 'No products yet' : 'No posts yet'}</Text>
+            </View>
+          )
+        }
+      />
     </SafeAreaView>
   );
 };
@@ -268,82 +425,112 @@ const shadow = (opacity = 0.06, radius = 10, y = 4) =>
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   centered: { justifyContent: 'center', alignItems: 'center' },
-  scrollContent: { paddingBottom: 52 },
-  loadingText: { marginTop: 12, fontSize: 15, color: C.t3, fontWeight: '500' },
+  listContent: { paddingBottom: 60 },
+  loadingText: { marginTop: 12, fontSize: 15, color: C.t3 },
   retryBtn: { marginTop: 20, backgroundColor: C.brand, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 14 },
   retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 
-  heroBanner: { height: 210, backgroundColor: C.brandD, position: 'relative' },
-  bannerImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  // Hero
+  heroBanner: { height: 180, backgroundColor: C.brandD, position: 'relative' },
+  bannerImage: { width: '100%', height: '100%' },
   bannerFallback: { ...StyleSheet.absoluteFillObject, backgroundColor: C.brandD },
   bannerScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,30,18,0.45)' },
-  backBtn: { position: 'absolute', top: 16, left: 16, zIndex: 20, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.28)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
-  heroBadge: { position: 'absolute', top: 18, right: 16, zIndex: 20, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  heroBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
+  backBtn: { position: 'absolute', top: 16, left: 16, zIndex: 20, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
 
-  identityCard: { alignItems: 'center', marginTop: -44, paddingBottom: 28, paddingHorizontal: 24 },
-  avatarRing: { width: 92, height: 92, borderRadius: 46, borderWidth: 4, borderColor: C.bg, overflow: 'hidden', backgroundColor: C.brandBg, marginBottom: 14, ...shadow(0.14, 14, 6) },
+  // Profile — horizontal layout
+  profileSection: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingTop: 16, gap: 20,
+  },
+  avatarRing: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: C.surface, overflow: 'hidden', backgroundColor: C.brandBg, marginTop: -40, ...shadow(0.12, 8, 4) },
   avatar: { width: '100%', height: '100%' },
   avatarFallback: { flex: 1, backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 36, fontWeight: '800', color: '#fff' },
-  vendorName: { fontSize: 23, fontWeight: '800', color: C.t1, textAlign: 'center', letterSpacing: -0.4 },
-  storeName: { fontSize: 14, color: C.t2, fontWeight: '500', marginTop: 3, textAlign: 'center' },
+  avatarInitial: { fontSize: 30, fontWeight: '800', color: '#fff' },
 
-  ratingWrap: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.goldLight, borderWidth: 1, borderColor: C.accentBorder, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, marginTop: 14 },
-  ratingStars: { flexDirection: 'row' },
-  ratingValue: { fontSize: 13, fontWeight: '800', color: '#D97706' },
+  profileStats: { flex: 1, gap: 12 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
+  statItem: { alignItems: 'center' },
+  statValue: { fontSize: 18, fontWeight: '800', color: C.t1 },
+  statLabel: { fontSize: 11, color: C.t3, marginTop: 2 },
 
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 14 },
-  campusPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.brandBg, borderWidth: 1, borderColor: C.brandBorder, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 18 },
-  campusPillText: { fontSize: 12, color: C.brand, fontWeight: '700' },
-  locationPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F4F4F2', borderWidth: 1, borderColor: '#E9E9E6', paddingHorizontal: 11, paddingVertical: 6, borderRadius: 18 },
-  locationPillText: { fontSize: 12, color: C.t2, fontWeight: '600' },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.successBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  verifiedText: { fontSize: 10, fontWeight: '700', color: C.success },
+  followBtn: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: C.brand, paddingVertical: 9, borderRadius: 8,
+  },
+  followBtnActive: { backgroundColor: C.brandBg, borderWidth: 1.5, borderColor: C.brand },
+  followBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  followBtnTextActive: { color: C.brand },
 
-  bioText: { fontSize: 13, color: C.t2, marginTop: 16, textAlign: 'center', lineHeight: 20, paddingHorizontal: 6 },
+  // Name section
+  nameSection: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
+  vendorName: { fontSize: 16, fontWeight: '800', color: C.t1 },
+  storeName: { fontSize: 13, color: C.t2, marginTop: 2 },
+  campusText: { fontSize: 12, color: C.t3, marginTop: 4 },
+  bioText: { fontSize: 13, color: C.t2, marginTop: 6, lineHeight: 19 },
 
-  section: { paddingHorizontal: 16, marginBottom: 6 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 8 },
-  sectionAccent: { width: 3, height: 17, borderRadius: 2, backgroundColor: C.gold },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: C.t1, flex: 1, letterSpacing: -0.2 },
-  sectionBadge: { backgroundColor: C.brandBg, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
-  sectionBadgeText: { fontSize: 12, fontWeight: '700', color: C.brand },
+  // Tabs
+  tabBar: {
+    flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E2E8F0',
+    marginTop: 14, paddingHorizontal: 16,
+  },
+  tab: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 12, marginRight: 24,
+    borderBottomWidth: 2, borderBottomColor: 'transparent',
+  },
+  tabActive: { borderBottomColor: C.brand },
+  tabText: { fontSize: 13.5, fontWeight: '600', color: C.t3 },
+  tabTextActive: { color: C.brand },
 
-  divider: { height: 1, backgroundColor: '#E2E8F0', marginHorizontal: 16, marginVertical: 20 },
-
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { backgroundColor: C.brandBg, borderWidth: 1, borderColor: C.brandBorder, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 },
-  chipText: { fontSize: 12, fontWeight: '700', color: C.brand },
-
-  emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { marginTop: 10, fontSize: 15, color: C.t3 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-
-  productCard: { width: CARD_WIDTH, backgroundColor: C.surface, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0', ...shadow(0.06, 10, 4) },
-  productImgWrap: { width: '100%', height: 138, position: 'relative' },
-  productImg: { width: '100%', height: '100%', resizeMode: 'cover' },
-  outOfStockOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.42)', justifyContent: 'center', alignItems: 'center' },
-  outOfStockText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.6 },
-  conditionBadge: { position: 'absolute', top: 6, left: 6, backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
-  conditionBadgeText: { fontSize: 9, fontWeight: '700', color: C.brand, textTransform: 'capitalize' },
-  negotiableTag: { position: 'absolute', top: 6, right: 6, backgroundColor: C.accent, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
-  negotiableTagText: { color: '#fff', fontSize: 9, fontWeight: '700' },
-  productBody: { padding: 11 },
-  productName: { fontSize: 13, fontWeight: '600', color: C.t1, lineHeight: 18, marginBottom: 5 },
-  productFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-  productPrice: { fontSize: 15, fontWeight: '800', color: C.accent },
-  cartBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center', ...shadow(0.15, 5, 3) },
+  // Products
+  productCard: { width: CARD_WIDTH, backgroundColor: C.surface, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0', margin: 6, ...shadow(0.04, 6, 2) },
+  productImgWrap: { width: '100%', height: 130, position: 'relative' },
+  productImg: { width: '100%', height: '100%' },
+  outOfStockOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  outOfStockText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+  productBody: { padding: 10 },
+  productName: { fontSize: 12.5, fontWeight: '600', color: C.t1, lineHeight: 17, marginBottom: 6 },
+  productFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  productPrice: { fontSize: 14, fontWeight: '800', color: C.accent },
+  cartBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center' },
   cartBtnActive: { backgroundColor: C.brandD },
   cartBtnDisabled: { backgroundColor: C.t3 },
 
+  // Feed posts
+  feedCard: {
+    backgroundColor: C.surface, borderRadius: 14, marginHorizontal: 16, marginBottom: 10,
+    borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden', ...shadow(0.04, 6, 2),
+  },
+  feedMediaWrap: { height: 180, backgroundColor: '#F1F5F9', position: 'relative' },
+  feedMedia: { width: '100%', height: '100%' },
+  feedMediaTextOnly: { justifyContent: 'center', alignItems: 'center' },
+  feedMediaCount: { position: 'absolute', top: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  feedMediaCountText: { color: '#fff', fontSize: 9, fontWeight: '600' },
+  feedTypeBadge: { position: 'absolute', bottom: 8, left: 8, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  feedTypeText: { color: '#fff', fontSize: 9.5, fontWeight: '700' },
+  feedBody: { padding: 10 },
+  feedTitle: { fontSize: 13, fontWeight: '600', color: C.t1, lineHeight: 18, marginBottom: 6 },
+  feedStats: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  feedStat: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  feedStatText: { fontSize: 10.5, color: C.t3, fontWeight: '500' },
+  feedTime: { fontSize: 10, color: C.t3, marginLeft: 'auto' },
+
+  emptyState: { alignItems: 'center', paddingVertical: 50 },
+  emptyText: { marginTop: 8, fontSize: 14, color: C.t3 },
+
+  // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.48)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   successModal: { backgroundColor: C.surface, borderRadius: 22, padding: 30, alignItems: 'center', width: '100%', maxWidth: 340, ...shadow(0.12, 20, 8) },
-  modalIconRing: { width: 60, height: 60, borderRadius: 30, backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  successTitle: { fontSize: 19, fontWeight: '800', color: C.t1, marginBottom: 6 },
-  successMsg: { fontSize: 14, color: C.t2, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  modalPrimaryBtn: { width: '100%', flexDirection: 'row', backgroundColor: C.brand, paddingVertical: 14, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  modalPrimaryBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  modalSecondaryBtn: { width: '100%', paddingVertical: 13, borderRadius: 13, borderWidth: 1.5, borderColor: C.brandBorder, alignItems: 'center' },
-  modalSecondaryText: { color: C.brand, fontSize: 14, fontWeight: '600' },
+  modalIconRing: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  successTitle: { fontSize: 18, fontWeight: '800', color: C.t1, marginBottom: 4 },
+  successMsg: { fontSize: 13, color: C.t2, textAlign: 'center', marginBottom: 22 },
+  modalPrimaryBtn: { width: '100%', flexDirection: 'row', backgroundColor: C.brand, paddingVertical: 13, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  modalPrimaryBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  modalSecondaryBtn: { width: '100%', paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: C.brandBorder, alignItems: 'center' },
+  modalSecondaryText: { color: C.brand, fontSize: 13, fontWeight: '600' },
 });
 
 export default VendorDetailScreen;

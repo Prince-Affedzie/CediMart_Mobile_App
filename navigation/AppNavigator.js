@@ -45,6 +45,12 @@ import InboxScreen from '../screens/InboxScreen'
 import AIShoppingScreen from '../screens/AIShoppingScreen'
 import EarningsScreen from '../screens/EarningsScreen'
 
+
+// Feed
+import CampusFeedScreen from '../screens/CampusFeedScreen'
+import CreateFeedPostScreen from '../screens/CreateFeedPostScreen'
+import MyFeedPostsScreen from '../screens/MyFeedPostsScreen'
+
 // ── Vendor screens ──
 import VendorSignUpScreen from '../vendorscreens/VendorSignUp'
 import VendorLoginScreen from '../vendorscreens/VendorLogin';
@@ -58,6 +64,7 @@ import VendorOrderDetailScreen from '../vendorscreens/OrderDetail'
 import UpdateProductScreen from '../vendorscreens/EditProduct'
 import VendorSupportScreen from '../vendorscreens/VendorSupport'
 import VendorReferralStatsScreen from '../vendorscreens/Vendorreferralstatsscreen'
+import SelectProductScreen from '../vendorscreens/SelectProductScreen'
 
 import * as Linking from 'expo-linking';
 import { DEEP_LINK_PREFIXES, DEEP_LINK_CONFIG } from '../config/deepLinks';
@@ -169,8 +176,9 @@ function MainTabNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           switch (route.name) {
-            case 'Home':     iconName = focused ? 'home' : 'home-outline'; break;
+            case 'Shopping':     iconName = focused ? 'storefront' : 'storefront-outline'; break;
             case 'Products': iconName = focused ? 'basket' : 'basket-outline'; break;
+            case 'CampusFeed':iconName = focused ? 'newspaper' : 'newspaper-outline'; break;
             case 'Cart':     iconName = focused ? 'cart' : 'cart-outline'; break;
             case 'CediAi':   iconName = focused ? 'sparkles' : 'sparkles-outline'; break;
             case 'Profile':  iconName = focused ? 'person' : 'person-outline'; break;
@@ -191,8 +199,10 @@ function MainTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Home"     component={HomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="CediAi"   component={AIShoppingScreen} options={{ title: 'CediAi' }} />
+      <Tab.Screen name="CampusFeed"   component={CampusFeedScreen} options={{ title: 'Feeds' }} />
+      <Tab.Screen name="Shopping"     component={HomeScreen} options={{ title: 'Shop' }} />
+     
+      {/*<Tab.Screen name="CediAi"   component={AIShoppingScreen} options={{ title: 'CediAi' }} />*/}
       <Tab.Screen name="Products" component={ProductsScreen} options={{ title: 'Products' }} />
       <Tab.Screen
         name="Cart"
@@ -234,6 +244,10 @@ function MainStackNavigator() {
               <Stack.Screen name="VendorSupport" component={VendorSupportScreen} options={{ headerShown: false }} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
               <Stack.Screen name="ReferralStats" component={VendorReferralStatsScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="CampusFeed"   component={CampusFeedScreen} options={{ title: 'Feeds' }} />
+              <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="SelectProduct" component={SelectProductScreen} options={{ headerShown: false }} />
+              
             </>
           ) : (
             <>
@@ -256,6 +270,9 @@ function MainStackNavigator() {
               <Stack.Screen name="VendorDetail" component={VendorDetailScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Inbox" component={InboxScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Earnings" component={EarningsScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="MyFeedPosts" component={MyFeedPostsScreen} options={{ headerShown: false }} />
+              
             </>
           )}
           <Stack.Screen name="ChatScreen" component={ChatScreen} />

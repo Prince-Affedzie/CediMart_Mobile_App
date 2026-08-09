@@ -6,7 +6,7 @@ const BackendURL = Constants.expoConfig.extra?.EXPO_PUBLIC_BACKEND_URL;
 const API = axios.create({
   baseURL: BackendURL,
   withCredentials: true,
-  timeout: 30000,
+  timeout: 60000,
 });
 
 const AUTH_KEYS = ["@cedimart_token", "@cedimart_user", "@cedimart_role"];

@@ -75,6 +75,14 @@ const ActionCard = ({ label, hint, iconName, iconBg, iconColor, onPress, disable
   </TouchableOpacity>
 );
 
+// ─── Extended FAB (icon + label pill) ──────────────────────────────────────
+const ExtendedFAB = ({ label, iconName, bg, textColor = '#fff', onPress, style }) => (
+  <TouchableOpacity style={[styles.fabButton, { backgroundColor: bg }, style]} onPress={onPress} activeOpacity={0.85}>
+    <Ionicons name={iconName} size={18} color={textColor} />
+    <Text style={[styles.fabLabel, { color: textColor }]}>{label}</Text>
+  </TouchableOpacity>
+);
+
 const ProductCard = ({ product, onPress }) => {
   const imageUri = product.images?.[0] || product.image;
   const conditionCfg = CONDITION_LABELS[product.condition];
@@ -249,8 +257,27 @@ const VendorDashboardScreen = ({ navigation }) => {
           </View>
         )}
 
-        <View style={{ height: 48 }} />
+        {/* Extra bottom padding so FAB stack never covers list content */}
+        <View style={{ height: 140 }} />
       </ScrollView>
+
+      {/* ─── Floating Action Buttons: Campus Feed + Create Post ───────────── */}
+      <View style={styles.fabStack} pointerEvents="box-none">
+        <ExtendedFAB
+          label="Campus Feed"
+          iconName="newspaper-outline"
+          bg={C.info}
+          onPress={() => navigation.navigate('CampusFeed')}
+          style={styles.fabSecondary}
+        />
+        <ExtendedFAB
+          label="Create Post"
+          iconName="add"
+          bg={C.accent}
+          onPress={() => navigation.navigate('CreateFeedPost')}
+          style={styles.fabPrimary}
+        />
+      </View>
     </SafeAreaView>
   );
 };
@@ -324,6 +351,42 @@ const styles = StyleSheet.create({
   emptyBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg },
   loadingText: { marginTop: 14, fontSize: 15, color: C.t2 },
+
+  // ─── FAB stack ─────────────────────────────────────────────────────────
+  fabStack: {
+    position: 'absolute',
+    right: 16,
+    bottom: 24,
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  fabButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 28,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    shadowColor: C.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  fabLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  fabSecondary: {
+    // Campus Feed — slightly smaller, sits above the primary FAB
+    paddingVertical: 10,
+    opacity: 0.96,
+  },
+  fabPrimary: {
+    // Create Post — the primary, most prominent action
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
 });
 
 export default VendorDashboardScreen;

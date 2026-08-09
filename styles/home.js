@@ -87,7 +87,7 @@ export const styles = StyleSheet.create({
   viewAllText: { fontSize: 13, fontWeight: '600', color: C.brand },
 
   // ── Carousel ──
-  carouselSection: { marginHorizontal: 16, marginTop: 16 },
+  carouselSection: { marginHorizontal: 8, marginTop: 16 },
   carouselWrap: { borderRadius: 20, overflow: 'hidden' },
   slideWrapper: { height: 200, position: 'relative', backgroundColor: C.brandD },
   slideImage: { width: '100%', height: '100%', position: 'absolute' },

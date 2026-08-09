@@ -12,7 +12,7 @@ export default {
     splash: {
       image: "./assets/cedimart_logo.png",
       resizeMode: "contain",
-      backgroundColor: "#4CAF50"
+      backgroundColor: "#0F766E"
     },
     scheme: "cedimart", // Add this at the top level too
     
@@ -161,6 +161,7 @@ export default {
           }
         }
       ],
+      "expo-video",
       "expo-font",
       "expo-notifications",
       "expo-asset",

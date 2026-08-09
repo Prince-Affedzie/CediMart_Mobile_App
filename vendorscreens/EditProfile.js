@@ -501,6 +501,42 @@ const VendorAccountScreen = () => {
                 </View>
               </Section>
 
+              <Section label="Community">
+              <SettingsRow 
+                iconName="newspaper-outline" 
+                iconBg="#F5F3FF" 
+                iconColor="#7C3AED" 
+                label="My Posts" 
+                value={`${profile?.feedPostsCount || 0} posts`}
+                onPress={() => navigation.navigate('MyFeedPosts')} 
+              />
+              <SettingsRow 
+                iconName="bookmark-outline" 
+                iconBg="#FFFBEB" 
+                iconColor="#F59E0B" 
+                label="Saved Posts" 
+                value="View your saved items"
+                onPress={() => navigation.navigate('SavedPosts')} 
+              />
+              <SettingsRow 
+                iconName="people-outline" 
+                iconBg="#F0F9FF" 
+                iconColor="#0284C7" 
+                label="Followers" 
+                value={`${profile?.followersCount || 0} followers`}
+                onPress={() => navigation.navigate('Followers')} 
+              />
+              <SettingsRow 
+                iconName="people-outline" 
+                iconBg="#ECFDF5" 
+                iconColor="#059669" 
+                label="Following" 
+                value={`${profile?.followingCount || 0} people`}
+                onPress={() => navigation.navigate('Following')}
+                isLast 
+              />
+            </Section>
+
               
               <Section label="Referrals">
                 <SettingsRow 

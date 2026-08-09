@@ -16,6 +16,7 @@ import {
   StatusBar,
   TouchableWithoutFeedback,
   FlatList,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,14 +27,102 @@ import SupportFAB from '../components/SupportFAB';
 import AIFAB from '../components/AIFAB';
 import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES,HERO_SLIDES} from '../data/General'
 import RecommendEarnBanner from '../components/RecommendEarnNotice'
-
+import ProductHeroCarousel from '../components/ProductHeroCarousel';
 
 const { width } = Dimensions.get('window');
 
-
-
 const AUTO_SCROLL_INTERVAL = 4200;
 
+// ─── Category sections to display ─────────────────────────────────────────────
+const FEATURED_CATEGORIES = [
+  { key: 'fashion', label: 'Fashion', icon: '👗', color: '#E91E63' },
+  { key: 'computers and laptops', label: 'Computers & Laptops', icon: '💻', color: '#2196F3' },
+  { key: 'phones and tablets', label: 'Phones & Tablets', icon: '📱', color: '#0D9488' },
+  { key: 'beauty and grooming', label: 'Beauty & Grooming', icon: '💄', color: '#9C27B0' },
+];
+
+// ─── Skeleton Components ──────────────────────────────────────────────────────
+const SkeletonProductCard = () => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, []);
+
+  const shimmerStyle = {
+    opacity: shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] }),
+  };
+
+  return (
+    <View style={styles.productCard}>
+      <Animated.View style={[styles.skeletonImg, { backgroundColor: '#E0E0E0' }, shimmerStyle]} />
+      <View style={styles.productBody}>
+        <Animated.View style={[styles.skeletonLine, { width: '80%', height: 13, marginBottom: 8 }, shimmerStyle]} />
+        <Animated.View style={[styles.skeletonLine, { width: '50%', height: 11, marginBottom: 6 }, shimmerStyle]} />
+        <Animated.View style={[styles.skeletonLine, { width: '60%', height: 16, marginTop: 4 }, shimmerStyle]} />
+      </View>
+    </View>
+  );
+};
+
+const SkeletonDealCard = () => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, []);
+
+  const shimmerStyle = {
+    opacity: shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] }),
+  };
+
+  return (
+    <View style={styles.dealCard}>
+      <Animated.View style={[styles.dealImg, { backgroundColor: '#E0E0E0' }, shimmerStyle]} />
+      <View style={styles.dealOverlay}>
+        <Animated.View style={[styles.skeletonLine, { width: '70%', height: 12, marginBottom: 8 }, shimmerStyle]} />
+        <Animated.View style={[styles.skeletonLine, { width: '45%', height: 15, marginBottom: 6 }, shimmerStyle]} />
+        <Animated.View style={[styles.skeletonLine, { width: '55%', height: 11 }, shimmerStyle]} />
+      </View>
+    </View>
+  );
+};
+
+const SkeletonCategorySection = ({ isHorizontal = false }) => (
+  <View style={styles.section}>
+    <View style={styles.sectionHeader}>
+      <View>
+        <Animated.View style={{ width: 140, height: 16, backgroundColor: '#E0E0E0', borderRadius: 4, marginBottom: 4, opacity: 0.6 }} />
+        <Animated.View style={{ width: 80, height: 11, backgroundColor: '#E0E0E0', borderRadius: 3, opacity: 0.4 }} />
+      </View>
+    </View>
+    {isHorizontal ? (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+        {[1, 2, 3, 4].map(i => <SkeletonDealCard key={i} />)}
+      </ScrollView>
+    ) : (
+      <View style={styles.productsGrid}>
+        {[1, 2, 3, 4, 5, 6].map(i => <SkeletonProductCard key={i} />)}
+      </View>
+    )}
+  </View>
+);
+
+// ─── Existing Components ──────────────────────────────────────────────────────
 const ConditionBadge = ({ condition }) => {
   const cfg = CONDITION_LABELS[condition] || { label: condition, color: '#616161', bg: '#F5F5F5' };
   return (
@@ -73,9 +162,7 @@ const HeroCarousel = ({ onSlidePress }) => {
       <Image source={{ uri: item.image }} style={styles.slideImage} resizeMode="cover" />
       <View style={[styles.slideScrim, { backgroundColor: item.overlayColor }]} />
       <View style={styles.slideContent}>
-        {/*<View style={styles.slideTagPill}><Text style={styles.slideTagText}>{item.tag}</Text></View>*/}
         <Text style={styles.slideTitle}>{item.title}</Text>
-        {/*<Text style={styles.slideSubtitle}>{item.subtitle}</Text>*/}
         <TouchableOpacity style={[styles.slideBtn, { borderColor: item.accentColor }]} onPress={() => onSlidePress(item)} activeOpacity={0.85}>
           <Text style={[styles.slideBtnText, { color: item.accentColor }]}>{item.btnText}</Text>
           <Ionicons name="arrow-forward" size={13} color={item.accentColor} />
@@ -100,27 +187,10 @@ const HeroCarousel = ({ onSlidePress }) => {
   );
 };
 
-const CampusCard = ({ config, count, onPress }) => {
-  const { id, icon, palette } = config;
-  return (
-    <TouchableOpacity style={[styles.campusCard, { backgroundColor: palette.bg, borderColor: palette.border }]} onPress={() => onPress(id)} activeOpacity={0.82}>
-      <View style={[styles.campusIconBadge, { backgroundColor: palette.accent + '22' }]}><Text style={styles.campusIcon}>{icon}</Text></View>
-      <Text style={[styles.campusName, { color: palette.accent }]} numberOfLines={2}>{id}</Text>
-      {count > 0 ? (
-        <View style={[styles.campusCountChip, { borderColor: palette.border }]}>
-          <View style={[styles.campusCountDot, { backgroundColor: palette.accent }]} />
-          <Text style={[styles.campusCountText, { color: palette.accent }]}>{count} listing{count !== 1 ? 's' : ''}</Text>
-        </View>
-      ) : <Text style={styles.campusNoListings}>No listings yet</Text>}
-    </TouchableOpacity>
-  );
-};
-
 const ProductCard = ({ product, onPress }) => {
   const imageUri = product.images?.[0];
   const catCfg = CATEGORY_CONFIG[product.category] || CATEGORY_CONFIG.other;
 
-  // ─── Discount calculations ──────────────────────────────────────────────
   const discountInfo = product.discountInfo;
   const hasActiveDiscount = discountInfo?.isOnSale && 
     (!discountInfo.discountStartDate || new Date(discountInfo.discountStartDate) <= Date.now()) &&
@@ -142,15 +212,11 @@ const ProductCard = ({ product, onPress }) => {
             <Text style={{ fontSize: 30 }}>{catCfg.icon}</Text>
           </View>
         )}
-        
-        {/* Discount badge - shows first if active */}
         {hasActiveDiscount && (
           <View style={styles.discountBadgeProduct}>
             <Text style={styles.discountBadgeProductText}>-{discountPercentage}%</Text>
           </View>
         )}
-        
-        {/* Condition badge - reposition when discount is active */}
         {product.condition && !hasActiveDiscount && (
           <View style={styles.conditionOverlay}>
             <ConditionBadge condition={product.condition} />
@@ -161,15 +227,12 @@ const ProductCard = ({ product, onPress }) => {
             <ConditionBadge condition={product.condition} />
           </View>
         )}
-        
-        {/* Negotiable tag */}
         {product.negotiable && (
           <View style={styles.negotiableTag}>
             <Text style={styles.negotiableTagText}>Negotiable</Text>
           </View>
         )}
       </View>
-      
       <View style={styles.productBody}>
         <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
         {product.campus && (
@@ -179,7 +242,6 @@ const ProductCard = ({ product, onPress }) => {
           </View>
         )}
         <View style={styles.productFooter}>
-          {/* Price section with discount */}
           {hasActiveDiscount ? (
             <View style={styles.productPriceStack}>
               <View style={styles.productPriceRow}>
@@ -189,9 +251,7 @@ const ProductCard = ({ product, onPress }) => {
                 </View>
               </View>
               {originalPrice && (
-                <Text style={styles.productOriginalPrice}>
-                  GH₵ {originalPrice.toFixed(2)}
-                </Text>
+                <Text style={styles.productOriginalPrice}>GH₵ {originalPrice.toFixed(2)}</Text>
               )}
             </View>
           ) : (
@@ -207,7 +267,6 @@ const DealCard = ({ product, onPress }) => {
   const imageUri = product.images?.[0];
   const catCfg = CATEGORY_CONFIG[product.category] || CATEGORY_CONFIG.other;
 
-  // ─── Discount calculations ──────────────────────────────────────────────
   const discountInfo = product.discountInfo;
   const hasActiveDiscount = discountInfo?.isOnSale && 
     (!discountInfo.discountStartDate || new Date(discountInfo.discountStartDate) <= Date.now()) &&
@@ -228,20 +287,16 @@ const DealCard = ({ product, onPress }) => {
           <Text style={{ fontSize: 34 }}>{catCfg.icon}</Text>
         </View>
       )}
-      
-      {/* Tags strip - discount takes priority over urgent */}
       {hasActiveDiscount && (
         <View style={styles.dealDiscountBadge}>
           <Ionicons name="pricetag" size={9} color="#fff" />
           <Text style={styles.dealDiscountBadgeText}>-{discountPercentage}% OFF</Text>
         </View>
       )}
-      
       <View style={styles.dealOverlay}>
         <Text style={styles.dealName} numberOfLines={1}>{product.name}</Text>
         {product.condition && <ConditionBadge condition={product.condition} />}
         <View style={styles.dealBottom}>
-          {/* Price section with discount */}
           {hasActiveDiscount ? (
             <View style={styles.dealPriceStack}>
               <View style={styles.dealPriceRow}>
@@ -251,9 +306,7 @@ const DealCard = ({ product, onPress }) => {
                 </View>
               </View>
               {originalPrice && (
-                <Text style={styles.dealOriginalPrice}>
-                  GH₵ {originalPrice.toFixed(2)}
-                </Text>
+                <Text style={styles.dealOriginalPrice}>GH₵ {originalPrice.toFixed(2)}</Text>
               )}
               {product.negotiable && <Text style={styles.dealNeg}>Negotiable</Text>}
             </View>
@@ -285,6 +338,41 @@ const StatsBanner = ({ stats }) => {
   );
 };
 
+// ─── Category Section Component ────────────────────────────────────────────────
+const CategoryProductSection = ({ category, products, loading, onProductPress, onSeeAll }) => {
+  if (loading) {
+    return <SkeletonCategorySection isHorizontal={false} />;
+  }
+
+  if (!products || products.length === 0) return null;
+
+  const catCfg = FEATURED_CATEGORIES.find(c => c.key === category) || { label: category, icon: '📦', color: '#0D9488' };
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionTitleRow}>
+          <View style={[styles.categoryDot, { backgroundColor: catCfg.color }]} />
+          <View>
+            <Text style={styles.sectionTitle}>{catCfg.icon} {catCfg.label}</Text>
+            <Text style={styles.sectionSubtitle}>Shop {catCfg.label.toLowerCase()} from campus sellers</Text>
+          </View>
+        </View>
+        <TouchableOpacity onPress={() => onSeeAll(category)} style={styles.seeAllRow}>
+          <Text style={styles.seeAllText}>See all</Text>
+          <Ionicons name="chevron-forward" size={13} color="#0D9488" />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.productsGrid}>
+        {products.slice(0, 6).map(p => (
+          <ProductCard key={p._id} product={p} onPress={onProductPress} />
+        ))}
+      </View>
+    </View>
+  );
+};
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 const GuestHomeScreen = () => {
   const navigation = useNavigation();
 
@@ -302,6 +390,10 @@ const GuestHomeScreen = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
 
+  // Category products state
+  const [categoryProducts, setCategoryProducts] = useState({});
+  const [categoryLoading, setCategoryLoading] = useState({});
+
   useEffect(() => { loadHomeData(); }, []);
 
   useEffect(() => {
@@ -310,7 +402,7 @@ const GuestHomeScreen = () => {
   }, [searchQuery]);
 
   const loadHomeData = async () => {
-    try { setLoading(true); await Promise.all([loadProductData(), loadStatsData()]); }
+    try { setLoading(true); await Promise.all([loadProductData(), loadStatsData(), loadCategoryProducts()]); }
     catch (err) { console.error('GuestHome load error:', err); }
     finally { setLoading(false); setRefreshing(false); }
   };
@@ -330,6 +422,32 @@ const GuestHomeScreen = () => {
       if (newRes?.data?.data) setNewArrivals(newRes.data.data);
       if (favRes?.data?.data) setStudentFavorites(favRes.data.data);
     } catch (err) { console.error('Product data error:', err); }
+  };
+
+  const loadCategoryProducts = async () => {
+    const initialLoading = {};
+    FEATURED_CATEGORIES.forEach(cat => { initialLoading[cat.key] = true; });
+    setCategoryLoading(initialLoading);
+
+    const categoryPromises = FEATURED_CATEGORIES.map(async (cat) => {
+      try {
+        const res = await productService.getProductsByCategory(cat.key, { limit: 6, sort: 'newest' });
+        return { key: cat.key, products: res?.data?.data || res?.data?.products || res?.data || [] };
+      } catch (err) {
+        console.error(`Failed to load ${cat.key}:`, err);
+        return { key: cat.key, products: [] };
+      }
+    });
+
+    const results = await Promise.all(categoryPromises);
+    const productsMap = {};
+    const loadingMap = {};
+    results.forEach(({ key, products }) => {
+      productsMap[key] = products;
+      loadingMap[key] = false;
+    });
+    setCategoryProducts(productsMap);
+    setCategoryLoading(loadingMap);
   };
 
   const loadStatsData = async () => {
@@ -368,6 +486,7 @@ const GuestHomeScreen = () => {
   const handleCampusPress = (campusId) => { navigation.navigate('Campus', { campus: campusId }); };
   const handleCategoryPress = (category) => { navigation.navigate('Category', { category, categoryName: CATEGORY_CONFIG[category]?.label }); };
   const handleProductPress = (product) => { navigation.navigate('GuestProductDetail', { productId: product._id, product }); };
+  const handleCategorySeeAll = (category) => { navigation.navigate('Category', { category, categoryName: FEATURED_CATEGORIES.find(c => c.key === category)?.label }); };
 
   if (loading && !refreshing) {
     return (
@@ -383,7 +502,7 @@ const GuestHomeScreen = () => {
       <StatusBar backgroundColor="#0D9488" barStyle="light-content" />
 
       <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2E7D32" colors={['#2E7D32']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" colors={['#0D9488']} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -407,121 +526,99 @@ const GuestHomeScreen = () => {
               </TouchableOpacity>
               <TouchableOpacity style={styles.headerSignUpBtn} onPress={goToSignUp} activeOpacity={0.85}>
                 <Text style={styles.headerSignUpText}>Join Free</Text>
-                
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.searchWrapper}>
-  <View style={styles.searchBar}>
-    
-    <TextInput 
-      style={styles.searchInput} 
-      placeholder="Search products, categories…" 
-      placeholderTextColor="#BDBDBD" 
-      value={searchQuery} 
-      onChangeText={setSearchQuery} 
-      onSubmitEditing={handleSearchSubmit} 
-      returnKeyType="search" 
-      autoCapitalize="none" 
-      autoCorrect={false} 
-    />
-    {searching ? (
-      <ActivityIndicator size="small" color="#0D9488" />
-    ) : searchQuery.length > 0 ? (
-      <TouchableOpacity 
-        onPress={clearSearch} 
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Ionicons name="close-circle" size={17} color="#BDBDBD" />
-      </TouchableOpacity>
-    ) : (
-      <TouchableOpacity 
-        style={styles.searchIconBtn}
-        onPress={handleSearchSubmit}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="search-outline" size={16} color="#FFFFFF" />
-      </TouchableOpacity>
-    )}
-  </View>
-  
-  {showSearchResults && (
-    <>
-      <TouchableWithoutFeedback onPress={() => setShowSearchResults(false)}>
-        <View style={styles.searchBackdrop} />
-      </TouchableWithoutFeedback>
-      <View style={styles.searchDropdown}>
-        <ScrollView 
-          style={{ maxHeight: 380 }} 
-          keyboardShouldPersistTaps="handled" 
-          nestedScrollEnabled 
-          showsVerticalScrollIndicator={false}
-        >
-          {searchResults.length > 0 ? (
-            <View style={styles.searchSection}>
-              <Text style={styles.searchSectionLabel}>Products</Text>
-              {searchResults.map(p => (
-                <TouchableOpacity 
-                  key={p._id} 
-                  style={styles.searchRow} 
-                  onPress={() => { handleProductPress(p); clearSearch(); }}
-                >
-                  {p.images?.[0] ? (
-                    <Image source={{ uri: p.images[0] }} style={styles.searchThumb} />
-                  ) : (
-                    <View style={[styles.searchThumb, { 
-                      backgroundColor: CATEGORY_CONFIG[p.category]?.color || '#F5F5F5', 
-                      justifyContent: 'center', 
-                      alignItems: 'center' 
-                    }]}>
-                      <Text style={{ fontSize: 18 }}>
-                        {CATEGORY_CONFIG[p.category]?.icon || '📦'}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.searchRowName} numberOfLines={1}>
-                      {p.name}
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                      <Text style={styles.searchRowPrice}>
-                        GH₵ {p.price?.toFixed(2)}
-                      </Text>
-                      {p.campus && (
-                        <Text style={styles.searchRowCampus}>{p.campus}</Text>
-                      )}
-                    </View>
-                  </View>
-                  {p.condition && <ConditionBadge condition={p.condition} />}
+            <View style={styles.searchBar}>
+              <TextInput 
+                style={styles.searchInput} 
+                placeholder="Search products, categories…" 
+                placeholderTextColor="#BDBDBD" 
+                value={searchQuery} 
+                onChangeText={setSearchQuery} 
+                onSubmitEditing={handleSearchSubmit} 
+                returnKeyType="search" 
+                autoCapitalize="none" 
+                autoCorrect={false} 
+              />
+              {searching ? (
+                <ActivityIndicator size="small" color="#0D9488" />
+              ) : searchQuery.length > 0 ? (
+                <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={17} color="#BDBDBD" />
                 </TouchableOpacity>
-              ))}
+              ) : (
+                <TouchableOpacity style={styles.searchIconBtn} onPress={handleSearchSubmit} activeOpacity={0.8}>
+                  <Ionicons name="search-outline" size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
             </View>
-          ) : !searching ? (
-            <View style={styles.noResults}>
-              <Ionicons name="search-outline" size={36} color="#C8E6C9" />
-              <Text style={styles.noResultsTitle}>No results</Text>
-              <Text style={styles.noResultsSub}>Try a different keyword</Text>
-            </View>
-          ) : null}
-          {searchResults.length > 0 && (
-            <TouchableOpacity style={styles.viewAllRow} onPress={handleSearchSubmit}>
-              <Text style={styles.viewAllText}>
-                See all results for "{searchQuery}"
-              </Text>
-              <Ionicons name="arrow-forward" size={14} color="#2E7D32" />
-            </TouchableOpacity>
-          )}
-        </ScrollView>
-      </View>
-    </>
-  )}
-  </View>
+            
+            {showSearchResults && (
+              <>
+                <TouchableWithoutFeedback onPress={() => setShowSearchResults(false)}>
+                  <View style={styles.searchBackdrop} />
+                </TouchableWithoutFeedback>
+                <View style={styles.searchDropdown}>
+                  <ScrollView style={{ maxHeight: 380 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                    {searchResults.length > 0 ? (
+                      <View style={styles.searchSection}>
+                        <Text style={styles.searchSectionLabel}>Products</Text>
+                        {searchResults.map(p => (
+                          <TouchableOpacity key={p._id} style={styles.searchRow} onPress={() => { handleProductPress(p); clearSearch(); }}>
+                            {p.images?.[0] ? (
+                              <Image source={{ uri: p.images[0] }} style={styles.searchThumb} />
+                            ) : (
+                              <View style={[styles.searchThumb, { backgroundColor: CATEGORY_CONFIG[p.category]?.color || '#F5F5F5', justifyContent: 'center', alignItems: 'center' }]}>
+                                <Text style={{ fontSize: 18 }}>{CATEGORY_CONFIG[p.category]?.icon || '📦'}</Text>
+                              </View>
+                            )}
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.searchRowName} numberOfLines={1}>{p.name}</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                                <Text style={styles.searchRowPrice}>GH₵ {p.price?.toFixed(2)}</Text>
+                                {p.campus && <Text style={styles.searchRowCampus}>{p.campus}</Text>}
+                              </View>
+                            </View>
+                            {p.condition && <ConditionBadge condition={p.condition} />}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : !searching ? (
+                      <View style={styles.noResults}>
+                        <Ionicons name="search-outline" size={36} color="#C8E6C9" />
+                        <Text style={styles.noResultsTitle}>No results</Text>
+                        <Text style={styles.noResultsSub}>Try a different keyword</Text>
+                      </View>
+                    ) : null}
+                    {searchResults.length > 0 && (
+                      <TouchableOpacity style={styles.viewAllRow} onPress={handleSearchSubmit}>
+                        <Text style={styles.viewAllText}>See all results for "{searchQuery}"</Text>
+                        <Ionicons name="arrow-forward" size={14} color="#0D9488" />
+                      </TouchableOpacity>
+                    )}
+                  </ScrollView>
+                </View>
+              </>
+            )}
+          </View>
         </View>
+
         <RecommendEarnBanner />
 
         {/* HERO CAROUSEL */}
-        <View style={styles.carouselSection}><HeroCarousel onSlidePress={handleSlidePress} /></View>
+        {featuredProducts.length > 0 ? (
+         <View style={styles.carouselSection}>
+        <ProductHeroCarousel 
+         products={featuredProducts.slice(0, 6)} 
+         onProductPress={handleProductPress} 
+       />
+      </View>
+     ) : (
+     <ProductHeroCarousel products={[]} onProductPress={handleProductPress} />
+      )}
 
         {/* STATS BANNER */}
         {platformStats && <StatsBanner stats={platformStats} />}
@@ -530,7 +627,6 @@ const GuestHomeScreen = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Browse by Category</Text>
-            {/*<TouchableOpacity onPress={() => navigation.navigate('GuestProducts')} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#2E7D32" /></TouchableOpacity>*/}
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
             {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
@@ -542,58 +638,81 @@ const GuestHomeScreen = () => {
           </ScrollView>
         </View>
 
-        {/* SHOP BY CAMPUS 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View><Text style={styles.sectionTitle}>Shop by Campus</Text><Text style={styles.sectionSubtitle}>Find listings near your school</Text></View>
-            <TouchableOpacity onPress={() => navigation.navigate('GuestProducts')} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#2E7D32" /></TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.campusScrollContent}>
-            {ALL_CAMPUSES.map(config => <CampusCard key={config.id} config={config} count={campusStats[config.id] ?? 0} onPress={handleCampusPress} />)}
-          </ScrollView>
-        </View>
-        */}
-
+        {/*  FASHION CATEGORY */}
+        <CategoryProductSection
+          category="fashion"
+          products={categoryProducts['fashion']}
+          loading={categoryLoading['fashion']}
+          onProductPress={handleProductPress}
+          onSeeAll={handleCategorySeeAll}
+        />
 
         {/* FEATURED PRODUCTS */}
         {featuredProducts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View><Text style={styles.sectionTitle}>Featured Listings</Text><Text style={styles.sectionSubtitle}>Hand-picked by our team</Text></View>
-              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'featured' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#2E7D32" /></TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'featured' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <View style={styles.productsGrid}>{featuredProducts.slice(0, 10).map(p => <ProductCard key={p._id} product={p} onPress={handleProductPress} />)}</View>
           </View>
         )}
+
+        {/*  COMPUTERS & LAPTOPS CATEGORY */}
+        <CategoryProductSection
+          category="computers and laptops"
+          products={categoryProducts['computers and laptops']}
+          loading={categoryLoading['computers and laptops']}
+          onProductPress={handleProductPress}
+          onSeeAll={handleCategorySeeAll}
+        />
 
         {/* URGENT SALES */}
         {urgentSales.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}><View style={styles.urgentDot} /><View><Text style={styles.sectionTitle}>Urgent Sales</Text><Text style={styles.sectionSubtitle}>Grab them before they're gone</Text></View></View>
-              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'urgent-sale' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#2E7D32" /></TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'urgent-sale' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>{urgentSales.map(p => <DealCard key={p._id} product={p} onPress={handleProductPress} />)}</ScrollView>
           </View>
         )}
+
+        {/* PHONES & TABLETS CATEGORY */}
+        <CategoryProductSection
+          category="phones and tablets"
+          products={categoryProducts['phones and tablets']}
+          loading={categoryLoading['phones and tablets']}
+          onProductPress={handleProductPress}
+          onSeeAll={handleCategorySeeAll}
+        />
 
         {/* POPULAR ON CAMPUS */}
         {popularProducts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View><Text style={styles.sectionTitle}>Popular on Campus</Text><Text style={styles.sectionSubtitle}>Most viewed this week</Text></View>
-              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'popular', sort: 'popular' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#2E7D32" /></TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'popular', sort: 'popular' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <View style={styles.productsGrid}>{popularProducts.slice(0, 10).map(p => <ProductCard key={p._id} product={p} onPress={handleProductPress} />)}</View>
           </View>
         )}
+
+        {/* BEAUTY & GROOMING CATEGORY */}
+        <CategoryProductSection
+          category="beauty and grooming"
+          products={categoryProducts['beauty and grooming']}
+          loading={categoryLoading['beauty and grooming']}
+          onProductPress={handleProductPress}
+          onSeeAll={handleCategorySeeAll}
+        />
 
         {/* NEW ARRIVALS */}
         {newArrivals.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View><Text style={styles.sectionTitle}>New Arrivals</Text><Text style={styles.sectionSubtitle}>Just listed by students</Text></View>
-              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'new-arrival', sort: 'newest' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#2E7D32" /></TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'new-arrival', sort: 'newest' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>{newArrivals.map(p => <DealCard key={p._id} product={p} onPress={handleProductPress} />)}</ScrollView>
           </View>
@@ -604,7 +723,7 @@ const GuestHomeScreen = () => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View><Text style={styles.sectionTitle}>Student Favorites</Text><Text style={styles.sectionSubtitle}>Loved by campus shoppers</Text></View>
-              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'student-favorite' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#2E7D32" /></TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'student-favorite' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <View style={styles.productsGrid}>{studentFavorites.slice(0, 10).map(p => <ProductCard key={p._id} product={p} onPress={handleProductPress} />)}</View>
           </View>
@@ -617,7 +736,7 @@ const GuestHomeScreen = () => {
               <View style={styles.sellBannerTag}><Ionicons name="storefront-outline" size={11} color="#fff" /><Text style={styles.sellBannerTagText}>FOR SELLERS</Text></View>
               <Text style={styles.sellBannerTitle}>Got something{'\n'}to sell?</Text>
               <Text style={styles.sellBannerSub}>List your items for free and reach thousands of students across campuses</Text>
-              <View style={styles.sellBannerBtn}><Text style={styles.sellBannerBtnText}>Start Selling</Text><Ionicons name="arrow-forward" size={13} color="#1B5E20" /></View>
+              <View style={styles.sellBannerBtn}><Text style={styles.sellBannerBtnText}>Start Selling</Text><Ionicons name="arrow-forward" size={13} color="#0D9488" /></View>
             </View>
             <View style={styles.sellBannerIllustration}><Text style={{ fontSize: 60 }}>🛍️</Text></View>
           </TouchableOpacity>
@@ -625,20 +744,11 @@ const GuestHomeScreen = () => {
 
         <View style={{ height: 100 }} />
       </ScrollView>
-      <AIFAB 
-          style={{ 
-          position: 'absolute', 
-          bottom: 124, 
-          right: 16,
-            }}
-           />
-       
-       <SupportFAB />
-       
+
+      <AIFAB style={{ position: 'absolute', bottom: 124, right: 16 }} />
+      <SupportFAB />
     </SafeAreaView>
   );
 };
-
-
 
 export default GuestHomeScreen;
