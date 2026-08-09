@@ -45,7 +45,6 @@ import InboxScreen from '../screens/InboxScreen'
 import AIShoppingScreen from '../screens/AIShoppingScreen'
 import EarningsScreen from '../screens/EarningsScreen'
 
-
 // Feed
 import CampusFeedScreen from '../screens/Feeds/CampusFeedScreen'
 import CreateFeedPostScreen from '../screens/Feeds/CreateFeedPostScreen'
@@ -56,7 +55,7 @@ import SavedPostsScreen from '../screens/Feeds/SavedPostsScreen'
 import FeedPostDetailScreen from '../screens/Feeds/FeedPostDetailScreen'
 
 // Opportunities
-import  OpportunitiesScreen from '../screens/Opportunities/OpportunitiesScreen'
+import OpportunitiesScreen from '../screens/Opportunities/OpportunitiesScreen'
 
 // ── Vendor screens ──
 import VendorSignUpScreen from '../vendorscreens/VendorSignUp'
@@ -95,34 +94,95 @@ const AuthStack = createStackNavigator();
 export const navigationRef = createNavigationContainerRef();
 
 // ─── Tab Bar Color Constants ────────────────────────────────────────────────
-const TAB_ACTIVE_COLOR   = '#0D9488';  // Teal
-const TAB_INACTIVE_COLOR = '#94A3B8';  // Slate-400
-const TAB_BADGE_COLOR    = '#DC2626';  // Red for badges
-const TAB_BAR_BORDER     = '#E2E8F0';  // Light slate border
+const TAB_ACTIVE_COLOR   = '#0D9488';
+const TAB_INACTIVE_COLOR = '#94A3B8';
+const TAB_BADGE_COLOR    = '#DC2626';
+const TAB_BAR_BORDER     = '#E2E8F0';
 
 // ───────────────────────────────────────────────────
-// CUSTOMER AUTH FLOW
+// GUEST TAB NAVIGATOR (NEW)
 // ───────────────────────────────────────────────────
-function AuthNavigator() {
+function GuestTabNavigator() {
+  const { bottom } = useSafeAreaInsets();
+
   return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: '#FFFFFF' } }}>
-      <AuthStack.Screen name="GuestHome" component={GuestHomeScreen} />
-      <AuthStack.Screen name="GuestProductDetail" component={GuestProductDetailScreen} />
-      <AuthStack.Screen name="Products" component={ProductsScreen} options={{ title: 'Products' }} />
-      <AuthStack.Screen name="GuestMarketDetail" component={GuestMarketDetailScreen} />
-      <AuthStack.Screen name="Category" component={CategoryScreen} options={{ animation: 'slide_from_right' }} />
-      <AuthStack.Screen name="Campus" component={CampusProductsScreen} options={{ animation: 'slide_from_right' }} />
-      <AuthStack.Screen name="VendorDetail" component={VendorDetailScreen} options={{ headerShown: false }} />
-      <AuthStack.Screen name="TagProducts" component={TagProductsScreen} options={{ animation: 'slide_from_right' }} />
-      <AuthStack.Screen name="Login" component={LoginScreen} />
-      <AuthStack.Screen name="VendorLogin" component={VendorLoginScreen} />
-      <AuthStack.Screen name="VendorSignUp" component={VendorSignUpScreen} />
-      <AuthStack.Screen name="SignUp" component={SignUpScreen} />
-      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <AuthStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
-      <AuthStack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
-      <AuthStack.Screen name="CediAi" component={AIShoppingScreen} />
-    </AuthStack.Navigator>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          switch (route.name) {
+            case 'GuestFeed':     iconName = focused ? 'newspaper' : 'newspaper-outline'; break;
+            case 'GuestDiscover': iconName = focused ? 'compass' : 'compass-outline'; break;
+            case 'GuestShop':     iconName = focused ? 'storefront' : 'storefront-outline'; break;
+            case 'GuestCart':     iconName = focused ? 'cart' : 'cart-outline'; break;
+            case 'GuestProfile':  iconName = focused ? 'person' : 'person-outline'; break;
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: TAB_ACTIVE_COLOR,
+        tabBarInactiveTintColor: TAB_INACTIVE_COLOR,
+        tabBarStyle: {
+          paddingBottom: 5 + bottom,
+          paddingTop: 5,
+          height: 60 + bottom,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: TAB_BAR_BORDER,
+        },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '500', marginBottom: 2 },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="GuestFeed"     component={CampusFeedScreen} options={{ title: 'Feed' }} />
+      <Tab.Screen name="GuestDiscover" component={OpportunitiesScreen} options={{ title: 'Discover' }} />
+      <Tab.Screen name="GuestShop"     component={GuestHomeScreen} options={{ title: 'Shop' }} />
+      <Tab.Screen name="GuestCart"     component={CartScreen} options={{ title: 'Cart' }} />
+      <Tab.Screen name="GuestProfile"  component={AccountScreen} options={{ title: 'Profile' }} />
+    </Tab.Navigator>
+  );
+}
+
+// ───────────────────────────────────────────────────
+// CUSTOMER TAB NAVIGATOR
+// ───────────────────────────────────────────────────
+function MainTabNavigator() {
+  const { bottom } = useSafeAreaInsets();
+  const { cartCount } = useCart();
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          switch (route.name) {
+            case 'CampusFeed': iconName = focused ? 'newspaper' : 'newspaper-outline'; break;
+            case 'Discover':   iconName = focused ? 'compass' : 'compass-outline'; break;
+            case 'Shopping':   iconName = focused ? 'storefront' : 'storefront-outline'; break;
+            case 'Cart':       iconName = focused ? 'cart' : 'cart-outline'; break;
+            case 'Profile':    iconName = focused ? 'person' : 'person-outline'; break;
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: TAB_ACTIVE_COLOR,
+        tabBarInactiveTintColor: TAB_INACTIVE_COLOR,
+        tabBarStyle: {
+          paddingBottom: 5 + bottom,
+          paddingTop: 5,
+          height: 60 + bottom,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: TAB_BAR_BORDER,
+        },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '500', marginBottom: 2 },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="CampusFeed" component={CampusFeedScreen} options={{ title: 'Feed' }} />
+      <Tab.Screen name="Discover"   component={OpportunitiesScreen} options={{ title: 'Discover' }} />
+      <Tab.Screen name="Shopping"   component={HomeScreen} options={{ title: 'Shop' }} />
+      <Tab.Screen name="Cart"       component={CartScreen} options={{ title: 'Cart', tabBarBadge: cartCount > 0 ? cartCount : undefined, tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 } }} />
+      <Tab.Screen name="Profile"    component={AccountScreen} options={{ title: 'Profile' }} />
+    </Tab.Navigator>
   );
 }
 
@@ -171,65 +231,6 @@ function VendorTabNavigator() {
 }
 
 // ───────────────────────────────────────────────────
-// CUSTOMER TAB NAVIGATOR
-// ───────────────────────────────────────────────────
-function MainTabNavigator() {
-  const { bottom } = useSafeAreaInsets();
-  const { cartCount } = useCart();
-
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => { //Discover
-          let iconName;
-          switch (route.name) {
-            case 'Shopping':     iconName = focused ? 'storefront' : 'storefront-outline'; break;
-            case 'Discover': iconName = focused ? 'compass' : 'compass-outline'; break;
-            case 'Products': iconName = focused ? 'basket' : 'basket-outline'; break;
-            case 'CampusFeed':iconName = focused ? 'newspaper' : 'newspaper-outline'; break;
-            case 'Cart':     iconName = focused ? 'cart' : 'cart-outline'; break;
-            case 'CediAi':   iconName = focused ? 'sparkles' : 'sparkles-outline'; break;
-            case 'Profile':  iconName = focused ? 'person' : 'person-outline'; break;
-          }
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: TAB_ACTIVE_COLOR,
-        tabBarInactiveTintColor: TAB_INACTIVE_COLOR,
-        tabBarStyle: {
-          paddingBottom: 5 + bottom,
-          paddingTop: 5,
-          height: 60 + bottom,
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: TAB_BAR_BORDER,
-        },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '500', marginBottom: 2 },
-        headerShown: false,
-      })}
-    >
-      <Tab.Screen name="CampusFeed"   component={CampusFeedScreen} options={{ title: 'Feeds' }} />
-      <Tab.Screen name="Discover" component={OpportunitiesScreen} options={{ title: 'Discover' }} />
-      <Tab.Screen name="Shopping"     component={HomeScreen} options={{ title: 'Shop' }} />
-     
-      {/*<Tab.Screen name="CediAi"   component={AIShoppingScreen} options={{ title: 'CediAi' }} />*/}
-      <Tab.Screen name="Products" component={ProductsScreen} options={{ title: 'Products' }} />
-      
-      
-      {/*<Tab.Screen
-        name="Cart"
-        component={CartScreen}
-        options={{
-          title: 'Cart',
-          tabBarBadge: cartCount > 0 ? cartCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 },
-        }}
-      />*/}
-      <Tab.Screen name="Profile"  component={AccountScreen} options={{ title: 'Profile' }} />
-    </Tab.Navigator>
-  );
-}
-
-// ───────────────────────────────────────────────────
 // MAIN STACK – role‑based routing
 // ───────────────────────────────────────────────────
 function MainStackNavigator() {
@@ -239,8 +240,28 @@ function MainStackNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!user ? (
         <>
-          <Stack.Screen name="Auth" component={AuthNavigator} />
+          {/* 🔥 Guests get tabs */}
+          <Stack.Screen name="GuestTabs" component={GuestTabNavigator} />
           <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="GuestProductDetail" component={GuestProductDetailScreen} />
+          <Stack.Screen name="Products" component={ProductsScreen} />
+          <Stack.Screen name="Category" component={CategoryScreen} options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="Campus" component={CampusProductsScreen} options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="VendorDetail" component={VendorDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="TagProducts" component={TagProductsScreen} options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="VendorLogin" component={VendorLoginScreen} />
+          <Stack.Screen name="VendorSignUp" component={VendorSignUpScreen} />
+          <Stack.Screen name="SignUp" component={SignUpScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+          <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
+          <Stack.Screen name="CediAi" component={AIShoppingScreen} />
+          <Stack.Screen name="CampusFeed" component={CampusFeedScreen} />
+          <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Discover" component={OpportunitiesScreen} options={{ title: 'Discover' }} />
+          <Stack.Screen name="GuestMarketDetail" component={GuestMarketDetailScreen} />
         </>
       ) : (
         <>
@@ -255,10 +276,8 @@ function MainStackNavigator() {
               <Stack.Screen name="VendorSupport" component={VendorSupportScreen} options={{ headerShown: false }} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
               <Stack.Screen name="ReferralStats" component={VendorReferralStatsScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="CampusFeed"   component={CampusFeedScreen} options={{ title: 'Feeds' }} />
-              <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="CampusFeed" component={CampusFeedScreen} options={{ title: 'Feed' }} />
               <Stack.Screen name="SelectProduct" component={SelectProductScreen} options={{ headerShown: false }} />
-              
             </>
           ) : (
             <>
@@ -267,7 +286,6 @@ function MainStackNavigator() {
               <Stack.Screen name="Category" component={CategoryScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="Campus" component={CampusProductsScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="TagProducts" component={TagProductsScreen} options={{ animation: 'slide_from_right' }} />
-              <Stack.Screen name="Cart" component={CartScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Order" component={OrderScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Orders" component={OrdersScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
@@ -281,18 +299,17 @@ function MainStackNavigator() {
               <Stack.Screen name="VendorDetail" component={VendorDetailScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Inbox" component={InboxScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Earnings" component={EarningsScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="MyFeedPosts" component={MyFeedPostsScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="Followers" component={FollowersScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="Following" component={FollowingScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="SavedPosts" component={SavedPostsScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
-              
-          
-          
             </>
           )}
+          {/* Shared screens for both roles */}
           <Stack.Screen name="ChatScreen" component={ChatScreen} />
+          <Stack.Screen name="MyFeedPosts" component={MyFeedPostsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Followers" component={FollowersScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Following" component={FollowingScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="SavedPosts" component={SavedPostsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Discover" component={OpportunitiesScreen} options={{ title: 'Discover' }} />
         </>
       )}
     </Stack.Navigator>

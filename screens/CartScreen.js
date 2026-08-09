@@ -151,6 +151,58 @@ const CartScreen = () => {
     );
   }
 
+
+
+// ── NOT AUTHENTICATED ──
+if (!isAuthenticated) {
+  return (
+    <View style={styles.screen}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <SafeAreaView edges={['top']} style={{ zIndex: 10 }}>
+        <View style={styles.navRow}>
+          <TouchableOpacity style={styles.navBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={22} color={C.t1} />
+          </TouchableOpacity>
+          <Text style={styles.navTitle}>My Cart</Text>
+          <View style={{ width: 42 }} />
+        </View>
+      </SafeAreaView>
+      <Animated.View style={[styles.emptyWrap, { opacity: fadeAnim }]}>
+        <View style={styles.authPromptCard}>
+          {/* Icon */}
+          <View style={styles.authPromptIcon}>
+            <Ionicons name="cart-outline" size={48} color={C.brandBorder} />
+          </View>
+
+          <Text style={styles.authPromptTitle}>See your cart</Text>
+          <Text style={styles.authPromptSubtitle}>
+            Login or create an account to view your saved items, track orders, and enjoy secure checkout.
+          </Text>
+
+
+          {/* Buttons */}
+          <TouchableOpacity 
+            style={styles.authLoginBtn} 
+            onPress={() => navigation.navigate('Login')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="log-in-outline" size={18} color="#fff" />
+            <Text style={styles.authLoginBtnText}>Login</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.authSignupBtn} 
+            onPress={() => navigation.navigate('SignUp')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.authSignupBtnText}>Create an Account</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
   // ── EMPTY CART ──
   if (cartItems.length === 0) {
     return (
@@ -224,9 +276,7 @@ const CartScreen = () => {
       <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
       <SafeAreaView edges={['top']} style={styles.floatingNavSafe}>
         <View style={styles.navRow}>
-          <TouchableOpacity style={styles.navBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={22} color={C.t1} />
-          </TouchableOpacity>
+          
           <View style={styles.navCenter}>
             <Text style={styles.navTitle}>My Cart</Text>
             {cartCount > 0 && <View style={styles.navBadge}><Text style={styles.navBadgeText}>{cartCount}</Text></View>}
@@ -372,6 +422,92 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: C.surface, borderRadius: 22, padding: 32, alignItems: 'center', width: width * 0.78, maxWidth: 300, shadowColor: C.black, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 12 },
   modalTitle: { fontSize: 18, fontWeight: '800', color: C.t1, marginTop: 18, marginBottom: 6 },
   modalSub: { fontSize: 13, color: C.t3, textAlign: 'center' },
+  // In the StyleSheet, add:
+authPromptCard: {
+  backgroundColor: C.surface,
+  borderRadius: 24,
+  padding: 32,
+  alignItems: 'center',
+  width: '100%',
+  maxWidth: 360,
+  shadowColor: C.black,
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.08,
+  shadowRadius: 12,
+  elevation: 4,
+},
+authPromptIcon: {
+  width: 96,
+  height: 96,
+  borderRadius: 48,
+  backgroundColor: C.brandBg,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: 20,
+},
+authPromptTitle: {
+  fontSize: 22,
+  fontWeight: '800',
+  color: C.t1,
+  marginBottom: 8,
+},
+authPromptSubtitle: {
+  fontSize: 14,
+  color: C.t2,
+  textAlign: 'center',
+  lineHeight: 21,
+  marginBottom: 24,
+},
+authFeatures: {
+  width: '100%',
+  gap: 12,
+  marginBottom: 28,
+  paddingHorizontal: 8,
+},
+authFeatureRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 10,
+},
+authFeatureText: {
+  fontSize: 14,
+  color: C.t1,
+  fontWeight: '500',
+},
+authLoginBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  backgroundColor: C.brand,
+  width: '100%',
+  paddingVertical: 15,
+  borderRadius: 14,
+  marginBottom: 12,
+  shadowColor: C.brand,
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.25,
+  shadowRadius: 8,
+  elevation: 4,
+},
+authLoginBtnText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: '700',
+},
+authSignupBtn: {
+  width: '100%',
+  paddingVertical: 14,
+  borderRadius: 14,
+  borderWidth: 2,
+  borderColor: C.brand,
+  alignItems: 'center',
+},
+authSignupBtnText: {
+  color: C.brand,
+  fontSize: 15,
+  fontWeight: '700',
+},
 });
 
 export default CartScreen;

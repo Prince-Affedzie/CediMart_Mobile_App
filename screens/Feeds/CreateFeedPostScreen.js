@@ -493,6 +493,72 @@ const CreateFeedPostScreen = () => {
   const campusLabel = CAMPUS_OPTIONS.find((c) => c.value === campus)?.label || 'Select';
   const canPost = !!title.trim() && !!postType && !loading && !compressing;
 
+
+  // Add this right after the component starts, before the return:
+
+// ── NOT AUTHENTICATED ──
+if (!user) {
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.headerBackBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="close" size={24} color={C.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>New Post</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <View style={styles.authContainer}>
+        {/* Icon */}
+        <View style={styles.authIconWrap}>
+          <View style={styles.authIcon}>
+            <Ionicons name="create-outline" size={44} color={C.brand} />
+          </View>
+        </View>
+
+        <Text style={styles.authTitle}>Share with the Campus</Text>
+        <Text style={styles.authSubtitle}>
+          Create an account or login to share posts, moments, and connect with students across campus.
+        </Text>
+
+        {/* Features */}
+        <View style={styles.authFeatures}>
+          <View style={styles.authFeatureRow}>
+            <Ionicons name="checkmark-circle" size={18} color={C.brand} />
+            <Text style={styles.authFeatureText}>Share products, events & moments</Text>
+          </View>
+          <View style={styles.authFeatureRow}>
+            <Ionicons name="checkmark-circle" size={18} color={C.brand} />
+            <Text style={styles.authFeatureText}>Get likes, comments & followers</Text>
+          </View>
+          <View style={styles.authFeatureRow}>
+            <Ionicons name="checkmark-circle" size={18} color={C.brand} />
+            <Text style={styles.authFeatureText}>Build your campus presence</Text>
+          </View>
+        </View>
+
+        {/* Buttons */}
+        <TouchableOpacity 
+          style={styles.authLoginBtn} 
+          onPress={() => navigation.navigate('Login')}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="log-in-outline" size={18} color="#fff" />
+          <Text style={styles.authLoginBtnText}>Login</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.authSignupBtn} 
+          onPress={() => navigation.navigate('SignUp')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.authSignupBtnText}>Create an Account</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
@@ -909,6 +975,85 @@ const styles = StyleSheet.create({
 
   errorText: { fontSize: 12, color: C.danger, marginTop: 4, fontWeight: '500' },
   contentError: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.dangerBg, borderWidth: 1, borderColor: '#FECACA', borderRadius: 10, padding: 12, marginHorizontal: 16, marginTop: 20 },
+  // Auth prompt
+authContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: 32,
+  backgroundColor: C.bg,
+  paddingBottom:28,
+},
+authIconWrap: {
+  marginBottom: 20,
+},
+authIcon: {
+  width: 96,
+  height: 96,
+  borderRadius: 48,
+  backgroundColor: C.brandDim,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+authTitle: {
+  fontSize: 22,
+  fontWeight: '800',
+  color: C.text,
+  marginBottom: 8,
+  textAlign: 'center',
+},
+authSubtitle: {
+  fontSize: 14,
+  color: C.textOff,
+  textAlign: 'center',
+  lineHeight: 21,
+  marginBottom: 28,
+},
+authFeatures: {
+  width: '100%',
+  gap: 14,
+  marginBottom: 32,
+  paddingHorizontal: 8,
+},
+authFeatureRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 10,
+},
+authFeatureText: {
+  fontSize: 14,
+  color: C.text,
+  fontWeight: '500',
+},
+authLoginBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  backgroundColor: C.brand,
+  width: '100%',
+  paddingVertical: 15,
+  borderRadius: 14,
+  marginBottom: 12,
+},
+authLoginBtnText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: '700',
+},
+authSignupBtn: {
+  width: '100%',
+  paddingVertical: 14,
+  borderRadius: 14,
+  borderWidth: 2,
+  borderColor: C.brand,
+  alignItems: 'center',
+},
+authSignupBtnText: {
+  color: C.brand,
+  fontSize: 15,
+  fontWeight: '700',
+},
 });
 
 export default CreateFeedPostScreen;
