@@ -12,6 +12,7 @@ import {
   StatusBar,
   Platform,
   Animated,
+  Alert,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +24,7 @@ import { getFeed, toggleLike, toggleSave, incrementView } from '../../apis/feedA
 import {followUser} from '../../apis/userApi'
 import { useAuth } from '../../context/AuthContext';
 import CommentsSheet from '../../components/feed/CommentsSheet';
+import ReportSheet from '../../components/ReportSheet'
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -118,7 +120,7 @@ const TypeFilter = ({ types, activeType, onSelect }) => (
 );
 
 // ─── Action Rail (right side) ───────────────────────────────────────────
-const ActionRail = ({ post, isLiked, isSaved, onLike, onComment, onFollow, onSave, onShare, isFollowing,authorInitial, authorImage }) => (
+const ActionRail = ({ post, isLiked, isSaved, onLike, onComment, onFollow, onSave, onShare,onReport, isFollowing,authorInitial, authorImage }) => (
   <View style={styles.rail}>
     <TouchableOpacity style={styles.railAvatarWrap} onPress={onFollow} activeOpacity={0.85}>
       <View style={styles.railAvatar}>
@@ -155,6 +157,9 @@ const ActionRail = ({ post, isLiked, isSaved, onLike, onComment, onFollow, onSav
       <Ionicons name="arrow-redo-outline" size={27} color={C.white} />
       <Text style={styles.railLabel}>Share</Text>
     </TouchableOpacity>
+    <TouchableOpacity style={styles.railBtn} onPress={onReport} activeOpacity={0.7}>
+      <Ionicons name="flag-outline" size={22} color={C.faint} />
+    </TouchableOpacity>
   </View>
 );
 
@@ -168,6 +173,7 @@ const FeedPostItem = ({
   onSave,
   onShare,
   onFollow,
+  onReport,
   onProductPress,
   itemHeight,
 }) => {
@@ -424,6 +430,7 @@ const FeedPostItem = ({
           onSave={handleSave}
           onFollow={handleFollow}
           onShare={onShare}
+          onReport={onReport}
           authorInitial={authorInitial}
           authorImage={post.author?.profileImage}
         />
@@ -441,6 +448,8 @@ const CampusFeedScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [commentPost, setCommentPost] = useState(null);
+  const [showReport, setShowReport] = useState(false)
+  const [reportPost, setReportPost] = useState(null)
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -535,6 +544,19 @@ const handleCloseComments = () => {
   }).current;
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 70 }).current;
 
+
+  const handleReport = (post) => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please login to report posts.');
+      return;
+    }
+    setReportPost(post);
+  };
+
+  const handleCloseReport = () => {
+    setReportPost(null);
+  };
+
   const renderItem = ({ item, index }) => (
     <FeedPostItem
       post={item}
@@ -544,6 +566,7 @@ const handleCloseComments = () => {
       onComment={() => handleComment(item)}
       onSave={handleSave}
       onFollow={handleFollow}
+      onReport={() => handleReport(item)}
       onShare={() => handleShare(item)}
       onProductPress={() => item.linkedProduct && handleProductPress(item.linkedProduct)}
       itemHeight={itemHeight}
@@ -617,10 +640,16 @@ const handleCloseComments = () => {
       </SafeAreaView>
 
       <CommentsSheet
-    visible={!!commentPost}
-    onClose={handleCloseComments}
-    postId={commentPost?._id}
-   />
+      visible={!!commentPost}
+      onClose={handleCloseComments}
+      postId={commentPost?._id}
+     />
+     <ReportSheet
+        visible={!!reportPost}
+        onClose={handleCloseReport}
+        contentType="FeedPost"
+        contentId={reportPost?._id}
+      />
 
       {/* Create Post FAB */}
       <TouchableOpacity style={styles.fab} onPress={handleCreatePost} activeOpacity={0.85}>
@@ -717,8 +746,8 @@ const styles = StyleSheet.create({
   productChipPrice: { color: C.brand, fontSize: 12.5, fontWeight: '800' },
 
   // Action rail
-  rail: { alignItems: 'center', gap: 18, paddingBottom: 4, marginBottom: 76 },
-  railAvatarWrap: { alignItems: 'center', marginBottom: 4 },
+  rail: { alignItems: 'center', gap: 12, paddingBottom: 4, marginBottom: 80 },
+  railAvatarWrap: { alignItems: 'center', marginBottom: 8 },
   railAvatar: {
     width: 46, height: 46, borderRadius: 23, borderWidth: 2, borderColor: C.white,
     backgroundColor: 'rgba(255,255,255,0.2)',

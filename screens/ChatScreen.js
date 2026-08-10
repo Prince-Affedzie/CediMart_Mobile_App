@@ -4,11 +4,13 @@ import {
   View, Text, FlatList, TextInput, TouchableOpacity,
   StyleSheet, Image, KeyboardAvoidingView, Platform,
   ActivityIndicator, Pressable, SafeAreaView, StatusBar,
-  Animated,
+  Animated, Modal, Alert, Clipboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
+import ReportSheet from '../components/ReportSheet';
+import * as Haptics from 'expo-haptics';
 
 // ─── Teal + Coral Palette ──────────────────────────────────────────────────
 const C = {
@@ -36,8 +38,6 @@ const C = {
   gray200:      '#E5E7EB',
 };
 
-const BRAND_GREEN = C.brand; // Keep variable name for compatibility, now teal
-
 export default function ChatScreen({ route, navigation }) {
   const { conversation: initialConversation } = route.params;
   const { user } = useAuth();
@@ -48,6 +48,9 @@ export default function ChatScreen({ route, navigation }) {
   } = useChat();
 
   const [inputText, setInputText] = useState('');
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [showReport, setShowReport] = useState(false);
+  const [reportedMessages, setReportedMessages] = useState(new Set());
   const [isSending, setIsSending] = useState(false);
   const [disclaimerVisible, setDisclaimerVisible] = useState(true);
   const disclaimerAnim = useRef(new Animated.Value(1)).current;
@@ -99,14 +102,44 @@ export default function ChatScreen({ route, navigation }) {
   const isTyping = Object.keys(typingUsers).length > 0;
   const isInitialLoad = messagesLoading && messages.length === 0;
 
+  const handleLongPressMessage = (message) => {
+    setSelectedMessage(message);
+  };
+
+  const handleReportMessage = (message) => {
+    setSelectedMessage(message);
+    setShowReport(true);
+  };
+
+  const handleCloseReport = () => {
+    if (selectedMessage) {
+      setReportedMessages(prev => new Set([...prev, selectedMessage._id]));
+    }
+    setShowReport(false);
+    setSelectedMessage(null);
+  };
+
   const renderMessage = ({ item, index }) => {
     const isMe = item.sender?._id === user._id || item.sender === user._id;
     const prevMsg = messages[index - 1];
     const showAvatar = !isMe && (!prevMsg || prevMsg.sender?._id !== item.sender?._id);
     const isRead = !!item.readAt;
+    
     if (item.type === 'system') return <SystemMessage text={item.text} />;
     if (item.type === 'offer_link') return <OfferCard message={item} isMe={isMe} onPress={() => navigation.navigate('OfferDetails', { offerId: item.offerMeta?.offerId })} />;
-    return <MessageBubble message={item} isMe={isMe} showAvatar={showAvatar} otherParty={otherParty} isRead={isRead} />;
+    
+    return (
+      <MessageBubble 
+        message={item} 
+        isMe={isMe} 
+        showAvatar={showAvatar} 
+        otherParty={otherParty} 
+        isRead={isRead}
+        onLongPress={handleLongPressMessage}
+        onReport={handleReportMessage}
+        isReported={reportedMessages.has(item._id)}
+      />
+    );
   };
 
   return (
@@ -161,6 +194,13 @@ export default function ChatScreen({ route, navigation }) {
           </View>
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      <ReportSheet
+        visible={showReport}
+        onClose={handleCloseReport}
+        contentType="ChatMessage"  
+        contentId={selectedMessage?._id}
+      />
     </View>
   );
 }
@@ -232,29 +272,83 @@ const ProductBanner = ({ product, onBack, otherParty }) => {
   );
 };
 
-const MessageBubble = ({ message, isMe, showAvatar, otherParty, isRead }) => (
-  <View style={[bubbleStyles.row, isMe && bubbleStyles.rowMe]}>
-    <View style={bubbleStyles.avatarSlot}>
-      {showAvatar && !isMe && (
-        otherParty?.avatar ? (
-          <Image source={{ uri: otherParty.avatar }} style={bubbleStyles.avatar} />
-        ) : (
-          <View style={[bubbleStyles.avatar, bubbleStyles.avatarFallback]}>
-            <Text style={bubbleStyles.avatarLetter}>{(otherParty?.firstName || otherParty?.name)?.[0]?.toUpperCase() ?? '?'}</Text>
+const MessageBubble = ({ message, isMe, showAvatar, otherParty, isRead, onLongPress, onReport, isReported }) => {
+  const [showActions, setShowActions] = useState(false);
+
+  const handleLongPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowActions(true);
+    onLongPress?.(message);
+  };
+
+  const handleCopy = () => {
+    setShowActions(false);
+    Clipboard.setString(message.text);
+    Alert.alert('Copied', 'Message copied to clipboard');
+  };
+
+  const handleReport = () => {
+    setShowActions(false);
+    onReport?.(message);
+  };
+
+  return (
+    <View>
+      <Pressable
+        onLongPress={handleLongPress}
+        delayLongPress={400}
+        onPress={() => setShowActions(false)}
+        style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+      >
+        <View style={[bubbleStyles.row, isMe && bubbleStyles.rowMe]}>
+          <View style={bubbleStyles.avatarSlot}>
+            {showAvatar && !isMe && (
+              otherParty?.avatar ? (
+                <Image source={{ uri: otherParty.avatar }} style={bubbleStyles.avatar} />
+              ) : (
+                <View style={[bubbleStyles.avatar, bubbleStyles.avatarFallback]}>
+                  <Text style={bubbleStyles.avatarLetter}>{(otherParty?.firstName || otherParty?.name)?.[0]?.toUpperCase() ?? '?'}</Text>
+                </View>
+              )
+            )}
           </View>
-        )
-      )}
+          <View style={[bubbleStyles.bubble, isMe ? bubbleStyles.bubbleMe : bubbleStyles.bubbleThem]}>
+            <Text style={[bubbleStyles.text, isMe && bubbleStyles.textMe]}>{message.text}</Text>
+            <View style={bubbleStyles.meta}>
+              <Text style={[bubbleStyles.time, isMe && bubbleStyles.timeMe]}>{formatShortTime(message.createdAt)}</Text>
+              {isMe && <Ionicons name={isRead ? 'checkmark-done' : 'checkmark'} size={12} color={isRead ? '#99F6E4' : 'rgba(255,255,255,0.5)'} style={{ marginLeft: 2 }} />}
+              {message._optimistic && <ActivityIndicator size="small" color="rgba(255,255,255,0.5)" style={{ marginLeft: 4 }} />}
+              {isReported && (
+                <View style={bubbleStyles.reportedTag}>
+                  <Ionicons name="flag" size={8} color={C.danger} />
+                  <Text style={bubbleStyles.reportedText}>Reported</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </Pressable>
+
+      <Modal visible={showActions} transparent animationType="fade" onRequestClose={() => setShowActions(false)}>
+        <Pressable style={actionStyles.backdrop} onPress={() => setShowActions(false)}>
+          <View style={[actionStyles.menu, isMe ? actionStyles.menuRight : actionStyles.menuLeft]}>
+            <TouchableOpacity style={actionStyles.menuItem} onPress={handleCopy}>
+              <Ionicons name="copy-outline" size={18} color={C.t1} />
+              <Text style={actionStyles.menuItemText}>Copy</Text>
+            </TouchableOpacity>
+            
+            <View style={actionStyles.divider} />
+            
+            <TouchableOpacity style={actionStyles.menuItem} onPress={handleReport}>
+              <Ionicons name="flag-outline" size={18} color={C.danger} />
+              <Text style={[actionStyles.menuItemText, { color: C.danger }]}>Report</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
-    <View style={[bubbleStyles.bubble, isMe ? bubbleStyles.bubbleMe : bubbleStyles.bubbleThem]}>
-      <Text style={[bubbleStyles.text, isMe && bubbleStyles.textMe]}>{message.text}</Text>
-      <View style={bubbleStyles.meta}>
-        <Text style={[bubbleStyles.time, isMe && bubbleStyles.timeMe]}>{formatShortTime(message.createdAt)}</Text>
-        {isMe && <Ionicons name={isRead ? 'checkmark-done' : 'checkmark'} size={12} color={isRead ? '#99F6E4' : 'rgba(255,255,255,0.5)'} style={{ marginLeft: 2 }} />}
-        {message._optimistic && <ActivityIndicator size="small" color="rgba(255,255,255,0.5)" style={{ marginLeft: 4 }} />}
-      </View>
-    </View>
-  </View>
-);
+  );
+};
 
 const OfferCard = ({ message, isMe, onPress }) => (
   <View style={[bubbleStyles.row, isMe && bubbleStyles.rowMe]}>
@@ -361,6 +455,12 @@ const bubbleStyles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'center', marginTop: 4, justifyContent: 'flex-end' },
   time: { fontSize: 10, color: C.t3 },
   timeMe: { color: 'rgba(255,255,255,0.65)' },
+  reportedTag: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    marginLeft: 6, backgroundColor: C.dangerBg,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+  },
+  reportedText: { fontSize: 9, fontWeight: '700', color: C.danger },
 });
 
 const offerStyles = StyleSheet.create({
@@ -382,4 +482,49 @@ const systemStyles = StyleSheet.create({
   wrap: { alignItems: 'center', marginVertical: 10, paddingHorizontal: 20 },
   bubble: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EEEEEE', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 6 },
   text: { fontSize: 12, color: C.t2, fontWeight: '500' },
+});
+
+const actionStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menu: {
+    backgroundColor: C.white,
+    borderRadius: 16,
+    paddingVertical: 4,
+    minWidth: 180,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  menuLeft: {
+    alignSelf: 'flex-start',
+    marginLeft: 60,
+  },
+  menuRight: {
+    alignSelf: 'flex-end',
+    marginRight: 20,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  menuItemText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.t1,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginHorizontal: 12,
+  },
 });
