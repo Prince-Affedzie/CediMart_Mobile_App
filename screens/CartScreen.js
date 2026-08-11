@@ -58,7 +58,7 @@ const CartScreen = () => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [screenLoading, setScreenLoading] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(0));
-
+  
   useFocusEffect(
     useCallback(() => {
       setScreenLoading(true);

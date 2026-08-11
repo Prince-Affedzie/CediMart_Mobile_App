@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView, ScrollView, 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { reportApi } from '../apis/reportApi';
@@ -92,8 +93,12 @@ const ReportSheet = ({ visible, onClose, contentType, contentId }) => {
   };
 
   return (
+   
     <Modal transparent visible={visible} animationType="fade" onRequestClose={handleClose}>
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.backdrop}
+      >
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={handleClose} activeOpacity={1} />
         <View style={styles.sheet}>
           <View style={styles.handle} />
@@ -106,7 +111,7 @@ const ReportSheet = ({ visible, onClose, contentType, contentId }) => {
           </View>
 
           {!selectedReason ? (
-            <View style={styles.reasonList}>
+            <ScrollView style={styles.reasonList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {REASONS.map((r) => (
                 <TouchableOpacity
                   key={r.key}
@@ -121,9 +126,9 @@ const ReportSheet = ({ visible, onClose, contentType, contentId }) => {
                   <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           ) : (
-            <View style={styles.detailSection}>
+            <ScrollView style={styles.detailSection} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <TouchableOpacity style={styles.selectedReasonChip} onPress={() => setSelectedReason(null)}>
                 <Ionicons name="chevron-back" size={14} color={C.brand} />
                 <Text style={styles.selectedReasonText}>
@@ -156,11 +161,12 @@ const ReportSheet = ({ visible, onClose, contentType, contentId }) => {
                   <Text style={styles.submitBtnText}>Submit report</Text>
                 )}
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
+ 
   );
 };
 
@@ -170,7 +176,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22,
     paddingHorizontal: 18, paddingTop: 10, paddingBottom: Platform.OS === 'ios' ? 32 : 22,
     maxHeight: '80%',
-    bottom:24
+    bottom:16
   },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: 'center', marginBottom: 12 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },

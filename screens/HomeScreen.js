@@ -27,9 +27,11 @@ import { NotificationContext } from '../context/NotificationContext';
 import { useNavigation } from '@react-navigation/native';
 import {styles} from '../styles/home'
 import AIFAB from '../components/AIFAB';
+import ShopFAB from '../components/ShopFAB'
 import ProductHeroCarousel from '../components/ProductHeroCarousel';
 import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES} from '../data/General'
 import RecommendEarnBanner from '../components/RecommendEarnNotice'
+import {ProductGridSkeleton} from '../components/SkeletonLoader'
 
 const { width } = Dimensions.get('window');
 
@@ -396,11 +398,8 @@ const HomeScreen = () => {
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0D9488" />
-        <Text style={styles.loadingText}>Loading…</Text>
-      </View>
-    );
+      <ProductGridSkeleton/>
+    )
   }
 
   return (
@@ -643,7 +642,11 @@ const HomeScreen = () => {
 
         <View style={{ height: 100 }} />
       </ScrollView>
-
+       <ShopFAB 
+        onPress={() => navigation.navigate('Products')} 
+        bottomOffset={30} // Push up if there's another FAB
+      />
+      
       <AIFAB style={{ position: 'absolute', bottom: 24, right: 16 }} />
     </SafeAreaView>
   );

@@ -12,6 +12,8 @@ import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-si
 import * as AppleAuthentication from 'expo-apple-authentication';
 import FullScreenLoader from '../components/FullScreenLoader';
 import usePushNotifications from "../hooks/usePushNotification";
+import SupportFAB from '../components/SupportFAB';
+
 
 const GoogleLogo = require('../assets/Google-logo.png');
 const BrandLogo = require('../assets/cedimart_logo.png');
@@ -53,6 +55,7 @@ const SignUpScreen = ({ navigation }) => {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { login: authLogin, google_signUp, signUpByApple } = useAuth();
 
   const scrollViewRef = useRef(null);
@@ -102,6 +105,7 @@ const SignUpScreen = ({ navigation }) => {
     else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
     if (!formData.confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
     else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!agreedToTerms) newErrors.terms = 'You must agree to the Terms of Service and Privacy Policy';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -110,6 +114,10 @@ const SignUpScreen = ({ navigation }) => {
 
   const handleGoogleSignUp = async () => {
     if (isLoading) return;
+    if (!agreedToTerms) {
+      Alert.alert('Terms Required', 'Please agree to the Terms of Service and Privacy Policy before creating an account.');
+      return;
+    }
     setGoogleLoading(true);
     let navigatedAway = false;
     try {
@@ -138,6 +146,10 @@ const SignUpScreen = ({ navigation }) => {
 
   const handleAppleSignUp = async () => {
     if (isLoading) return;
+    if (!agreedToTerms) {
+      Alert.alert('Terms Required', 'Please agree to the Terms of Service and Privacy Policy before creating an account.');
+      return;
+    }
     setAppleLoading(true);
     try {
       const isAvailable = await AppleAuthentication.isAvailableAsync();
@@ -160,6 +172,10 @@ const SignUpScreen = ({ navigation }) => {
 
   const handleSignUp = async () => {
     if (isLoading) return;
+    if (!agreedToTerms) {
+      Alert.alert('Terms Required', 'Please agree to the Terms of Service and Privacy Policy before creating an account.');
+      return;
+    }
     Keyboard.dismiss();
     setTimeout(async () => {
       if (!validateForm()) return;
@@ -180,6 +196,7 @@ const SignUpScreen = ({ navigation }) => {
   const handleInputChange = (field, value) => { setFormData(prev => ({ ...prev, [field]: value })); if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' })); };
 
   return (
+    
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container} keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
       <Animated.View style={[styles.animatedContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         <ScrollView ref={scrollViewRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
@@ -214,6 +231,30 @@ const SignUpScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           <View style={styles.dividerContainer}><View style={styles.divider} /><Text style={styles.dividerText}> For Buyers </Text><View style={styles.divider} /></View>
+
+          {/* 🔥 Prominent Terms Agreement — placed before social buttons */}
+          <View style={styles.termsAgreementCard}>
+            <TouchableOpacity 
+              style={styles.termsCheckRow} 
+              onPress={() => setAgreedToTerms(!agreedToTerms)}
+              disabled={isLoading}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.termsCheckbox, agreedToTerms && styles.termsCheckboxChecked, isLoading && styles.termsCheckboxDisabled]}>
+                {agreedToTerms && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.termsCheckText}>
+                I agree to the{' '}
+                <Text style={styles.termsLink} onPress={(e) => { e.stopPropagation(); navigation.navigate('TermsOfService'); }}>Terms of Service</Text>
+                {' '}and{' '}
+                <Text style={styles.termsLink} onPress={(e) => { e.stopPropagation(); navigation.navigate('PrivacyPolicy'); }}>Privacy Policy</Text>
+              </Text>
+            </TouchableOpacity>
+            {errors.terms && <Text style={styles.termsError}>{errors.terms}</Text>}
+            <Text style={styles.termsNote}>
+              By creating an account, you acknowledge that CediMart is a platform powered by user-generated content. You agree to our zero-tolerance policy on abuse, harassment, and hate speech.
+            </Text>
+          </View>
 
           {/* Social Sign Up */}
           <View style={styles.socialContainer}>
@@ -284,11 +325,6 @@ const SignUpScreen = ({ navigation }) => {
               {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
             </View>
 
-            <TouchableOpacity style={styles.termsContainer} disabled={isLoading} activeOpacity={0.7}>
-              <View style={styles.checkboxContainer}><View style={[styles.checkbox, isLoading && styles.checkboxDisabled]}><Ionicons name="checkmark" size={14} color="#FFFFFF" /></View></View>
-              <Text style={styles.termsText}>I agree to the <Text style={styles.linkText} onPress={() => navigation.navigate('TermsOfService')}>Terms of Service</Text> and <Text style={styles.linkText} onPress={() => navigation.navigate('PrivacyPolicy')}>Privacy Policy</Text></Text>
-            </TouchableOpacity>
-
             <TouchableOpacity ref={buttonRef} style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]} onPress={handleSignUp} disabled={isLoading} activeOpacity={0.8}>
               {loading ? (
                 <View style={styles.buttonLoadingContent}><Animated.View style={{ transform: [{ rotate: spin }], marginRight: 8 }}><Ionicons name="refresh" size={20} color="#FFFFFF" /></Animated.View><Text style={styles.signUpButtonText}>Creating Account...</Text></View>
@@ -311,6 +347,7 @@ const SignUpScreen = ({ navigation }) => {
         iconColor={googleLoading ? "#DB4437" : appleLoading ? "#000000" : C.brand}
         backgroundColor="rgba(255, 255, 255, 0.98)"
       />
+    <SupportFAB />
     </KeyboardAvoidingView>
   );
 };
@@ -342,6 +379,66 @@ const styles = StyleSheet.create({
   vendorCTASubtext: { color: '#99F6E4', fontSize: 13, fontWeight: '700' },
   vendorCTARight: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
 
+  // Terms Agreement Card
+  termsAgreementCard: {
+    backgroundColor: C.brandDim,
+    borderRadius: 14,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: C.brandBorder,
+  },
+  termsCheckRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  termsCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: C.brand,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 1,
+    flexShrink: 0,
+  },
+  termsCheckboxChecked: {
+    backgroundColor: C.brand,
+  },
+  termsCheckboxDisabled: {
+    borderColor: C.brandBorder,
+    backgroundColor: C.brandBorder,
+  },
+  termsCheckText: {
+    flex: 1,
+    fontSize: 13.5,
+    color: C.t1,
+    lineHeight: 19,
+    fontWeight: '500',
+  },
+  termsLink: {
+    color: C.brand,
+    fontWeight: '700',
+  },
+  termsError: {
+    fontSize: 12,
+    color: C.danger,
+    marginTop: 8,
+    marginLeft: 36,
+    fontWeight: '600',
+  },
+  termsNote: {
+    fontSize: 11.5,
+    color: C.t2,
+    lineHeight: 17,
+    marginTop: 10,
+    marginLeft: 36,
+    fontStyle: 'italic',
+  },
+
   form: { paddingHorizontal: 20 },
   nameRow: { flexDirection: 'row', marginBottom: 20 },
   nameInputGroup: { flex: 1 },
@@ -356,12 +453,6 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 12, color: C.danger, marginTop: 4, marginLeft: 4 },
   passwordHintContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 6, marginLeft: 4 },
   hintText: { fontSize: 12, color: '#666', marginLeft: 6 },
-  termsContainer: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 24, paddingHorizontal: 4 },
-  checkboxContainer: { marginTop: 2, marginRight: 10 },
-  checkbox: { width: 20, height: 20, borderRadius: 4, backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center' },
-  checkboxDisabled: { backgroundColor: C.brandBorder },
-  termsText: { fontSize: 13, color: '#666', lineHeight: 18, flex: 1 },
-  linkText: { color: C.brand, fontWeight: '600' },
   signUpButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: C.brand, borderRadius: 12, paddingVertical: 16, marginBottom: 24, shadowColor: C.brand, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 3 },
   signUpButtonDisabled: { backgroundColor: C.brandBorder, shadowOpacity: 0.1 },
   signUpButtonText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold', marginRight: 8 },

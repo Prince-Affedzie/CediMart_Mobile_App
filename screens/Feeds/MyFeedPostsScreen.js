@@ -91,6 +91,8 @@ const StatsHeader = ({ stats }) => {
 };
 
 // ─── Grid Item ─────────────────────────────────────────────────────────────
+// Replace the GridItem component:
+
 const GridItem = ({ post, onPress, onMenu }) => {
   const typeCfg = FEED_TYPE_CONFIG[post.type] || FEED_TYPE_CONFIG.product_reel;
   const media = post.media?.[0];
@@ -109,6 +111,10 @@ const GridItem = ({ post, onPress, onMenu }) => {
             nativeControls={false}
             pointerEvents="none"
           />
+          {/* 🔥 Centered play icon */}
+          <View style={styles.playIconCenter}>
+            <Ionicons name="play-circle" size={36} color="rgba(255,255,255,0.85)" />
+          </View>
         </View>
       ) : isImage ? (
         <Image source={{ uri: media.thumbnailUrl || media.url }} style={styles.gridMedia} resizeMode="cover" />
@@ -118,13 +124,8 @@ const GridItem = ({ post, onPress, onMenu }) => {
         </View>
       )}
 
-      {/* Top overlay: video indicator + menu */}
+      {/* Top overlay: menu */}
       <View style={styles.gridTopRow} pointerEvents="box-none">
-        {isVideo && (
-          <View style={styles.gridVideoBadge}>
-            <Ionicons name="play" size={12} color="#fff" />
-          </View>
-        )}
         <View style={{ flex: 1 }} />
         <TouchableOpacity
           style={styles.gridMenuBtn}
@@ -137,20 +138,25 @@ const GridItem = ({ post, onPress, onMenu }) => {
 
       {/* Bottom overlay: stats */}
       <View style={styles.gridBottomOverlay} pointerEvents="none">
-        <Ionicons name="heart" size={10} color="#fff" />
-        <Text style={styles.gridStatsText}>{formatCount(post.likes?.length || 0)}</Text>
+        <View style={styles.gridStatItem}>
+          <Ionicons name="heart" size={10} color="#fff" />
+          <Text style={styles.gridStatsText}>{formatCount(post.likes?.length || 0)}</Text>
+        </View>
+        <View style={styles.gridStatItem}>
+          <Ionicons name="eye" size={11} color="#fff" />
+          <Text style={styles.gridStatsText}>{formatCount(post.views || 0)}</Text>
+        </View>
         <View style={{ flex: 1 }} />
         {post.media?.length > 1 && (
-          <>
+          <View style={styles.gridStatItem}>
             <Ionicons name="copy-outline" size={10} color="#fff" />
             <Text style={styles.gridStatsText}>{post.media.length}</Text>
-          </>
+          </View>
         )}
       </View>
     </TouchableOpacity>
   );
 };
-
 // ─── Action Sheet ─────────────────────────────────────────────────────────
 const PostActionSheet = ({ visible, post, onClose, onEdit, onShare, onDelete }) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -436,10 +442,18 @@ listContent: {
     position: 'absolute', top: 6, left: 6, right: 6,
     flexDirection: 'row', alignItems: 'center',
   },
-  gridVideoBadge: {
-    width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center', alignItems: 'center', paddingLeft: 1,
-  },
+  // In the styles object, add:
+playIconCenter: {
+  position: 'absolute',
+  top: 0, left: 0, right: 0, bottom: 0,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+gridStatItem: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 3,
+},
   gridMenuBtn: {
     width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center', alignItems: 'center',

@@ -1,12 +1,11 @@
 // src/screens/opportunities/OpportunitiesScreen.js
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Dimensions,
   Platform,
 } from 'react-native';
@@ -39,211 +38,117 @@ const C = {
   danger: '#DC2626',
 };
 
-const OPPORTUNITY_TYPES = [
-  { key: 'all', label: 'All', icon: 'apps-outline' },
-  { key: 'internship', label: 'Internships', icon: 'briefcase-outline', color: C.info, bg: C.infoBg },
-  { key: 'scholarship', label: 'Scholarships', icon: 'school-outline', color: C.success, bg: C.successBg },
-  { key: 'competition', label: 'Competitions', icon: 'trophy-outline', color: C.gold, bg: C.goldBg },
-  { key: 'hackathon', label: 'Hackathons', icon: 'code-slash-outline', color: C.purple, bg: C.purpleBg },
-  { key: 'fellowship', label: 'Fellowships', icon: 'star-outline', color: C.accent, bg: C.accentBg },
-  { key: 'job', label: 'Part-time Jobs', icon: 'wallet-outline', color: '#EC4899', bg: '#FDF2F8' },
-  { key: 'volunteer', label: 'Volunteer', icon: 'heart-outline', color: C.danger, bg: '#FEF2F2' },
+const COMING_SOON_ITEMS = [
+  {
+    icon: 'briefcase-outline',
+    title: 'Internships',
+    desc: 'Find placement opportunities at top companies',
+    color: C.info,
+    bg: C.infoBg,
+  },
+  {
+    icon: 'school-outline',
+    title: 'Scholarships',
+    desc: 'Discover funding for your education',
+    color: C.success,
+    bg: C.successBg,
+  },
+  {
+    icon: 'trophy-outline',
+    title: 'Competitions',
+    desc: 'Showcase your skills and win prizes',
+    color: C.gold,
+    bg: C.goldBg,
+  },
+  {
+    icon: 'code-slash-outline',
+    title: 'Hackathons',
+    desc: 'Build, collaborate, and innovate',
+    color: C.purple,
+    bg: C.purpleBg,
+  },
+  {
+    icon: 'star-outline',
+    title: 'Fellowships',
+    desc: 'Accelerate your career with top programs',
+    color: C.accent,
+    bg: C.accentBg,
+  },
+  {
+    icon: 'wallet-outline',
+    title: 'Part-time Jobs',
+    desc: 'Earn while you learn on campus',
+    color: '#EC4899',
+    bg: '#FDF2F8',
+  },
+  {
+    icon: 'heart-outline',
+    title: 'Volunteer',
+    desc: 'Give back and build your network',
+    color: C.danger,
+    bg: '#FEF2F2',
+  },
 ];
 
-// ─── Opportunity Card (Mock) ───────────────────────────────────────────────
-const OpportunityCard = ({ item }) => {
-  const typeCfg = OPPORTUNITY_TYPES.find(t => t.key === item.type) || OPPORTUNITY_TYPES[0];
-
-  return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85}>
-      {/* Type badge */}
-      <View style={styles.cardHeader}>
-        <View style={[styles.cardTypeBadge, { backgroundColor: typeCfg.bg }]}>
-          <Ionicons name={typeCfg.icon} size={12} color={typeCfg.color} />
-          <Text style={[styles.cardTypeText, { color: typeCfg.color }]}>{typeCfg.label}</Text>
-        </View>
-        {item.deadline && (
-          <View style={styles.deadlineBadge}>
-            <Ionicons name="time-outline" size={10} color={C.danger} />
-            <Text style={styles.deadlineText}>{item.deadline}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Content */}
-      <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-      <Text style={styles.cardOrg}>{item.organization}</Text>
-
-      {item.description && (
-        <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
-      )}
-
-      {/* Tags */}
-      <View style={styles.cardTags}>
-        {item.isRemote && (
-          <View style={styles.tag}>
-            <Ionicons name="laptop-outline" size={10} color={C.info} />
-            <Text style={styles.tagText}>Remote</Text>
-          </View>
-        )}
-        {item.location && (
-          <View style={styles.tag}>
-            <Ionicons name="location-outline" size={10} color={C.textOff} />
-            <Text style={styles.tagText}>{item.location}</Text>
-          </View>
-        )}
-        {item.compensation && (
-          <View style={[styles.tag, { backgroundColor: C.successBg }]}>
-            <Text style={[styles.tagText, { color: C.success }]}>{item.compensation}</Text>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-// ─── Main Screen ─────────────────────────────────────────────────────────────
 const OpportunitiesScreen = () => {
-  const [activeType, setActiveType] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Mock data for boilerplate
-  const mockOpportunities = [
-    {
-      id: '1',
-      type: 'internship',
-      title: 'Software Engineering Intern - Summer 2025',
-      organization: 'Google',
-      description: 'Join Google for a 12-week internship program. Work on real projects with experienced engineers.',
-      location: 'Accra, Ghana',
-      isRemote: false,
-      compensation: 'Paid',
-      deadline: '2d left',
-    },
-    {
-      id: '2',
-      type: 'scholarship',
-      title: 'Mastercard Foundation Scholars Program',
-      organization: 'Mastercard Foundation',
-      description: 'Full scholarship covering tuition, accommodation, and living expenses for undergraduate students.',
-      isRemote: false,
-      compensation: 'Full Ride',
-      deadline: '5d left',
-    },
-    {
-      id: '3',
-      type: 'hackathon',
-      title: 'Campus Innovation Challenge 2025',
-      organization: 'CediMart × UG',
-      description: 'Build solutions for campus problems. Win prizes up to GH₵ 10,000.',
-      location: 'University of Ghana',
-      isRemote: false,
-      compensation: 'GH₵ 10,000 prize',
-      deadline: '1w left',
-    },
-    {
-      id: '4',
-      type: 'job',
-      title: 'Campus Brand Ambassador',
-      organization: 'CediMart',
-      description: 'Represent CediMart on your campus. Earn commissions and build your network.',
-      isRemote: true,
-      compensation: 'Commission-based',
-    },
-    {
-      id: '5',
-      type: 'volunteer',
-      title: 'Campus Clean-Up Initiative',
-      organization: 'Green Campus Club',
-      description: 'Join fellow students to keep our campus clean. Certificates provided.',
-      location: 'Main Campus',
-      isRemote: false,
-      deadline: '3d left',
-    },
-    {
-      id: '6',
-      type: 'competition',
-      title: 'National Student Entrepreneurship Challenge',
-      organization: 'Ghana Startup Network',
-      description: 'Pitch your business idea to top investors. Win mentorship and seed funding.',
-      location: 'Accra International Conference Centre',
-      isRemote: false,
-      compensation: 'Seed Funding',
-      deadline: '2w left',
-    },
-  ];
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Opportunities</Text>
-        <Text style={styles.headerSubtitle}>Discover your next big break</Text>
-      </View>
-
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={16} color={C.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search opportunities..."
-            placeholderTextColor={C.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={16} color={C.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Type Filter */}
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterScroll}
-      >
-        {OPPORTUNITY_TYPES.map(type => {
-          const isActive = activeType === type.key;
-          return (
-            <TouchableOpacity
-              key={type.key}
-              style={[styles.filterChip, isActive && styles.filterChipActive]}
-              onPress={() => setActiveType(type.key)}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={type.icon}
-                size={14}
-                color={isActive ? '#fff' : C.textOff}
-              />
-              <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                {type.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* List */}
-      <ScrollView
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {mockOpportunities.map(item => (
-          <OpportunityCard key={item.id} item={item} />
-        ))}
-
-        {/* Empty state placeholder */}
-        <View style={styles.placeholderNote}>
-          <Ionicons name="construct-outline" size={20} color={C.textMuted} />
-          <Text style={styles.placeholderText}>
-            This is a boilerplate screen. API integration coming soon.
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          <View style={styles.heroIconRing}>
+            <View style={styles.heroIconInner}>
+              <Ionicons name="rocket-outline" size={40} color={C.brand} />
+            </View>
+          </View>
+          <Text style={styles.heroTitle}>Something Exciting{'\n'}is Coming</Text>
+          <Text style={styles.heroSubtitle}>
+            We're building a dedicated hub for internships, scholarships, competitions, hackathons, and more — all tailored for your campus.
           </Text>
+          <View style={styles.heroBadge}>
+            <View style={styles.heroBadgeDot} />
+            <Text style={styles.heroBadgeText}>Launching soon</Text>
+          </View>
         </View>
+
+        {/* What to Expect */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>What to expect</Text>
+          <View style={styles.featuresGrid}>
+            {COMING_SOON_ITEMS.map((item, i) => (
+              <View key={i} style={styles.featureCard}>
+                <View style={[styles.featureIcon, { backgroundColor: item.bg }]}>
+                  <Ionicons name={item.icon} size={22} color={item.color} />
+                </View>
+                <Text style={styles.featureTitle}>{item.title}</Text>
+                <Text style={styles.featureDesc}>{item.desc}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Stay Updated CTA */}
+        <View style={styles.ctaCard}>
+          <View style={styles.ctaPattern} />
+          <Ionicons name="notifications-outline" size={28} color="#fff" style={styles.ctaIcon} />
+          <Text style={styles.ctaTitle}>Be the first to know</Text>
+          <Text style={styles.ctaSubtitle}>
+            We'll notify you the moment opportunities go live on your campus. Stay tuned!
+          </Text>
+          <View style={styles.ctaButtonRow}>
+            <View style={styles.ctaDot1} />
+            <View style={styles.ctaDot2} />
+            <View style={styles.ctaDot3} />
+          </View>
+        </View>
+
+        {/* Footer note */}
+        <Text style={styles.footerText}>
+          Got ideas for what you'd like to see?{'\n'}We'd love to hear from you!
+        </Text>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -254,71 +159,202 @@ const OpportunitiesScreen = () => {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
+  scrollContent: { paddingBottom: 40 },
 
-  // Header
-  header: {
-    backgroundColor: C.surface, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+  // Hero
+  heroSection: {
+    alignItems: 'center',
+    paddingHorizontal: 28,
+    paddingTop: 40,
+    paddingBottom: 32,
   },
-  headerTitle: { fontSize: 26, fontWeight: '800', color: C.text, letterSpacing: -0.5 },
-  headerSubtitle: { fontSize: 13, color: C.textMuted, marginTop: 2 },
+  heroIconRing: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: C.brandDim,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: C.brand + '30',
+  },
+  heroIconInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: C.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: C.brand,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: C.text,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+    lineHeight: 36,
+    marginBottom: 12,
+  },
+  heroSubtitle: {
+    fontSize: 14.5,
+    color: C.textOff,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: C.brandDim,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.brand + '30',
+  },
+  heroBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.brand,
+  },
+  heroBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.brand,
+    letterSpacing: 0.3,
+  },
 
-  // Search
-  searchContainer: { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: C.surface },
-  searchBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 12,
-    borderWidth: 1, borderColor: C.border,
+  // Section
+  section: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
   },
-  searchInput: { flex: 1, fontSize: 14, color: C.text, paddingVertical: 10 },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: C.text,
+    marginBottom: 14,
+    letterSpacing: -0.2,
+  },
 
-  // Filter
-  filterScroll: { paddingHorizontal: 12, paddingVertical: 8, gap: 8, backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
-  filterChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: C.bg, borderWidth: 1, borderColor: C.border,
+  // Features Grid
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  filterChipActive: { backgroundColor: C.brand, borderColor: C.brand },
-  filterChipText: { fontSize: 12.5, fontWeight: '600', color: C.textOff },
-  filterChipTextActive: { color: '#fff' },
+  featureCard: {
+    width: (width - 42) / 2,
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  featureIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  featureTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.text,
+    marginBottom: 3,
+  },
+  featureDesc: {
+    fontSize: 11.5,
+    color: C.textMuted,
+    lineHeight: 16,
+  },
 
-  // List
-  listContent: { padding: 12, gap: 10 },
+  // CTA Card
+  ctaCard: {
+    backgroundColor: C.brand,
+    marginHorizontal: 16,
+    borderRadius: 22,
+    padding: 28,
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  ctaPattern: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  ctaIcon: {
+    marginBottom: 14,
+    opacity: 0.9,
+  },
+  ctaTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 8,
+    letterSpacing: -0.3,
+  },
+  ctaSubtitle: {
+    fontSize: 13.5,
+    color: 'rgba(255,255,255,0.75)',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  ctaButtonRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+  },
+  ctaDot1: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  ctaDot2: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+  },
+  ctaDot3: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
 
-  // Card
-  card: {
-    backgroundColor: C.surface, borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: C.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
+  // Footer
+  footerText: {
+    textAlign: 'center',
+    fontSize: 12.5,
+    color: C.textMuted,
+    lineHeight: 19,
+    paddingHorizontal: 40,
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  cardTypeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  cardTypeText: { fontSize: 10.5, fontWeight: '700' },
-  deadlineBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#FEF2F2', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8,
-  },
-  deadlineText: { fontSize: 10, fontWeight: '700', color: C.danger },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: C.text, lineHeight: 22, marginBottom: 4 },
-  cardOrg: { fontSize: 13, color: C.brand, fontWeight: '600', marginBottom: 6 },
-  cardDesc: { fontSize: 13, color: C.textOff, lineHeight: 19, marginBottom: 10 },
-  cardTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tag: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6,
-  },
-  tagText: { fontSize: 10.5, fontWeight: '600', color: C.textOff },
-
-  // Placeholder
-  placeholderNote: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 20,
-    backgroundColor: C.surface, borderRadius: 14, borderWidth: 1,
-    borderColor: C.border, borderStyle: 'dashed',
-  },
-  placeholderText: { fontSize: 12.5, color: C.textMuted, fontWeight: '500' },
 });
 
 export default OpportunitiesScreen;

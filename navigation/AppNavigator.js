@@ -302,6 +302,7 @@ function MainStackNavigator() {
             </>
           )}
           {/* Shared screens for both roles */}
+          <Stack.Screen name="Products" component={ProductsScreen} />
           <Stack.Screen name="ChatScreen" component={ChatScreen} />
           <Stack.Screen name="MyFeedPosts" component={MyFeedPostsScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Followers" component={FollowersScreen} options={{ headerShown: false }} />

@@ -28,6 +28,8 @@ import AIFAB from '../components/AIFAB';
 import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES,HERO_SLIDES} from '../data/General'
 import RecommendEarnBanner from '../components/RecommendEarnNotice'
 import ProductHeroCarousel from '../components/ProductHeroCarousel';
+import {ProductGridSkeleton} from '../components/SkeletonLoader'
+import ShopFAB from '../components/ShopFAB'
 
 const { width } = Dimensions.get('window');
 
@@ -490,10 +492,7 @@ const GuestHomeScreen = () => {
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0D9488" />
-        <Text style={styles.loadingText}>Loading…</Text>
-      </View>
+      <ProductGridSkeleton/>
     );
   }
 
@@ -745,8 +744,12 @@ const GuestHomeScreen = () => {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      <AIFAB style={{ position: 'absolute', bottom: 124, right: 16 }} />
-      <SupportFAB />
+      <ShopFAB
+        onPress={() => navigation.navigate('Products')} 
+        bottomOffset={40}  
+      />
+      <AIFAB style={{ position: 'absolute', bottom: 34, right: 16 }} />
+      
     </SafeAreaView>
   );
 };

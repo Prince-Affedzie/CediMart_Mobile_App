@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { sendOTPVendor, verifyOTP } from '../apis/authApi';
 import { createVendorProfile } from '../apis/vendorApi';
+import SupportFAB from '../components/SupportFAB';
+
 
 // ─── Teal + Coral Palette ──────────────────────────────────────────────────
 const C = {
@@ -203,6 +205,7 @@ const VendorSignUpScreen = ({ navigation }) => {
   const [instagram, setInstagram] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [storeBanner, setStoreBanner] = useState(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -270,6 +273,10 @@ const VendorSignUpScreen = ({ navigation }) => {
 
   const handleSubmitProfile = async () => {
     if (!fullName.trim()) return Alert.alert('Missing Info', 'Please enter your full name.');
+    if (!agreedToTerms) {
+    Alert.alert('Terms Required', 'Please agree to the Terms of Service and Privacy Policy before creating your account.');
+    return;
+  }
     setLoading(true);
     try {
       const formData = new FormData();
@@ -392,7 +399,27 @@ const VendorSignUpScreen = ({ navigation }) => {
         <TouchableOpacity style={[styles.primaryButton, loading && styles.primaryButtonDisabled]} onPress={handleSubmitProfile} disabled={loading} activeOpacity={0.8}>
           {loading ? <ActivityIndicator size="small" color="#fff" /> : <><Text style={styles.primaryButtonText}>Create Account</Text><Ionicons name="checkmark-circle-outline" size={20} color="#fff" /></>}
         </TouchableOpacity>
-        <View style={styles.termsText}><Ionicons name="information-circle-outline" size={14} color={C.t3} /><Text style={styles.termsTextContent}>By creating an account, you agree to our Terms of Service and Privacy Policy.</Text></View>
+        <View style={styles.termsAgreementCard}>
+      <TouchableOpacity 
+        style={styles.termsCheckRow} 
+        onPress={() => setAgreedToTerms(!agreedToTerms)}
+        disabled={loading}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.termsCheckbox, agreedToTerms && styles.termsCheckboxChecked, loading && styles.termsCheckboxDisabled]}>
+          {agreedToTerms && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+        </View>
+        <Text style={styles.termsCheckText}>
+          I agree to the{' '}
+          <Text style={styles.termsLink} onPress={(e) => { e.stopPropagation(); navigation.navigate('TermsOfService'); }}>Terms of Service</Text>
+          {' '}and{' '}
+          <Text style={styles.termsLink} onPress={(e) => { e.stopPropagation(); navigation.navigate('PrivacyPolicy'); }}>Privacy Policy</Text>
+        </Text>
+      </TouchableOpacity>
+      <Text style={styles.termsNote}>
+        By creating a vendor account, you acknowledge that CediMart is a platform powered by user-generated content. You agree to our zero-tolerance policy on abuse, harassment, and hate speech. As a vendor, you represent your campus and must maintain professional conduct at all times.
+      </Text>
+      </View>
       </View>
     </Animated.View>
   );
@@ -416,7 +443,9 @@ const VendorSignUpScreen = ({ navigation }) => {
           </View>
         </ScrollView>
         <LoadingOverlay visible={loading} message={step === STEPS.PHONE ? 'Sending verification code...' : step === STEPS.OTP ? 'Verifying your phone...' : 'Creating your account...'} />
+       
       </KeyboardAvoidingView>
+       <SupportFAB/>
     </SafeAreaView>
   );
 };
@@ -508,6 +537,57 @@ const styles = StyleSheet.create({
   loadingOverlay: { flex: 1, backgroundColor: 'rgba(255,255,255,0.95)', justifyContent: 'center', alignItems: 'center' },
   loadingContainer: { backgroundColor: C.white, padding: 30, borderRadius: 16, alignItems: 'center', shadowColor: C.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 5, minWidth: 200 },
   loadingText: { fontSize: 15, fontWeight: '600', color: '#333', textAlign: 'center' },
+  // Terms Agreement Card
+termsAgreementCard: {
+  backgroundColor: C.brandDim,
+  borderRadius: 14,
+  padding: 16,
+  marginBottom: 20,
+  borderWidth: 1,
+  borderColor: C.brandBorder,
+},
+termsCheckRow: {
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  gap: 12,
+},
+termsCheckbox: {
+  width: 24,
+  height: 24,
+  borderRadius: 6,
+  borderWidth: 2,
+  borderColor: C.brand,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginTop: 1,
+  flexShrink: 0,
+},
+termsCheckboxChecked: {
+  backgroundColor: C.brand,
+},
+termsCheckboxDisabled: {
+  borderColor: C.brandBorder,
+  backgroundColor: C.brandBorder,
+},
+termsCheckText: {
+  flex: 1,
+  fontSize: 13.5,
+  color: C.t1,
+  lineHeight: 19,
+  fontWeight: '500',
+},
+termsLink: {
+  color: C.brand,
+  fontWeight: '700',
+},
+termsNote: {
+  fontSize: 11.5,
+  color: C.t2,
+  lineHeight: 17,
+  marginTop: 10,
+  marginLeft: 36,
+  fontStyle: 'italic',
+},
 });
 
 export default VendorSignUpScreen;

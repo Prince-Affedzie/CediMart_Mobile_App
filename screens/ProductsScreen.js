@@ -24,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import productService from '../services/productService';
 import {styles} from '../styles/products'
 import {CONDITION_CONFIG,SUBCATEGORIES,CATEGORIES} from '../data/General'
+import {ProductGridSkeleton} from '../components/SkeletonLoader'
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 44) / 2;
@@ -206,7 +207,7 @@ const GridCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
         <View style={styles.gridMetaRow}>
           {item.campus && (
             <View style={styles.campusMicroPill}>
-              <Ionicons name="school-outline" size={8} color="#2E7D32" />
+              <Ionicons name="school-outline" size={8} color="#0D9488" />
               <Text style={styles.campusMicroText}>{item.campus}</Text>
             </View>
           )}
@@ -255,17 +256,17 @@ const GridCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
                 onPress={() => onQtyChange(item, 'decrease')}
                 disabled={isLoading}
               >
-                <Ionicons name="remove" size={12} color="#2E7D32" />
+                <Ionicons name="remove" size={12} color="#0D9488" />
               </TouchableOpacity>
               {isUpdating
-                ? <ActivityIndicator size="small" color="#4CAF50" style={{ width: 22 }} />
+                ? <ActivityIndicator size="small" color="#0D9488" style={{ width: 22 }} />
                 : <Text style={styles.gridQtyNum}>{qtyInCart}</Text>}
               <TouchableOpacity
                 style={styles.gridQtyBtn}
                 onPress={() => onQtyChange(item, 'increase')}
                 disabled={isLoading || qtyInCart >= (item.countInStock ?? 0)}
               >
-                <Ionicons name="add" size={12} color="#2E7D32" />
+                <Ionicons name="add" size={12} color="#0D9488" />
               </TouchableOpacity>
             </View>
           )}
@@ -340,7 +341,7 @@ const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
         <View style={styles.listMetaRow}>
           {item.campus && (
             <View style={styles.campusMicroPill}>
-              <Ionicons name="school-outline" size={8} color="#2E7D32" />
+              <Ionicons name="school-outline" size={8} color="#0D9488" />
               <Text style={styles.campusMicroText}>{item.campus}</Text>
             </View>
           )}
@@ -398,17 +399,17 @@ const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
                 onPress={() => onQtyChange(item, 'decrease')}
                 disabled={isLoading}
               >
-                <Ionicons name="remove" size={13} color="#2E7D32" />
+                <Ionicons name="remove" size={13} color="#0D9488" />
               </TouchableOpacity>
               {isUpdating
-                ? <ActivityIndicator size="small" color="#4CAF50" style={{ width: 28 }} />
+                ? <ActivityIndicator size="small" color="#0D9488" style={{ width: 28 }} />
                 : <Text style={styles.listQtyNum}>{qtyInCart}</Text>}
               <TouchableOpacity
                 style={styles.listQtyBtn}
                 onPress={() => onQtyChange(item, 'increase')}
                 disabled={isLoading || qtyInCart >= (item.countInStock ?? 0)}
               >
-                <Ionicons name="add" size={13} color="#2E7D32" />
+                <Ionicons name="add" size={13} color="#0D9488" />
               </TouchableOpacity>
             </View>
           )}
@@ -1003,7 +1004,7 @@ const ProductsScreen = ({ navigation, route }) => {
                     })}
                     <TouchableOpacity style={styles.liveViewAll} onPress={handleSearchSubmit}>
                       <Text style={styles.liveViewAllText}>See all results for "{searchQuery}"</Text>
-                      <Ionicons name="arrow-forward" size={13} color="#2E7D32" />
+                      <Ionicons name="arrow-forward" size={13} color="#0D9488" />
                     </TouchableOpacity>
                   </>
                 ) : (
@@ -1199,10 +1200,7 @@ const ProductsScreen = ({ navigation, route }) => {
     ════════════════════════════════ */}
 <View style={{ position: 'relative', minHeight: loading && products.length > 0 ? 200 : undefined }}>
   {loading && products.length === 0 ? (
-    <View style={styles.loadingWrap}>
-      <ActivityIndicator size="large" color="#0D9488" />
-      <Text style={styles.loadingText}>Finding listings…</Text>
-    </View>
+   <ProductGridSkeleton/>
   ) : products.length === 0 ? (
     renderEmptyState()
   ) : viewMode === 'grid' ? (

@@ -22,9 +22,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
-import * as tus from 'tus-js-client';
 import { createFeedPost } from '../../apis/feedApi';
 import { uploadApi } from '../../apis/uploadApi';
 import { useAuth } from '../../context/AuthContext';
@@ -72,39 +69,18 @@ const CAMPUS_OPTIONS = [
   { value: 'ATU', label: 'ATU' },
 ];
 
+const INSPO_ITEMS = [
+  { type: 'lifestyle', icon: 'camera-outline', label: 'Hostel Tour', color: '#F97316' },
+  { type: 'product_reel', icon: 'pricetag-outline', label: 'Sell Items', color: '#0D9488' },
+  { type: 'service_reel', icon: 'construct-outline', label: 'Your Services', color: '#7C3AED' },
+  { type: 'campus_event', icon: 'calendar-outline', label: 'Campus Events', color: '#0284C7' },
+  { type: 'campus_hack', icon: 'bulb-outline', label: 'Campus Hacks', color: '#F59E0B' },
+  { type: 'achievement', icon: 'trophy-outline', label: 'Your Wins', color: '#059669' },
+  { type: 'funny_moment', icon: 'happy-outline', label: 'Funny Moments', color: '#EC4899' },
+];
+
 const MAX_TAGS = 10;
-
-const CLIENT_MAX_SIZE = {
-  image: 10 * 1024 * 1024,
-  video: 50 * 1024 * 1024,
-};
-
-const IMAGE_COMPRESS = { maxWidth: 1080, quality: 0.7 };
-
-const compressImageAsset = async (asset) => {
-  try {
-    const actions = [];
-    if (!asset.width || asset.width > IMAGE_COMPRESS.maxWidth) {
-      actions.push({ resize: { width: IMAGE_COMPRESS.maxWidth } });
-    }
-
-    const result = await ImageManipulator.manipulateAsync(asset.uri, actions, {
-      compress: IMAGE_COMPRESS.quality,
-      format: ImageManipulator.SaveFormat.JPEG,
-    });
-
-    const info = await FileSystem.getInfoAsync(result.uri, { size: true });
-
-    return {
-      uri: result.uri,
-      mimeType: 'image/jpeg',
-      size: info.exists ? info.size : null,
-    };
-  } catch (err) {
-    console.warn('Image compression failed, using original:', err.message);
-    return null;
-  }
-};
+const CLIENT_MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -121,7 +97,7 @@ const withRetry = async (fn, attempts = 2) => {
   throw lastErr;
 };
 
-// ─── Bottom Sheet Component (with scrollable content) ──────────────────────
+// ─── Bottom Sheet Component ──────────────────────────────────────────────
 const BottomSheet = ({ visible, onClose, title, children }) => {
   const slideAnim = useRef(new Animated.Value(height)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -188,7 +164,6 @@ const CreateFeedPostScreen = () => {
   const [linkedProductName, setLinkedProductName] = useState('');
 
   const [loading, setLoading] = useState(false);
-  const [compressing, setCompressing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -197,11 +172,10 @@ const CreateFeedPostScreen = () => {
 
   const selectedType = POST_TYPES.find((t) => t.key === postType);
 
-  // ─── Media Picker ──────────────────────────────────────────────────────────
+  // ─── Media Picker — Videos only ──────────────────────────────────────────
   const pickMedia = async () => {
-    if (compressing) return;
     if (media.length >= 5) {
-      Alert.alert('Limit reached', 'Up to 5 files.');
+      Alert.alert('Limit reached', 'Up to 5 videos.');
       return;
     }
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -211,7 +185,7 @@ const CreateFeedPostScreen = () => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'],
+      mediaTypes: ['videos'],
       allowsMultipleSelection: true,
       selectionLimit: 5 - media.length,
       quality: 0.8,
@@ -222,44 +196,20 @@ const CreateFeedPostScreen = () => {
         let mimeType = asset.mimeType;
         if (!mimeType) {
           const ext = asset.uri?.split('.').pop()?.toLowerCase()?.split('?')[0];
-          const map = {
-            jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
-            mp4: 'video/mp4', mov: 'video/quicktime',
-          };
-          mimeType = map[ext] || (asset.type === 'video' ? 'video/mp4' : 'image/jpeg');
+          const map = { mp4: 'video/mp4', mov: 'video/quicktime' };
+          mimeType = map[ext] || 'video/mp4';
         }
-        const extMap = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'video/mp4': 'mp4' };
         return {
           uri: asset.uri,
           width: asset.width,
           type: mimeType,
-          name: asset.fileName || `media_${Date.now()}_${i}.${extMap[mimeType] || 'jpg'}`,
+          name: asset.fileName || `video_${Date.now()}_${i}.mp4`,
           mimeType,
           size: asset.fileSize || null,
         };
       });
 
-      setCompressing(true);
-      try {
-        const processed = await Promise.all(
-          rawMedia.map(async (item) => {
-            if (item.mimeType?.startsWith('video/')) return item;
-            const compressed = await compressImageAsset(item);
-            if (!compressed) return item;
-            return {
-              ...item,
-              uri: compressed.uri,
-              mimeType: compressed.mimeType,
-              type: compressed.mimeType,
-              name: item.name?.replace(/\.[a-zA-Z0-9]+$/, '.jpg') || item.name,
-              size: compressed.size,
-            };
-          })
-        );
-        setMedia((prev) => [...prev, ...processed].slice(0, 5));
-      } finally {
-        setCompressing(false);
-      }
+      setMedia((prev) => [...prev, ...rawMedia].slice(0, 5));
     }
   };
 
@@ -311,6 +261,11 @@ const CreateFeedPostScreen = () => {
     });
   };
 
+  const handleInspoPress = (item) => {
+    setPostType(item.type);
+    setErrors((prev) => ({ ...prev, postType: null }));
+  };
+
   const validate = () => {
     const newErrors = {};
     if (!postType) newErrors.postType = 'Please select a category';
@@ -318,57 +273,15 @@ const CreateFeedPostScreen = () => {
     if (title.trim().length > 200) newErrors.title = 'Title must be 200 characters or less';
     if (description.length > 1000) newErrors.description = 'Description must be 1000 characters or less';
     if (!description.trim() && media.length === 0 && !linkedProductId)
-      newErrors.content = 'Add a description, media, or link a product';
+      newErrors.content = 'Add a description, video, or link a product';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // ─── Upload a single file ───────────────────────────────────────────────
-  const uploadOneFile = async (file, index) => {
-    const isVideo = (file.mimeType || file.type)?.startsWith('video/');
-
-    if (isVideo) {
-      return uploadVideoToBunny(file, index);
-    }
-
-    const limit = CLIENT_MAX_SIZE.image;
-    if (file.size && file.size > limit) {
-      const mb = (limit / (1024 * 1024)).toFixed(1);
-      throw new Error(`${file.name} is over the ${mb}MB limit`);
-    }
-
-    const { data: signedData } = await withRetry(() =>
-      uploadApi.getSignedUrl(file.name, file.mimeType || file.type, 'feed')
-    );
-    if (!signedData?.success) throw new Error(`Couldn't get an upload slot for ${file.name}`);
-
-    await withRetry(() =>
-      uploadApi.uploadToSupabase(
-        signedData.data.signedUrl,
-        { uri: file.uri, type: file.mimeType || file.type },
-        (progress) => {
-          const clamped = Math.min(1, Math.max(0, progress));
-          setUploadProgress((prev) => ({ ...prev, [index]: clamped }));
-        }
-      )
-    );
-
-    const { data: confirmData } = await withRetry(() => uploadApi.confirmUpload(signedData.data.path));
-
-    if (!confirmData?.success) {
-      throw new Error(confirmData?.message || `${file.name} failed to process`);
-    }
-
-    return {
-      type: 'image',
-      url: confirmData.data.url,
-      thumbnailUrl: confirmData.data.thumbnailUrl || null,
-    };
-  };
-
+  // ─── Upload a video to Bunny ────────────────────────────────────────────
   const uploadVideoToBunny = async (file, index) => {
-    if (file.size && file.size > CLIENT_MAX_SIZE.video) {
-      const mb = (CLIENT_MAX_SIZE.video / (1024 * 1024)).toFixed(1);
+    if (file.size && file.size > CLIENT_MAX_VIDEO_SIZE) {
+      const mb = (CLIENT_MAX_VIDEO_SIZE / (1024 * 1024)).toFixed(1);
       throw new Error(`${file.name} is over the ${mb}MB limit`);
     }
 
@@ -378,33 +291,40 @@ const CreateFeedPostScreen = () => {
     const { videoId, libraryId, signature, expirationTime, tusEndpoint } = initData.data;
 
     return new Promise((resolve, reject) => {
-      const upload = new tus.Upload(
-        { uri: file.uri, name: file.name, type: file.mimeType || file.type },
-        {
-          endpoint: tusEndpoint,
-          retryDelays: [0, 3000, 5000, 10000, 20000],
-          headers: {
-            AuthorizationSignature: signature,
-            AuthorizationExpire: String(expirationTime),
-            VideoId: videoId,
-            LibraryId: String(libraryId),
-          },
-          metadata: {
-            filetype: file.mimeType || file.type,
-            title: file.name,
-          },
-          onError: (err) => reject(new Error(err.message || `${file.name} failed to upload`)),
-          onProgress: (bytesUploaded, bytesTotal) => {
-            const raw = bytesTotal > 0 ? bytesUploaded / bytesTotal : 0;
-            const clamped = Math.min(1, Math.max(0, raw));
-            setUploadProgress((prev) => ({ ...prev, [index]: clamped }));
-          },
-          onSuccess: () => {
-            resolve({ type: 'video', bunnyVideoId: videoId });
-          },
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const raw = event.loaded / event.total;
+          const clamped = Math.min(1, Math.max(0, raw));
+          setUploadProgress((prev) => ({ ...prev, [index]: clamped }));
         }
-      );
-      upload.start();
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve({ type: 'video', bunnyVideoId: videoId });
+        } else {
+          reject(new Error(`Upload failed: ${xhr.status}`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+
+      xhr.open('POST', tusEndpoint, true);
+      xhr.setRequestHeader('AuthorizationSignature', signature);
+      xhr.setRequestHeader('AuthorizationExpire', String(expirationTime));
+      xhr.setRequestHeader('VideoId', videoId);
+      xhr.setRequestHeader('LibraryId', String(libraryId));
+      xhr.setRequestHeader('Upload-Length', String(file.size || 0));
+      xhr.setRequestHeader('Tus-Resumable', '1.0.0');
+      xhr.setRequestHeader('Content-Type', 'application/offset+octet-stream');
+
+      // Read file and send
+      fetch(file.uri)
+        .then(res => res.blob())
+        .then(blob => xhr.send(blob))
+        .catch(err => reject(err));
     });
   };
 
@@ -420,7 +340,7 @@ const CreateFeedPostScreen = () => {
     setUploadProgress({});
 
     try {
-      const results = await Promise.allSettled(media.map((file, i) => uploadOneFile(file, i)));
+      const results = await Promise.allSettled(media.map((file, i) => uploadVideoToBunny(file, i)));
 
       const uploadedMedia = [];
       const failedFiles = [];
@@ -439,8 +359,8 @@ const CreateFeedPostScreen = () => {
             );
           } else {
             Alert.alert(
-              'Some files failed',
-              `${failedFiles.length} of ${media.length} file(s) couldn't be uploaded:\n` +
+              'Some videos failed',
+              `${failedFiles.length} of ${media.length} video(s) couldn't be uploaded:\n` +
                 failedFiles.map((f) => `• ${f.name}`).join('\n') +
                 `\n\nPost with the other ${uploadedMedia.length}?`,
               [
@@ -491,73 +411,67 @@ const CreateFeedPostScreen = () => {
   };
 
   const campusLabel = CAMPUS_OPTIONS.find((c) => c.value === campus)?.label || 'Select';
-  const canPost = !!title.trim() && !!postType && !loading && !compressing;
+  const canPost = !!title.trim() && !!postType && !loading;
 
-
-  // Add this right after the component starts, before the return:
-
-// ── NOT AUTHENTICATED ──
-if (!user) {
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBackBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={24} color={C.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Post</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <View style={styles.authContainer}>
-        {/* Icon */}
-        <View style={styles.authIconWrap}>
-          <View style={styles.authIcon}>
-            <Ionicons name="create-outline" size={44} color={C.brand} />
-          </View>
+  // ── NOT AUTHENTICATED ──
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerBackBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="close" size={24} color={C.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>New Post</Text>
+          <View style={{ width: 40 }} />
         </View>
 
-        <Text style={styles.authTitle}>Share with the Campus</Text>
-        <Text style={styles.authSubtitle}>
-          Create an account or login to share posts, moments, and connect with students across campus.
-        </Text>
+        <View style={styles.authContainer}>
+          <View style={styles.authIconWrap}>
+            <View style={styles.authIcon}>
+              <Ionicons name="create-outline" size={44} color={C.brand} />
+            </View>
+          </View>
 
-        {/* Features */}
-        <View style={styles.authFeatures}>
-          <View style={styles.authFeatureRow}>
-            <Ionicons name="checkmark-circle" size={18} color={C.brand} />
-            <Text style={styles.authFeatureText}>Share products, events & moments</Text>
+          <Text style={styles.authTitle}>Share with the Campus</Text>
+          <Text style={styles.authSubtitle}>
+            Create an account or login to share videos, moments, and connect with students across campus.
+          </Text>
+
+          <View style={styles.authFeatures}>
+            <View style={styles.authFeatureRow}>
+              <Ionicons name="checkmark-circle" size={18} color={C.brand} />
+              <Text style={styles.authFeatureText}>Share videos, events & moments</Text>
+            </View>
+            <View style={styles.authFeatureRow}>
+              <Ionicons name="checkmark-circle" size={18} color={C.brand} />
+              <Text style={styles.authFeatureText}>Get likes, comments & followers</Text>
+            </View>
+            <View style={styles.authFeatureRow}>
+              <Ionicons name="checkmark-circle" size={18} color={C.brand} />
+              <Text style={styles.authFeatureText}>Build your campus presence</Text>
+            </View>
           </View>
-          <View style={styles.authFeatureRow}>
-            <Ionicons name="checkmark-circle" size={18} color={C.brand} />
-            <Text style={styles.authFeatureText}>Get likes, comments & followers</Text>
-          </View>
-          <View style={styles.authFeatureRow}>
-            <Ionicons name="checkmark-circle" size={18} color={C.brand} />
-            <Text style={styles.authFeatureText}>Build your campus presence</Text>
-          </View>
+
+          <TouchableOpacity
+            style={styles.authLoginBtn}
+            onPress={() => navigation.navigate('Login')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="log-in-outline" size={18} color="#fff" />
+            <Text style={styles.authLoginBtnText}>Login</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.authSignupBtn}
+            onPress={() => navigation.navigate('SignUp')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.authSignupBtnText}>Create an Account</Text>
+          </TouchableOpacity>
         </View>
-
-        {/* Buttons */}
-        <TouchableOpacity 
-          style={styles.authLoginBtn} 
-          onPress={() => navigation.navigate('Login')}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="log-in-outline" size={18} color="#fff" />
-          <Text style={styles.authLoginBtnText}>Login</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.authSignupBtn} 
-          onPress={() => navigation.navigate('SignUp')}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.authSignupBtnText}>Create an Account</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-}
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -585,18 +499,15 @@ if (!user) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Media */}
+          {/* Media — Videos only */}
           <View style={styles.mediaSection}>
             {media.length === 0 ? (
               <TouchableOpacity style={styles.mediaEmpty} onPress={pickMedia} activeOpacity={0.85}>
                 <View style={styles.mediaEmptyIconWrap}>
-                  <Ionicons name="image-outline" size={30} color={C.brand} />
-                  <View style={styles.mediaEmptyIconBadge}>
-                    <Ionicons name="videocam" size={13} color="#fff" />
-                  </View>
+                  <Ionicons name="videocam" size={30} color={C.brand} />
                 </View>
-                <Text style={styles.mediaEmptyTitle}>Add video or photos</Text>
-                <Text style={styles.mediaEmptySubtitle}>Up to 5 files</Text>
+                <Text style={styles.mediaEmptyTitle}>Add a video</Text>
+                
               </TouchableOpacity>
             ) : (
               <>
@@ -612,6 +523,9 @@ if (!user) {
                     {media.map((file, i) => (
                       <View key={i} style={styles.mediaPreviewSlide}>
                         <Image source={{ uri: file.uri }} style={styles.mediaPreviewImg} />
+                        <View style={styles.videoPreviewBadge}>
+                          <Ionicons name="play-circle" size={28} color="rgba(255,255,255,0.8)" />
+                        </View>
                         <TouchableOpacity style={styles.mediaPreviewRemove} onPress={() => removeMedia(i)}>
                           <Ionicons name="close" size={16} color="#fff" />
                         </TouchableOpacity>
@@ -652,11 +566,39 @@ if (!user) {
             )}
           </View>
 
+          {/* Inspiration chips */}
+          <View style={styles.inspoSection}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.inspoScroll}
+            >
+              {INSPO_ITEMS.map((item) => {
+                const isSelected = postType === item.type;
+                return (
+                  <TouchableOpacity
+                    key={item.type}
+                    style={[
+                      styles.inspoChip,
+                      isSelected && { backgroundColor: item.color + '14', borderColor: item.color },
+                    ]}
+                    onPress={() => handleInspoPress(item)}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons name={item.icon} size={13} color={isSelected ? item.color : C.textOff} />
+                    <Text style={[styles.inspoChipLabel, isSelected && { color: item.color }]}>{item.label}</Text>
+                    {isSelected && <Ionicons name="checkmark" size={12} color={item.color} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
           {/* Title & Description */}
           <View style={styles.section}>
             <TextInput
               style={[styles.titleInput, errors.title && styles.inputError]}
-              placeholder="Give your post a catchy title..."
+              placeholder="Give your video a catchy title..."
               placeholderTextColor={C.textMuted}
               value={title}
               onChangeText={(v) => { setTitle(v); setErrors((prev) => ({ ...prev, title: null })); }}
@@ -719,7 +661,7 @@ if (!user) {
                   </View>
                   <View>
                     <Text style={styles.settingsRowLabel}>Category</Text>
-                    <Text style={styles.settingsRowSubtext}>Helps people find this post</Text>
+                    <Text style={styles.settingsRowSubtext}>Helps people find this video</Text>
                   </View>
                 </View>
                 <View style={styles.settingsRowRight}>
@@ -739,7 +681,7 @@ if (!user) {
                   </View>
                   <View>
                     <Text style={styles.settingsRowLabel}>Campus</Text>
-                    <Text style={styles.settingsRowSubtext}>Where this post appears</Text>
+                    <Text style={styles.settingsRowSubtext}>Where this video appears</Text>
                   </View>
                 </View>
                 <View style={styles.settingsRowRight}>
@@ -831,36 +773,56 @@ if (!user) {
         </View>
       </BottomSheet>
 
-      {/* Full-screen processing overlay — covers compression + upload phases */}
-      <Modal transparent visible={compressing || loading} animationType="fade" statusBarTranslucent>
-        <View style={styles.processingOverlay}>
-          <View style={styles.processingCard}>
-            <ActivityIndicator size="large" color={C.brand} />
-            <Text style={styles.processingTitle}>
-              {compressing ? 'Optimizing photos...' : 'Sharing your post...'}
-            </Text>
+      {/* Processing overlay */}
+     
 
-            {!compressing && loading && media.length > 0 && (
-              <View style={styles.processingList}>
-                {media.map((file, i) => {
-                  const raw = uploadProgress[i];
-                  if (raw === undefined) return null;
-                  const pct = Math.min(100, Math.max(0, Math.round(raw * 100)));
-                  return (
-                    <View key={i} style={styles.processingRow}>
-                      <Text style={styles.processingFileName} numberOfLines={1}>{file.name}</Text>
-                      <View style={styles.processingBarTrack}>
-                        <View style={[styles.processingBarFill, { width: `${pct}%` }]} />
-                      </View>
-                      <Text style={styles.processingPercent}>{pct}%</Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </View>
+{loading && (
+  <View style={styles.processingOverlay}>
+    {/* Dark backdrop */}
+    <View style={styles.processingBackdrop} />
+    
+    {/* Content centered */}
+    <View style={styles.processingContent}>
+      {/* Circular progress with percentage */}
+      <View style={styles.circularProgressWrap}>
+        {/* Background circle */}
+        <View style={styles.circularProgressBg} />
+        
+        {/* Progress circle */}
+        <View style={styles.circularProgress}>
+          <Text style={styles.circularProgressText}>
+            {media.length > 0 && uploadProgress[0] !== undefined
+              ? Math.min(100, Math.max(0, Math.round(uploadProgress[0] * 100)))
+              : 0}%
+          </Text>
         </View>
-      </Modal>
+      </View>
+
+      {/* Label */}
+      <Text style={styles.processingTitle}>Uploading video...</Text>
+      
+      {/* File name */}
+      {media.length > 0 && (
+        <Text style={styles.processingFileName} numberOfLines={2}>
+          {media[0]?.name || 'Preparing...'}
+        </Text>
+      )}
+
+      {/* Multiple files indicator */}
+      {media.length > 1 && (
+        <View style={styles.processingFileCount}>
+          <Ionicons name="copy-outline" size={12} color="rgba(255,255,255,0.5)" />
+          <Text style={styles.processingFileCountText}>
+            +{media.length - 1} more file{media.length > 2 ? 's' : ''}
+          </Text>
+        </View>
+      )}
+
+      {/* Cancel hint */}
+      <Text style={styles.processingHint}>Please wait while we upload your video</Text>
+    </View>
+  </View>
+)}
     </SafeAreaView>
   );
 };
@@ -883,18 +845,18 @@ const styles = StyleSheet.create({
 
   mediaSection: { marginTop: 12 },
   mediaEmpty: { marginHorizontal: 16, height: PREVIEW_H * 0.6, borderRadius: 18, borderWidth: 1.5, borderColor: C.border, borderStyle: 'dashed', backgroundColor: C.surfaceAlt, justifyContent: 'center', alignItems: 'center', gap: 6 },
-  mediaEmptyIconWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: C.brandDim, justifyContent: 'center', alignItems: 'center', marginBottom: 4, position: 'relative' },
-  mediaEmptyIconBadge: {
-    position: 'absolute', bottom: -2, right: -2,
-    width: 22, height: 22, borderRadius: 11, backgroundColor: C.brand,
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: C.surface,
-  },
+  mediaEmptyIconWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: C.brandDim, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
   mediaEmptyTitle: { fontSize: 15, fontWeight: '700', color: C.text },
   mediaEmptySubtitle: { fontSize: 12.5, color: C.textMuted },
   mediaPreviewWrap: { marginHorizontal: 16, height: PREVIEW_H, borderRadius: 18, overflow: 'hidden', backgroundColor: '#000' },
   mediaPreviewSlide: { width: PREVIEW_W, height: PREVIEW_H },
   mediaPreviewImg: { width: '100%', height: '100%' },
+  videoPreviewBadge: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   mediaPreviewRemove: { position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
   mediaCounter: { position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   mediaCounterText: { color: '#fff', fontSize: 11, fontWeight: '700' },
@@ -957,103 +919,113 @@ const styles = StyleSheet.create({
   sheetOptionDesc: { fontSize: 12, color: C.textMuted, marginTop: 2 },
 
   processingOverlay: {
-    flex: 1, backgroundColor: 'rgba(15,23,42,0.6)',
-    justifyContent: 'center', alignItems: 'center', padding: 24,
-  },
-  processingCard: {
-    width: '100%', maxWidth: 340, backgroundColor: C.surface,
-    borderRadius: 20, paddingVertical: 28, paddingHorizontal: 22,
-    alignItems: 'center', gap: 14,
-  },
-  processingTitle: { fontSize: 15, fontWeight: '700', color: C.text },
-  processingList: { width: '100%', gap: 12, marginTop: 4 },
-  processingRow: { width: '100%' },
-  processingFileName: { fontSize: 11.5, color: C.textOff, fontWeight: '500', marginBottom: 5 },
-  processingBarTrack: { height: 6, backgroundColor: '#E2E8F0', borderRadius: 3, overflow: 'hidden' },
-  processingBarFill: { height: '100%', backgroundColor: C.brand, borderRadius: 3 },
-  processingPercent: { fontSize: 10.5, color: C.textMuted, fontWeight: '600', marginTop: 3, textAlign: 'right' },
-
-  errorText: { fontSize: 12, color: C.danger, marginTop: 4, fontWeight: '500' },
-  contentError: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.dangerBg, borderWidth: 1, borderColor: '#FECACA', borderRadius: 10, padding: 12, marginHorizontal: 16, marginTop: 20 },
-  // Auth prompt
-authContainer: {
+  ...StyleSheet.absoluteFillObject,
+  zIndex: 100,
+  elevation: 100,
+},
+processingBackdrop: {
+  ...StyleSheet.absoluteFillObject,
+  backgroundColor: 'rgba(0,0,0,0.85)',
+},
+processingContent: {
   flex: 1,
   justifyContent: 'center',
   alignItems: 'center',
-  paddingHorizontal: 32,
-  backgroundColor: C.bg,
-  paddingBottom:28,
+  paddingHorizontal: 40,
 },
-authIconWrap: {
-  marginBottom: 20,
-},
-authIcon: {
-  width: 96,
-  height: 96,
-  borderRadius: 48,
-  backgroundColor: C.brandDim,
+
+// Circular progress
+circularProgressWrap: {
+  width: 140,
+  height: 140,
   justifyContent: 'center',
   alignItems: 'center',
-},
-authTitle: {
-  fontSize: 22,
-  fontWeight: '800',
-  color: C.text,
-  marginBottom: 8,
-  textAlign: 'center',
-},
-authSubtitle: {
-  fontSize: 14,
-  color: C.textOff,
-  textAlign: 'center',
-  lineHeight: 21,
   marginBottom: 28,
 },
-authFeatures: {
-  width: '100%',
-  gap: 14,
-  marginBottom: 32,
-  paddingHorizontal: 8,
+circularProgressBg: {
+  position: 'absolute',
+  width: 140,
+  height: 140,
+  borderRadius: 70,
+  borderWidth: 3,
+  borderColor: 'rgba(255,255,255,0.1)',
 },
-authFeatureRow: {
+circularProgress: {
+  width: 110,
+  height: 110,
+  borderRadius: 55,
+  backgroundColor: 'rgba(13,148,136,0.12)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderWidth: 3,
+  borderColor: C.brand,
+},
+circularProgressText: {
+  fontSize: 28,
+  fontWeight: '900',
+  color: '#fff',
+  letterSpacing: -0.5,
+},
+
+processingTitle: {
+  fontSize: 17,
+  fontWeight: '700',
+  color: '#fff',
+  marginBottom: 8,
+},
+processingFileName: {
+  fontSize: 13,
+  color: 'rgba(255,255,255,0.5)',
+  textAlign: 'center',
+  maxWidth: '80%',
+  lineHeight: 18,
+},
+processingFileCount: {
   flexDirection: 'row',
   alignItems: 'center',
-  gap: 10,
+  gap: 5,
+  marginTop: 8,
+  backgroundColor: 'rgba(255,255,255,0.08)',
+  paddingHorizontal: 12,
+  paddingVertical: 5,
+  borderRadius: 12,
 },
-authFeatureText: {
-  fontSize: 14,
-  color: C.text,
+processingFileCountText: {
+  fontSize: 11.5,
+  color: 'rgba(255,255,255,0.5)',
+  fontWeight: '600',
+},
+processingHint: {
+  fontSize: 12,
+  color: 'rgba(255,255,255,0.3)',
+  marginTop: 24,
   fontWeight: '500',
 },
-authLoginBtn: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 8,
-  backgroundColor: C.brand,
-  width: '100%',
-  paddingVertical: 15,
-  borderRadius: 14,
-  marginBottom: 12,
-},
-authLoginBtnText: {
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: '700',
-},
-authSignupBtn: {
-  width: '100%',
-  paddingVertical: 14,
-  borderRadius: 14,
-  borderWidth: 2,
-  borderColor: C.brand,
-  alignItems: 'center',
-},
-authSignupBtnText: {
-  color: C.brand,
-  fontSize: 15,
-  fontWeight: '700',
-},
+
+  errorText: { fontSize: 12, color: C.danger, marginTop: 4, fontWeight: '500' },
+  contentError: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.dangerBg, borderWidth: 1, borderColor: '#FECACA', borderRadius: 10, padding: 12, marginHorizontal: 16, marginTop: 20 },
+
+  authContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, backgroundColor: C.bg, paddingBottom: 28 },
+  authIconWrap: { marginBottom: 20 },
+  authIcon: { width: 96, height: 96, borderRadius: 48, backgroundColor: C.brandDim, justifyContent: 'center', alignItems: 'center' },
+  authTitle: { fontSize: 22, fontWeight: '800', color: C.text, marginBottom: 8, textAlign: 'center' },
+  authSubtitle: { fontSize: 14, color: C.textOff, textAlign: 'center', lineHeight: 21, marginBottom: 28 },
+  authFeatures: { width: '100%', gap: 14, marginBottom: 32, paddingHorizontal: 8 },
+  authFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  authFeatureText: { fontSize: 14, color: C.text, fontWeight: '500' },
+  authLoginBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.brand, width: '100%', paddingVertical: 15, borderRadius: 14, marginBottom: 12 },
+  authLoginBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  authSignupBtn: { width: '100%', paddingVertical: 14, borderRadius: 14, borderWidth: 2, borderColor: C.brand, alignItems: 'center' },
+  authSignupBtnText: { color: C.brand, fontSize: 15, fontWeight: '700' },
+
+  inspoSection: { marginTop: 14 },
+  inspoScroll: { paddingHorizontal: 16, gap: 8 },
+  inspoChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+    borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  inspoChipLabel: { fontSize: 12.5, fontWeight: '600', color: C.textOff },
 });
 
 export default CreateFeedPostScreen;
