@@ -43,7 +43,8 @@ const C = {
 
 const AccountScreen = ({ navigation }) => {
   const { user, logoutUser, updateUser, deleteAccount, isAuthenticated } = useAuth();
-  const { cartItems } = useCart();
+  const { cartItems,cartCount } = useCart();
+
 
   const [loading, setLoading] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);

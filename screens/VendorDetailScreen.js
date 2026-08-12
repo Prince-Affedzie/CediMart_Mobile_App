@@ -12,6 +12,8 @@ import { getFeed } from '../apis/feedApi';
 import { followUser } from '../apis/userApi';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import ChatFAB from '../components/ChatFAB';
+
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
@@ -108,7 +110,7 @@ const FeedPostCard = ({ post, onPress }) => {
 const VendorDetailScreen = ({ route, navigation }) => {
   const { vendorId } = route.params;
   const { addToCart, cartItems } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated,user } = useAuth();
 
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -135,7 +137,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
       if (res.status === 200 && res.data.success) {
         const vendorData = res.data.data;
         setVendor(vendorData);
-        setFollowerCount(vendorData.followersCount || vendorData.followers?.length || 0);
+        setFollowerCount(vendorData.user.followersCount || 0);
         if (vendorData.user) {
           fetchVendorFeed(vendorData.user._id || vendorData.user);
         }
@@ -243,6 +245,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
+      
       <Modal animationType="fade" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={s.modalOverlay}>
           <View style={s.successModal}>
@@ -412,6 +415,18 @@ const VendorDetailScreen = ({ route, navigation }) => {
           )
         }
       />
+
+      <ChatFAB 
+      recipientId={vendor?.user?._id || vendor?.user}
+      isAuthenticated={isAuthenticated}
+      currentUserId={user?._id || user?.id}
+      style={{
+        position: 'absolute',
+        bottom: 74,
+        right: 16,
+      }}
+    />
+      
     </SafeAreaView>
   );
 };

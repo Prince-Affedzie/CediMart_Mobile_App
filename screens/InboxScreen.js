@@ -1,8 +1,8 @@
 // screens/InboxScreen.jsx
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, Image, RefreshControl, ActivityIndicator,
+  StyleSheet, Image, RefreshControl, TextInput,
   SafeAreaView, StatusBar, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 
 // ─── Teal + Coral Palette ──────────────────────────────────────────────────
 const C = {
+  bg:           '#F8FAFC',
   brand:        '#0D9488',
   brandL:       '#14B8A6',
   brandD:       '#0F766E',
@@ -31,20 +32,63 @@ const C = {
   t1:           '#0F172A',
   t2:           '#475569',
   t3:           '#94A3B8',
+  border:       '#F1F5F9',
   gray50:       '#FAFAFA',
   gray100:      '#F5F5F5',
   gray200:      '#E5E7EB',
 };
 
-const BRAND_GREEN = C.brand; // Keep variable name, now teal
-
 const REFRESH_COOLDOWN_MS = 30_000;
+
+// A small on-brand rotation so different contacts get visually distinct
+// avatar colors (when they have no photo) instead of every fallback
+// avatar looking identical — picked deterministically per person.
+const AVATAR_PALETTE = [
+  { bg: C.brandBg, fg: C.brand },
+  { bg: C.accentBg, fg: C.accent },
+  { bg: C.infoBg, fg: C.info },
+  { bg: '#F5F3FF', fg: '#7C3AED' },
+  { bg: '#FDF2F8', fg: '#EC4899' },
+  { bg: '#FFFBEB', fg: '#B45309' },
+];
+
+const getAvatarColors = (seed = '') => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+};
+
+const getOtherParty = (conv, userId) => {
+  const buyerId = conv.buyer?._id?.toString() || conv.buyer?.toString();
+  const isBuyer = buyerId === userId;
+  return isBuyer ? conv.seller : conv.buyer;
+};
+
+const getDisplayName = (party) => {
+  if (!party) return 'Unknown User';
+  if (party.firstName) return party.lastName ? `${party.firstName} ${party.lastName}` : party.firstName;
+  if (party.name) return party.name;
+  return 'Unknown User';
+};
+
+const getAvatarLetter = (party) => {
+  if (!party) return '?';
+  if (party.firstName) return party.firstName.charAt(0).toUpperCase();
+  if (party.name) return party.name.charAt(0).toUpperCase();
+  return '?';
+};
+
+const getProductName = (product) => {
+  if (!product) return 'Product';
+  return product.name || product.title || 'Product';
+};
 
 function InboxScreen({ navigation }) {
   const { inbox, inboxLoading, loadInbox } = useChat();
   const { user } = useAuth();
   const lastLoadedAt = useRef(null);
   const [noticeVisible, setNoticeVisible] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const noticeAnim = useRef(new Animated.Value(1)).current;
 
   useFocusEffect(
@@ -71,47 +115,43 @@ function InboxScreen({ navigation }) {
     navigation.navigate('ChatScreen', { conversation });
   };
 
-  const getDisplayName = (party) => {
-    if (!party) return 'Unknown User';
-    if (party.firstName) return party.lastName ? `${party.firstName} ${party.lastName}` : party.firstName;
-    if (party.name) return party.name;
-    return 'Unknown User';
-  };
+  const userId = user?._id?.toString();
 
-  const getAvatarLetter = (party) => {
-    if (!party) return '?';
-    if (party.firstName) return party.firstName.charAt(0).toUpperCase();
-    if (party.name) return party.name.charAt(0).toUpperCase();
-    return '?';
-  };
-
-  const getProductName = (product) => {
-    if (!product) return 'Product';
-    return product.name || product.title || 'Product';
-  };
+  // Local, instant filter — no need to round-trip to the server for
+  // something this small, and it keeps the inbox feeling snappy.
+  const filteredInbox = useMemo(() => {
+    if (!searchQuery.trim() || !userId) return inbox;
+    const q = searchQuery.trim().toLowerCase();
+    return inbox.filter((conv) => {
+      const otherParty = getOtherParty(conv, userId);
+      const name = getDisplayName(otherParty).toLowerCase();
+      const productName = getProductName(conv.product).toLowerCase();
+      const preview = (conv.lastMessage?.text || '').toLowerCase();
+      return name.includes(q) || productName.includes(q) || preview.includes(q);
+    });
+  }, [inbox, searchQuery, userId]);
 
   const renderItem = ({ item: conv }) => {
-    if (!conv || !user?._id) return null;
-    const buyerId = conv.buyer?._id?.toString() || conv.buyer?.toString();
-    const userId = user._id?.toString();
-    const isBuyer = buyerId === userId;
-    const otherParty = isBuyer ? conv.seller : conv.buyer;
+    if (!conv || !userId) return null;
+    const otherParty = getOtherParty(conv, userId);
     const preview = conv.lastMessage?.text ?? 'No messages yet';
     const time = conv.lastMessage ? formatTime(conv.lastMessage.createdAt) : formatTime(conv.createdAt);
     const unread = conv.myUnread ?? 0;
     const hasUnread = unread > 0;
+    const avatarColors = getAvatarColors(otherParty?._id || getDisplayName(otherParty));
 
     return (
-      <TouchableOpacity style={[styles.row, hasUnread && styles.rowUnread]} onPress={() => handleOpen(conv)} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.card} onPress={() => handleOpen(conv)} activeOpacity={0.75}>
+        {hasUnread && <View style={styles.unreadStripe} />}
+
         <View style={styles.avatarWrap}>
           {otherParty?.avatar ? (
-            <Image source={{ uri: otherParty.avatar }} style={styles.avatar} />
+            <Image source={{ uri: otherParty.avatar }} style={[styles.avatar, hasUnread && styles.avatarRingUnread]} />
           ) : (
-            <View style={[styles.avatar, styles.avatarFallback]}>
-              <Text style={styles.avatarLetter}>{getAvatarLetter(otherParty)}</Text>
+            <View style={[styles.avatar, { backgroundColor: avatarColors.bg }, hasUnread && styles.avatarRingUnread]}>
+              <Text style={[styles.avatarLetter, { color: avatarColors.fg }]}>{getAvatarLetter(otherParty)}</Text>
             </View>
           )}
-          {hasUnread && <View style={styles.unreadDot} />}
         </View>
 
         <View style={styles.content}>
@@ -119,16 +159,21 @@ function InboxScreen({ navigation }) {
             <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>{getDisplayName(otherParty)}</Text>
             <Text style={[styles.time, hasUnread && styles.timeUnread]}>{time}</Text>
           </View>
-          <View style={styles.productRow}>
-            <Ionicons name="pricetag-outline" size={11} color={C.brand} />
-            <Text style={styles.product} numberOfLines={1}>{getProductName(conv.product)}</Text>
+
+          <View style={styles.productTag}>
+            <Ionicons name="pricetag" size={9} color={C.brand} />
+            <Text style={styles.productTagText} numberOfLines={1}>{getProductName(conv.product)}</Text>
           </View>
+
           <View style={styles.bottomRow}>
             <Text style={[styles.preview, hasUnread && styles.previewUnread]} numberOfLines={1}>{preview}</Text>
-            {hasUnread && <View style={styles.badge}><Text style={styles.badgeText}>{unread > 99 ? '99+' : unread}</Text></View>}
+            {hasUnread && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unread > 99 ? '99+' : unread}</Text>
+              </View>
+            )}
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={16} color="#D0D0D0" style={styles.chevron} />
       </TouchableOpacity>
     );
   };
@@ -158,11 +203,31 @@ function InboxScreen({ navigation }) {
   }
 
   const totalUnread = inbox.reduce((sum, c) => sum + (c.myUnread || 0), 0);
+  const showNoResults = searchQuery.trim().length > 0 && filteredInbox.length === 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={C.white} />
       <Header unreadCount={totalUnread} />
+
+      {inbox.length > 0 && (
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={17} color={C.t3} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search conversations, products..."
+            placeholderTextColor={C.t3}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={17} color={C.t3} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {noticeVisible && (
         <Animated.View style={[noticeStyles.wrap, { opacity: noticeAnim }]}>
@@ -173,12 +238,11 @@ function InboxScreen({ navigation }) {
       )}
 
       <FlatList
-        data={inbox} keyExtractor={(item) => item._id}
+        data={filteredInbox} keyExtractor={(item) => item._id}
         renderItem={renderItem}
-        contentContainerStyle={[styles.listContent, inbox.length === 0 && styles.listContentEmpty]}
+        contentContainerStyle={[styles.listContent, filteredInbox.length === 0 && styles.listContentEmpty]}
         refreshControl={<RefreshControl refreshing={inboxLoading} onRefresh={handleManualRefresh} tintColor={C.brand} colors={[C.brand]} />}
-        ItemSeparatorComponent={() => <View style={styles.divider} />}
-        ListEmptyComponent={<EmptyState />}
+        ListEmptyComponent={showNoResults ? <NoResultsState query={searchQuery} /> : <EmptyState navigation={navigation} />}
         showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
@@ -198,14 +262,14 @@ const SkeletonRow = ({ delay = 0 }) => {
   }, []);
   const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] });
   return (
-    <Animated.View style={[skeletonStyles.row, { opacity }]}>
+    <Animated.View style={[skeletonStyles.card, { opacity }]}>
       <View style={skeletonStyles.avatar} />
       <View style={skeletonStyles.lines}>
         <View style={skeletonStyles.topRow}>
           <View style={[skeletonStyles.line, { width: '45%', height: 13 }]} />
           <View style={[skeletonStyles.line, { width: '18%', height: 11 }]} />
         </View>
-        <View style={[skeletonStyles.line, { width: '30%', height: 11, marginBottom: 5 }]} />
+        <View style={[skeletonStyles.line, { width: '30%', height: 11, marginBottom: 6 }]} />
         <View style={[skeletonStyles.line, { width: '70%', height: 12 }]} />
       </View>
     </Animated.View>
@@ -214,9 +278,7 @@ const SkeletonRow = ({ delay = 0 }) => {
 
 const InboxSkeleton = () => (
   <View style={skeletonStyles.wrap}>
-    {[0, 120, 240, 360, 480, 600].map((delay, i) => (
-      <React.Fragment key={i}><SkeletonRow delay={delay} />{i < 5 && <View style={styles.divider} />}</React.Fragment>
-    ))}
+    {[0, 120, 240, 360, 480].map((delay, i) => <SkeletonRow key={i} delay={delay} />)}
   </View>
 );
 
@@ -231,11 +293,25 @@ const Header = ({ unreadCount = 0 }) => (
   </View>
 );
 
-// ── Empty state ───────────────────────────────────────────────────────────────
-const EmptyState = () => (
+// ── Empty states ──────────────────────────────────────────────────────────────
+const EmptyState = ({ navigation }) => (
   <View style={emptyStyles.wrap}>
     <View style={emptyStyles.iconCircle}><Ionicons name="chatbubbles-outline" size={40} color={C.brand} /></View>
     <Text style={emptyStyles.title}>No conversations yet</Text>
+    <Text style={emptyStyles.subtitle}>When you message a vendor or start negotiating on a product, it'll show up here.</Text>
+    {/* Adjust the route name below if 'Discover' isn't what your browse/marketplace screen is called */}
+    <TouchableOpacity style={emptyStyles.cta} onPress={() => navigation.navigate('Discover')} activeOpacity={0.85}>
+      <Ionicons name="storefront-outline" size={16} color="#fff" />
+      <Text style={emptyStyles.ctaText}>Explore vendors</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+const NoResultsState = ({ query }) => (
+  <View style={emptyStyles.wrap}>
+    <View style={emptyStyles.iconCircle}><Ionicons name="search-outline" size={36} color={C.t3} /></View>
+    <Text style={emptyStyles.title}>No matches</Text>
+    <Text style={emptyStyles.subtitle}>Nothing found for "{query}". Try a different name or product.</Text>
   </View>
 );
 
@@ -258,54 +334,112 @@ const formatTime = (iso) => {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.white },
+  container: { flex: 1, backgroundColor: C.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, paddingHorizontal: 40 },
-  listContent: { paddingBottom: 20 },
+  listContent: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 24 },
   listContentEmpty: { flex: 1 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: C.white },
-  rowUnread: { backgroundColor: C.brandBg },
-  avatarWrap: { marginRight: 14, position: 'relative' },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#F0F0F0' },
-  avatarFallback: { backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center' },
-  avatarLetter: { fontSize: 20, fontWeight: '700', color: C.brand },
-  unreadDot: { position: 'absolute', top: -2, right: -2, width: 14, height: 14, borderRadius: 7, backgroundColor: C.brand, borderWidth: 2, borderColor: C.white },
+
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: C.white,
+    borderRadius: 13,
+    paddingHorizontal: 13,
+    height: 44,
+    marginHorizontal: 14,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  searchInput: { flex: 1, fontSize: 14, color: C.t1, height: '100%' },
+
+  // Card-style conversation row
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.white,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+    overflow: 'hidden',
+  },
+  unreadStripe: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: C.brand,
+  },
+  avatarWrap: { marginRight: 12 },
+  avatar: {
+    width: 52, height: 52, borderRadius: 26,
+    justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#F0F0F0',
+  },
+  avatarRingUnread: { borderWidth: 2, borderColor: C.brand },
+  avatarLetter: { fontSize: 19, fontWeight: '700' },
+
   content: { flex: 1 },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
-  name: { fontSize: 15, fontWeight: '600', color: C.t1, flex: 1, marginRight: 8 },
-  nameUnread: { fontWeight: '700' },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  name: { fontSize: 14.5, fontWeight: '600', color: C.t1, flex: 1, marginRight: 8 },
+  nameUnread: { fontWeight: '800' },
   time: { fontSize: 11, color: C.t3, fontWeight: '500' },
   timeUnread: { color: C.brand, fontWeight: '700' },
-  productRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 },
-  product: { fontSize: 12, color: C.brand, fontWeight: '500' },
+
+  productTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: C.brandBg,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 5,
+    maxWidth: '90%',
+  },
+  productTagText: { fontSize: 10.5, color: C.brandD, fontWeight: '600' },
+
   bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   preview: { fontSize: 13, color: C.t3, flex: 1, marginRight: 8 },
   previewUnread: { color: C.t2, fontWeight: '500' },
-  badge: { backgroundColor: C.brand, borderRadius: 12, minWidth: 24, height: 24, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 7 },
-  badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '800' },
-  chevron: { marginLeft: 8 },
-  divider: { height: 1, backgroundColor: '#F5F5F5', marginLeft: 82 },
+  badge: { backgroundColor: C.brand, borderRadius: 12, minWidth: 22, height: 22, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 },
+  badgeText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '800' },
 });
 
 const noticeStyles = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 14, marginTop: 10, marginBottom: 4, backgroundColor: C.accentBg, borderWidth: 1, borderColor: C.accentBorder, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  wrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 14, marginTop: 10, marginBottom: 4, backgroundColor: C.accentBg, borderWidth: 1, borderColor: C.accentBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
   text: { flex: 1, fontSize: 12, color: '#78350F', lineHeight: 17 },
   bold: { fontWeight: '700' },
 });
 
 const skeletonStyles = StyleSheet.create({
-  wrap: { paddingTop: 6 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#E0E0E0', marginRight: 14 },
+  wrap: { paddingHorizontal: 14, paddingTop: 16 },
+  card: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.white, borderRadius: 16, padding: 12, marginBottom: 10,
+    borderWidth: 1, borderColor: C.border,
+  },
+  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#E0E0E0', marginRight: 12 },
   lines: { flex: 1, gap: 5 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
   line: { backgroundColor: '#E0E0E0', borderRadius: 6 },
 });
 
 const headerStyles = StyleSheet.create({
-  wrap: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', backgroundColor: C.white },
-  title: { fontSize: 22, fontWeight: '800', color: C.t1, letterSpacing: -0.3 },
-  subtitle: { fontSize: 12, color: C.t3, marginTop: 2, fontWeight: '500' },
-  iconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center' },
+  wrap: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: C.bg },
+  title: { fontSize: 24, fontWeight: '900', color: C.t1, letterSpacing: -0.4 },
+  subtitle: { fontSize: 12.5, color: C.t3, marginTop: 2, fontWeight: '500' },
+  iconWrap: { width: 42, height: 42, borderRadius: 13, backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center' },
 });
 
 const emptyStyles = StyleSheet.create({
@@ -313,9 +447,12 @@ const emptyStyles = StyleSheet.create({
   iconCircle: { width: 88, height: 88, borderRadius: 44, backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   title: { fontSize: 18, fontWeight: '700', color: C.t1, marginBottom: 8 },
   subtitle: { fontSize: 14, color: C.t2, textAlign: 'center', lineHeight: 21, marginBottom: 24 },
-  tipCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: C.accentBg, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: C.accentBorder },
-  tipText: { fontSize: 13, color: '#5D4037', lineHeight: 19, flex: 1 },
-  tipBold: { fontWeight: '700', color: C.brand },
+  cta: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: C.brand, borderRadius: 14,
+    paddingHorizontal: 20, paddingVertical: 12,
+  },
+  ctaText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 });
 
 export default InboxScreen;

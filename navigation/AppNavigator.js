@@ -55,7 +55,7 @@ import SavedPostsScreen from '../screens/Feeds/SavedPostsScreen'
 import FeedPostDetailScreen from '../screens/Feeds/FeedPostDetailScreen'
 
 // Opportunities
-import OpportunitiesScreen from '../screens/Opportunities/OpportunitiesScreen'
+import DiscoverScreen from '../screens/DiscoverScreen'
 
 // ── Vendor screens ──
 import VendorSignUpScreen from '../vendorscreens/VendorSignUp'
@@ -116,6 +116,7 @@ function GuestTabNavigator() {
             case 'GuestShop':     iconName = focused ? 'storefront' : 'storefront-outline'; break;
             case 'GuestCart':     iconName = focused ? 'cart' : 'cart-outline'; break;
             case 'GuestProfile':  iconName = focused ? 'person' : 'person-outline'; break;
+            case 'Inbox':       iconName = focused ? 'chatbubbles' : 'chatbubbles-outline'; break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -134,9 +135,9 @@ function GuestTabNavigator() {
       })}
     >
       <Tab.Screen name="GuestFeed"     component={CampusFeedScreen} options={{ title: 'Feed' }} />
-      <Tab.Screen name="GuestDiscover" component={OpportunitiesScreen} options={{ title: 'Discover' }} />
+      <Tab.Screen name="GuestDiscover" component={DiscoverScreen} options={{ title: 'Discover' }} />
       <Tab.Screen name="GuestShop"     component={GuestHomeScreen} options={{ title: 'Shop' }} />
-      <Tab.Screen name="GuestCart"     component={CartScreen} options={{ title: 'Cart' }} />
+      <Tab.Screen name="Inbox"      component={InboxScreen} options={{ title: 'Inbox'}} />
       <Tab.Screen name="GuestProfile"  component={AccountScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
@@ -148,6 +149,7 @@ function GuestTabNavigator() {
 function MainTabNavigator() {
   const { bottom } = useSafeAreaInsets();
   const { cartCount } = useCart();
+  const { totalUnread } = useChat();
 
   return (
     <Tab.Navigator
@@ -160,6 +162,7 @@ function MainTabNavigator() {
             case 'Shopping':   iconName = focused ? 'storefront' : 'storefront-outline'; break;
             case 'Cart':       iconName = focused ? 'cart' : 'cart-outline'; break;
             case 'Profile':    iconName = focused ? 'person' : 'person-outline'; break;
+            case 'Inbox':       iconName = focused ? 'chatbubbles' : 'chatbubbles-outline'; break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -178,9 +181,9 @@ function MainTabNavigator() {
       })}
     >
       <Tab.Screen name="CampusFeed" component={CampusFeedScreen} options={{ title: 'Feed' }} />
-      <Tab.Screen name="Discover"   component={OpportunitiesScreen} options={{ title: 'Discover' }} />
+      <Tab.Screen name="Discover"   component={DiscoverScreen} options={{ title: 'Discover' }} />
       <Tab.Screen name="Shopping"   component={HomeScreen} options={{ title: 'Shop' }} />
-      <Tab.Screen name="Cart"       component={CartScreen} options={{ title: 'Cart', tabBarBadge: cartCount > 0 ? cartCount : undefined, tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 } }} />
+      <Tab.Screen name="Inbox"      component={InboxScreen} options={{ title: 'Inbox', tabBarBadge: totalUnread > 0 ? totalUnread : null, tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 } }} />
       <Tab.Screen name="Profile"    component={AccountScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
@@ -240,7 +243,7 @@ function MainStackNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!user ? (
         <>
-          {/* 🔥 Guests get tabs */}
+          {/*  Guests get tabs */}
           <Stack.Screen name="GuestTabs" component={GuestTabNavigator} />
           <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="GuestProductDetail" component={GuestProductDetailScreen} />
@@ -260,7 +263,7 @@ function MainStackNavigator() {
           <Stack.Screen name="CampusFeed" component={CampusFeedScreen} />
           <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
           <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Discover" component={OpportunitiesScreen} options={{ title: 'Discover' }} />
+          <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
           <Stack.Screen name="GuestMarketDetail" component={GuestMarketDetailScreen} />
         </>
       ) : (
@@ -287,6 +290,7 @@ function MainStackNavigator() {
               <Stack.Screen name="Campus" component={CampusProductsScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="TagProducts" component={TagProductsScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="Order" component={OrderScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="Cart" component={CartScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Orders" component={OrdersScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ headerShown: false }} />
               <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ headerShown: false }} />
@@ -299,6 +303,7 @@ function MainStackNavigator() {
               <Stack.Screen name="VendorDetail" component={VendorDetailScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Inbox" component={InboxScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Earnings" component={EarningsScreen} options={{ headerShown: false }} />
+              <Stack.Screen name="CediAi" component={AIShoppingScreen} />
             </>
           )}
           {/* Shared screens for both roles */}
@@ -310,7 +315,8 @@ function MainStackNavigator() {
           <Stack.Screen name="SavedPosts" component={SavedPostsScreen} options={{ headerShown: false }} />
           <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Discover" component={OpportunitiesScreen} options={{ title: 'Discover' }} />
+          <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
+          
         </>
       )}
     </Stack.Navigator>

@@ -621,7 +621,11 @@ const ProductDetailScreen = ({ route, navigation }) => {
             {addingToCart ? <ActivityIndicator size="small" color="#fff" /> : (<><Ionicons name="bag-add-outline" size={20} color="#fff" /><Text style={styles.addToCartBtnText}>{isAvailable ? `Add to Cart · GH₵ ${lineTotal}` : 'Sold Out'}</Text></>)}
           </TouchableOpacity>
            <RecommendEarnButton product={product} />
-          <ChatFAB product={product} isAuthenticated={isAuthenticated} style={{ position: 'absolute', bottom: 100, right: 20, zIndex: 20 }} onConversationOpened={(conversation) => { console.log('Conversation opened:', conversation._id); }} />
+          <ChatFAB product={product} isAuthenticated={isAuthenticated} style={{
+           position: 'absolute',
+           bottom: 164,
+           right: 16,
+         }} onConversationOpened={(conversation) => { console.log('Conversation opened:', conversation._id); }} />
         </SafeAreaView>
       </View>
     </View>

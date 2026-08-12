@@ -271,7 +271,7 @@ const VendorDashboardScreen = ({ navigation }) => {
           style={styles.fabSecondary}
         />
         <ExtendedFAB
-          label="Create Post"
+          label="Create Feed"
           iconName="add"
           bg={C.accent}
           onPress={() => navigation.navigate('CreateFeedPost')}

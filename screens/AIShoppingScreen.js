@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10,
     paddingBottom: Platform.OS === 'ios' ? 24 : 12,
     backgroundColor: C.surface, borderTopWidth: 1,
-    borderTopColor: '#F0F0F0', bottom: 30,
+    borderTopColor: '#F0F0F0', bottom: 40,
   },
   inputBarFocused: { borderTopColor: C.brandBorder },
   inputWrapper: {

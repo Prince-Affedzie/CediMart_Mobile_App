@@ -6,7 +6,7 @@ const PRELOAD_COUNT = 3;
 const MAX_CACHE_SIZE = 200 * 1024 * 1024; // 200MB
 const MAX_CACHE_AGE_MS = 10 * 60 * 1000; // 🆕 30 minutes — matches expected behavior
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // sweep frequency (must be <= MAX_CACHE_AGE_MS to enforce it promptly)
-const PRELOAD_QUALITY = '360p';
+const PRELOAD_QUALITY = '720p';
 const CACHE_DIR = FileSystem.cacheDirectory + 'feed-videos/';
 
 class FeedPrefetchService {

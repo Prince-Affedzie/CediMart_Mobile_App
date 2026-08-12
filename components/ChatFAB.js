@@ -12,7 +12,14 @@ import { openConversation } from '../apis/chatApi';
 const GREEN      = '#0D9488';
 const GREEN_GLOW = 'rgba(13, 148, 136, 0.28)';
 
-const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversationOpened }) => {
+const ChatFAB = ({ 
+  product,           // ✅ Optional - product object (for product-related chats)
+  recipientId,       // ✅ Optional - direct user ID to chat with
+  isAuthenticated, 
+  currentUserId, 
+  style,             // ✅ Parent can pass positioning styles here
+  onConversationOpened 
+}) => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
 
@@ -51,7 +58,7 @@ const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversatio
     if (!isAuthenticated) {
       Alert.alert(
         'Sign in to chat',
-        'Create a free account or log in to message this seller.',
+        'Create a free account or log in to start chatting.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Log In',  onPress: () => navigation.navigate('Login') },
@@ -61,18 +68,35 @@ const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversatio
       return;
     }
 
-    const sellerId = product?.vendor?._id;
-    if (sellerId && currentUserId && sellerId.toString() === currentUserId.toString()) {
-      Alert.alert("That's your listing", "You can't start a chat about your own product.");
+    // ✅ Get productId from product object
+    const productId = product?._id || product?.id || null;
+
+    // ✅ Require at least one: productId or recipientId
+    if (!productId && !recipientId) {
+      Alert.alert('Error', 'Cannot start chat: missing product or recipient information.');
+      return;
+    }
+
+    // ✅ Prevent chatting with yourself when recipientId is known
+    if (recipientId && currentUserId && recipientId.toString() === currentUserId.toString()) {
+      Alert.alert("That's you!", "You can't start a chat with yourself.");
       return;
     }
 
     setLoading(true);
     try {
-      const productId = product?._id ?? product?.id;
-      if (!productId) throw new Error('Missing product ID');
+      // ✅ Build request body - at least one will be present
+      const requestBody = {};
+      
+      if (productId) {
+        requestBody.productId = productId;
+      }
+      
+      if (recipientId) {
+        requestBody.recipientId = recipientId;
+      }
 
-      const response = await openConversation({ productId });
+      const response = await openConversation(requestBody);
 
       if (response?.data?.success) {
         const conversation = response.data.conversation;
@@ -91,8 +115,15 @@ const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversatio
     }
   };
 
+  // ✅ Dynamic button text based on context
+  const getButtonLabel = () => {
+    if (loading) return 'Opening chat…';
+    if (product) return 'Chat with Seller';
+    return 'Send Message';
+  };
+
   return (
-    <View style={[styles.wrap, style]}>
+    <View style={[styles.wrapper, style]}>
       <Animated.View
         style={[
           styles.glowLayer,
@@ -112,12 +143,12 @@ const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversatio
           {loading ? (
             <>
               <ActivityIndicator size="small" color="rgba(255,255,255,0.85)" />
-              <Text style={styles.label}>Opening chat…</Text>
+              <Text style={styles.label}>{getButtonLabel()}</Text>
             </>
           ) : (
             <>
               <Ionicons name="chatbubble-ellipses" size={19} color="#fff" />
-              <Text style={styles.label}>Chat with Seller</Text>
+              <Text style={styles.label}>{getButtonLabel()}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -128,19 +159,23 @@ const ChatFAB = ({ product, isAuthenticated, currentUserId, style, onConversatio
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  wrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  wrapper: {
+    // ✅ Parent controls positioning via the `style` prop
+    // These are fallback styles
+    position: 'absolute',
+    bottom: 24,
+    right: 16,
+    zIndex: 999,
   },
   glowLayer: {
     position: 'absolute',
-    width: '88%',
+    width: '100%',
     height: 46,
     borderRadius: 26,
     backgroundColor: GREEN,
     shadowColor: GREEN,
     shadowOffset: { width: 0, height: 4 },
-    bottom: 46,
+    bottom: 0,
   },
   pill: {
     flexDirection: 'row',
@@ -151,8 +186,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     borderRadius: 26,
     backgroundColor: GREEN,
-    bottom: 46,
     elevation: 5,
+    shadowColor: GREEN,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   pillLoading: {
     backgroundColor: '#0F766E', // Teal dark

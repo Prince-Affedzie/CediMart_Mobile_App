@@ -232,7 +232,7 @@ const SignUpScreen = ({ navigation }) => {
 
           <View style={styles.dividerContainer}><View style={styles.divider} /><Text style={styles.dividerText}> For Buyers </Text><View style={styles.divider} /></View>
 
-          {/* 🔥 Prominent Terms Agreement — placed before social buttons */}
+          {/*  Prominent Terms Agreement — placed before social buttons */}
           <View style={styles.termsAgreementCard}>
             <TouchableOpacity 
               style={styles.termsCheckRow} 
