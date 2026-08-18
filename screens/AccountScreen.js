@@ -269,6 +269,7 @@ const AccountScreen = ({ navigation }) => {
         <View style={styles.section}>
           {renderSectionTitle('Account')}
           <View style={[styles.menuCard, { borderColor: C.danger + '30' }]}>
+            {renderMenuItem('Logout', 'log-out-outline', handleLogout, C.accent)}
             {renderMenuItem('Delete Account', 'trash-outline', handleDeleteAccount, C.danger)}
           </View>
         </View>

@@ -71,8 +71,11 @@ const DropdownSelector = ({
 
   const selectedItem = items.find((item) => (typeof item === 'string' ? item : item.key) === selectedValue);
 
+  // FIXED: Only show label text without icon name
   const triggerLabel = selectedItem
-    ? typeof selectedItem === 'string' ? selectedItem : (selectedItem.icon ? selectedItem.icon + '  ' : '') + (selectedItem.label || formatDisplayName(selectedItem.key))
+    ? typeof selectedItem === 'string' 
+      ? selectedItem 
+      : (selectedItem.label || formatDisplayName(selectedItem.key))
     : placeholder;
 
   return (
@@ -104,10 +107,20 @@ const DropdownSelector = ({
               return (
                 <TouchableOpacity style={[bsStyles.item, isSelected && bsStyles.itemActive]} onPress={() => handleSelect(key)} activeOpacity={0.75}>
                   {renderItem ? renderItem({ item, isSelected }) : (
-                    <>
-                      {item.icon && <Text style={bsStyles.itemEmoji}>{item.icon}</Text>}
-                      <Text style={[bsStyles.itemText, isSelected && bsStyles.itemTextActive]}>{item.label || formatDisplayName(item.key)}</Text>
-                    </>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      {/* FIXED: Render Ionicons component instead of text */}
+                      {item.icon && (
+                        <Ionicons 
+                          name={item.icon} 
+                          size={22} 
+                          color={isSelected ? C.brand : C.t2}
+                          style={{ width: 32, textAlign: 'center' }}
+                        />
+                      )}
+                      <Text style={[bsStyles.itemText, isSelected && bsStyles.itemTextActive]}>
+                        {item.label || formatDisplayName(item.key)}
+                      </Text>
+                    </View>
                   )}
                   {isSelected && <Ionicons name="checkmark-circle" size={20} color={C.brand} style={{ marginLeft: 'auto' }} />}
                 </TouchableOpacity>
@@ -424,7 +437,28 @@ const UpdateProductScreen = ({ route, navigation }) => {
 
           <SectionCard title="Item Details" accent={C.brand} changed={name !== (originalProduct?.name || '') || category !== (originalProduct?.category || '') || subcategory !== (originalProduct?.subcategory || '') || brand !== (originalProduct?.brand || '') || condition !== (originalProduct?.condition || 'good')}>
             <FloatingInput label="Product Name" icon="pricetag-outline" placeholder="e.g. iPhone 13 Pro Max 256GB" value={name} onChangeText={setName} required />
-            <DropdownSelector label="Category" placeholder="Select category" items={VALID_CATEGORIES} selectedValue={category} onSelect={handleCategoryChange} required style={{ marginBottom: 14 }} renderItem={({ item, isSelected }) => (<View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}><Text style={{ fontSize: 22, width: 32, textAlign: 'center' }}>{item.icon}</Text><Text style={[bsStyles.itemText, { marginLeft: 12 }, isSelected && bsStyles.itemTextActive]}>{formatDisplayName(item.key)}</Text></View>)} />
+            <DropdownSelector 
+              label="Category" 
+              placeholder="Select category" 
+              items={VALID_CATEGORIES} 
+              selectedValue={category} 
+              onSelect={handleCategoryChange} 
+              required 
+              style={{ marginBottom: 14 }} 
+              renderItem={({ item, isSelected }) => (
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <Ionicons 
+                    name={item.icon} 
+                    size={22} 
+                    color={isSelected ? C.brand : C.t2}
+                    style={{ width: 32, textAlign: 'center' }}
+                  />
+                  <Text style={[bsStyles.itemText, { marginLeft: 12 }, isSelected && bsStyles.itemTextActive]}>
+                    {formatDisplayName(item.key)}
+                  </Text>
+                </View>
+              )} 
+            />
             <DropdownSelector label="Subcategory (optional)" placeholder="Select subcategory" items={subcategoryOptions} selectedValue={subcategory} onSelect={setSubcategory} style={{ marginBottom: 14 }} disabled={!category || subcategoryOptions.length === 0} />
             <FloatingInput label="Brand (optional)" icon="bookmark-outline" placeholder="e.g. Apple, Samsung, Nike" value={brand} onChangeText={setBrand} />
             <DropdownSelector label="Condition" placeholder="Select condition" items={CONDITION_OPTIONS} selectedValue={condition} onSelect={setCondition} required style={{ marginBottom: 4 }} />
@@ -487,7 +521,12 @@ const UpdateProductScreen = ({ route, navigation }) => {
                 const active = selectedTags.includes(key);
                 return (
                   <TouchableOpacity key={key} style={[styles.tagChip, active && styles.tagChipActive]} onPress={() => toggleTag(key)} activeOpacity={0.75}>
-                    <Text style={styles.tagEmoji}>{icon}</Text>
+                    {/* FIXED: Render Ionicons component instead of text */}
+                    <Ionicons 
+                      name={icon} 
+                      size={16} 
+                      color={active ? C.brand : C.t2}
+                    />
                     <Text style={[styles.tagLabel, active && styles.tagLabelActive]}>{formatDisplayName(key)}</Text>
                     {active && <Ionicons name="checkmark-circle" size={12} color={C.brand} />}
                   </TouchableOpacity>

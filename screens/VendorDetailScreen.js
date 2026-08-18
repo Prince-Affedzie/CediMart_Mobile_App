@@ -1,22 +1,29 @@
 // src/screens/VendorDetailScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Image,
+  View, Text, TouchableOpacity, Image,
   StyleSheet, ActivityIndicator, RefreshControl,
   Dimensions, Alert, Modal, Platform, FlatList,
+  Animated, Pressable, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { getVendorById } from '../apis/vendorApi';
 import { getFeed } from '../apis/feedApi';
 import { followUser } from '../apis/userApi';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import ChatFAB from '../components/ChatFAB';
+import { shareVendorProfile } from '../utils/shareUtils';
+
 
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
+const BANNER_HEIGHT = 190;
 
 const CAMPUS_LABELS = {
   UG: 'University of Ghana', KNUST: 'KNUST', UCC: 'University of Cape Coast',
@@ -34,6 +41,26 @@ const FEED_TYPE_CONFIG = {
   achievement: { icon: 'trophy-outline', color: '#059669', label: 'Achievement' },
 };
 
+// Kept in sync with the category palette on the Discover screen, so a
+// vendor's fallback banner here matches the color they were browsed under.
+const CATEGORY_COLORS = {
+  'electronics': '#2563EB',
+  'phones and tablets': '#7C3AED',
+  'computers and laptops': '#0891B2',
+  'gaming': '#DB2777',
+  'fashion': '#DC2626',
+  'books-course-materials': '#B45309',
+  'hostel-items': '#0D9488',
+  'appliances': '#475569',
+  'furniture': '#92400E',
+  'beauty and grooming': '#EC4899',
+  'sports and fitness': '#16A34A',
+  'accessories': '#CA8A04',
+  'food and drinks': '#EA580C',
+  'services': '#0284C7',
+  'other': '#64748B',
+};
+
 const C = {
   brand: '#0D9488', brandL: '#14B8A6', brandD: '#0F766E',
   brandBg: '#F0FDFA', brandBorder: '#99F6E4',
@@ -42,7 +69,16 @@ const C = {
   danger: '#DC2626', dangerBg: '#FEF2F2',
   bg: '#F8FAFC', surface: '#FFFFFF', elev: '#F1F5F9',
   t1: '#0F172A', t2: '#475569', t3: '#94A3B8',
-  white: '#FFFFFF', gold: '#F59E0B',
+  white: '#FFFFFF', gold: '#F59E0B', skeleton: '#EEF2F6',
+};
+
+const shade = (hex, percent) => {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const r = Math.max(0, (num >> 16) - amt);
+  const g = Math.max(0, ((num >> 8) & 0x00ff) - amt);
+  const b = Math.max(0, (num & 0x0000ff) - amt);
+  return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
 };
 
 const formatCount = (count) => {
@@ -64,12 +100,24 @@ const getTimeAgo = (date) => {
   return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 };
 
+// ─── Press-scale wrapper for tactile card feedback ─────────────────────────
+const Pressy = ({ onPress, style, children, scaleTo = 0.96, disabled }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const onPressIn = () => !disabled && Animated.spring(scale, { toValue: scaleTo, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
+  const onPressOut = () => !disabled && Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 6 }).start();
+  return (
+    <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut} disabled={disabled}>
+      <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
+    </Pressable>
+  );
+};
+
 // ─── Feed Post Card ─────────────────────────────────────────────────────────
 const FeedPostCard = ({ post, onPress }) => {
   const typeCfg = FEED_TYPE_CONFIG[post.type] || FEED_TYPE_CONFIG.product_reel;
   const hasMedia = post.media?.length > 0;
   return (
-    <TouchableOpacity style={s.feedCard} onPress={onPress} activeOpacity={0.9}>
+    <Pressy onPress={onPress} style={s.feedCard} scaleTo={0.98}>
       {hasMedia ? (
         <View style={s.feedMediaWrap}>
           <Image source={{ uri: post.media[0].url }} style={s.feedMedia} />
@@ -102,15 +150,51 @@ const FeedPostCard = ({ post, onPress }) => {
           <Text style={s.feedTime}>{getTimeAgo(post.createdAt)}</Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressy>
   );
 };
+
+// ─── Skeleton loading state ─────────────────────────────────────────────────
+const SkeletonBlock = ({ style }) => {
+  const shimmer = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const anim = Animated.loop(Animated.sequence([
+      Animated.timing(shimmer, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(shimmer, { toValue: 0, duration: 800, useNativeDriver: true }),
+    ]));
+    anim.start();
+    return () => anim.stop();
+  }, []);
+  const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0.9] });
+  return <Animated.View style={[{ backgroundColor: C.skeleton, borderRadius: 8 }, style, { opacity }]} />;
+};
+
+const VendorDetailSkeleton = () => (
+  <View style={{ flex: 1 }}>
+    <SkeletonBlock style={{ width: '100%', height: BANNER_HEIGHT, borderRadius: 0 }} />
+    <View style={{ paddingHorizontal: 16 }}>
+      <SkeletonBlock style={{ width: 80, height: 80, borderRadius: 40, marginTop: -40, borderWidth: 3, borderColor: C.bg }} />
+      <SkeletonBlock style={{ width: '55%', height: 18, marginTop: 16 }} />
+      <SkeletonBlock style={{ width: '35%', height: 13, marginTop: 8 }} />
+      <SkeletonBlock style={{ width: '70%', height: 13, marginTop: 8 }} />
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+        <SkeletonBlock style={{ flex: 1, height: 60, borderRadius: 14 }} />
+        <SkeletonBlock style={{ flex: 1, height: 60, borderRadius: 14 }} />
+        <SkeletonBlock style={{ flex: 1, height: 60, borderRadius: 14 }} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 24 }}>
+        <SkeletonBlock style={{ width: CARD_WIDTH, height: 190, borderRadius: 14 }} />
+        <SkeletonBlock style={{ width: CARD_WIDTH, height: 190, borderRadius: 14 }} />
+      </View>
+    </View>
+  </View>
+);
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 const VendorDetailScreen = ({ route, navigation }) => {
   const { vendorId } = route.params;
   const { addToCart, cartItems } = useCart();
-  const { isAuthenticated,user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -119,6 +203,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
   const [addingProductId, setAddingProductId] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [addedProductName, setAddedProductName] = useState('');
+  const [sharing, setSharing] = useState(false);
 
   // Tabs
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'posts'
@@ -129,6 +214,8 @@ const VendorDetailScreen = ({ route, navigation }) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
+
+  const modalScale = useRef(new Animated.Value(0.85)).current;
 
   const fetchVendor = async () => {
     try {
@@ -178,6 +265,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
     }
     const vendorUserId = vendor?.user?._id || vendor?.user;
     if (!vendorUserId) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setFollowLoading(true);
     try {
       const res = await followUser(vendorUserId);
@@ -192,8 +280,39 @@ const VendorDetailScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleShare = async () => {
+    if (sharing || !vendor) return;
+    setSharing(true);
+    try {
+      const result = await shareVendorProfile(vendor);
+      if (result?.success) {
+        Toast.show({ type: 'success', text1: 'Vendor shared successfully!' });
+      } else if (!result?.cancelled) {
+        Toast.show({ type: 'error', text1: 'Failed to share profile' });
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      Toast.show({ type: 'error', text1: 'Could not share profile' });
+    } finally {
+      setSharing(false);
+    }
+  };
+
+
+  const handleTabChange = (tab) => {
+    Haptics.selectionAsync().catch(() => {});
+    setActiveTab(tab);
+  };
+
   useEffect(() => { fetchVendor(); }, [vendorId]);
   const onRefresh = () => { setRefreshing(true); fetchVendor(); };
+
+  useEffect(() => {
+    if (modalVisible) {
+      modalScale.setValue(0.85);
+      Animated.spring(modalScale, { toValue: 1, useNativeDriver: true, speed: 22, bounciness: 8 }).start();
+    }
+  }, [modalVisible]);
 
   const getQuantityInCart = (productId) => {
     const item = cartItems.find(i => i.product?._id === productId || i.productId === productId);
@@ -213,6 +332,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
       return;
     }
     try {
+      Haptics.selectionAsync().catch(() => {});
       setAddingProductId(product._id); setAddedProductName(product.name);
       await addToCart(product._id, 1); setModalVisible(true);
       setTimeout(() => setModalVisible(false), 2200);
@@ -222,11 +342,13 @@ const VendorDetailScreen = ({ route, navigation }) => {
 
   const isValidImage = (url) => url && !url.includes('default_banner') && !url.includes('default_profile');
   const products = vendor?.products || [];
+  const bannerCategoryColor = CATEGORY_COLORS[vendor?.categories?.[0]] || C.brandD;
+  const hasRating = vendor?.rating > 0 || vendor?.numReviews > 0;
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={[s.container, s.centered]} edges={['top']}>
-        <ActivityIndicator size="large" color={C.brand} />
+      <SafeAreaView style={s.container} edges={['top']}>
+        <VendorDetailSkeleton />
       </SafeAreaView>
     );
   }
@@ -234,9 +356,13 @@ const VendorDetailScreen = ({ route, navigation }) => {
   if (error || !vendor) {
     return (
       <SafeAreaView style={[s.container, s.centered, { padding: 32 }]} edges={['top']}>
-        <Ionicons name="alert-circle-outline" size={52} color={C.t3} />
-        <Text style={[s.loadingText, { marginTop: 12 }]}>{error || 'Vendor not found'}</Text>
-        <TouchableOpacity style={s.retryBtn} onPress={() => { setLoading(true); fetchVendor(); }}>
+        <View style={s.errorIconWrap}>
+          <Ionicons name="alert-circle-outline" size={40} color={C.danger} />
+        </View>
+        <Text style={s.errorTitle}>Couldn't load this store</Text>
+        <Text style={s.loadingText}>{error || 'Vendor not found'}</Text>
+        <TouchableOpacity style={s.retryBtn} onPress={() => { setLoading(true); fetchVendor(); }} activeOpacity={0.85}>
+          <Ionicons name="refresh" size={15} color="#fff" style={{ marginRight: 6 }} />
           <Text style={s.retryBtnText}>Retry</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -245,10 +371,10 @@ const VendorDetailScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      
+
       <Modal animationType="fade" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={s.modalOverlay}>
-          <View style={s.successModal}>
+          <Animated.View style={[s.successModal, { transform: [{ scale: modalScale }] }]}>
             <View style={s.modalIconRing}><Ionicons name="checkmark" size={28} color="#fff" /></View>
             <Text style={s.successTitle}>Added to Cart</Text>
             <Text style={s.successMsg}>{addedProductName}</Text>
@@ -259,7 +385,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
             <TouchableOpacity style={s.modalSecondaryBtn} onPress={() => setModalVisible(false)}>
               <Text style={s.modalSecondaryText}>Continue Browsing</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
 
@@ -268,6 +394,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
         keyExtractor={(item, index) => item._id || index.toString()}
         numColumns={activeTab === 'products' ? 2 : 1}
         key={activeTab} // Force re-render on tab change
+        columnWrapperStyle={activeTab === 'products' ? { paddingHorizontal: 10 } : undefined}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.brand} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.listContent}
@@ -278,12 +405,36 @@ const VendorDetailScreen = ({ route, navigation }) => {
               {isValidImage(vendor.storeBanner) ? (
                 <Image source={{ uri: vendor.storeBanner }} style={s.bannerImage} />
               ) : (
-                <View style={s.bannerFallback} />
+                <LinearGradient
+                  colors={[bannerCategoryColor, shade(bannerCategoryColor, 25)]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.bannerImage}
+                >
+                  <Ionicons name="storefront-outline" size={90} color="rgba(255,255,255,0.10)" style={s.bannerIconDecor} />
+                </LinearGradient>
               )}
-              <View style={s.bannerScrim} />
-              <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-                <Ionicons name="arrow-back" size={20} color="#fff" />
-              </TouchableOpacity>
+              {/* Top scrim keeps back/share buttons legible over any photo */}
+              <LinearGradient colors={['rgba(0,0,0,0.45)', 'transparent']} style={s.bannerTopScrim} pointerEvents="none" />
+              {/* Bottom scrim blends the banner into the profile section */}
+              <LinearGradient colors={['transparent', 'rgba(10,30,18,0.35)']} style={s.bannerBottomScrim} pointerEvents="none" />
+
+              <View style={s.bannerTopBar}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={s.circleBtn}>
+                  <Ionicons name="arrow-back" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={handleShare} 
+                  style={[s.circleBtn, sharing && s.circleBtnDisabled]}
+                  disabled={sharing}
+                >
+                  {sharing ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="share-outline" size={19} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Profile Info — horizontal layout like Instagram */}
@@ -296,58 +447,75 @@ const VendorDetailScreen = ({ route, navigation }) => {
                     <Text style={s.avatarInitial}>{vendor.name?.charAt(0).toUpperCase() || '?'}</Text>
                   </View>
                 )}
+                {vendor.isVerified && (
+                  <View style={s.avatarVerifiedBadge}>
+                    <Ionicons name="checkmark" size={11} color="#fff" />
+                  </View>
+                )}
               </View>
 
               <View style={s.profileStats}>
-                {/* Stats Row */}
                 <View style={s.statsRow}>
                   <View style={s.statItem}>
                     <Text style={s.statValue}>{formatCount(products.length)}</Text>
                     <Text style={s.statLabel}>Products</Text>
                   </View>
+                  <View style={s.statDivider} />
                   <View style={s.statItem}>
                     <Text style={s.statValue}>{formatCount(followerCount)}</Text>
                     <Text style={s.statLabel}>Followers</Text>
                   </View>
+                  <View style={s.statDivider} />
                   <View style={s.statItem}>
                     <Text style={s.statValue}>{formatCount(feedPosts.length)}</Text>
                     <Text style={s.statLabel}>Posts</Text>
                   </View>
                 </View>
 
-                {/* Follow Button + Verified Badge in one row */}
-                <View style={s.actionRow}>
-                  {vendor.isVerified && (
-                    <View style={s.verifiedBadge}>
-                      <Ionicons name="shield-checkmark" size={13} color={C.success} />
-                      <Text style={s.verifiedText}>Verified</Text>
-                    </View>
-                  )}
-                  <TouchableOpacity
-                    style={[s.followBtn, isFollowing && s.followBtnActive]}
-                    onPress={handleFollow}
-                    disabled={followLoading}
-                    activeOpacity={0.85}
-                  >
-                    {followLoading ? (
-                      <ActivityIndicator size="small" color={isFollowing ? C.brand : '#fff'} />
-                    ) : (
+                <Pressy onPress={handleFollow} style={[s.followBtn, isFollowing && s.followBtnActive]} disabled={followLoading} scaleTo={0.95}>
+                  {followLoading ? (
+                    <ActivityIndicator size="small" color={isFollowing ? C.brand : '#fff'} />
+                  ) : (
+                    <>
+                      <Ionicons name={isFollowing ? 'checkmark' : 'person-add-outline'} size={13} color={isFollowing ? C.brand : '#fff'} style={{ marginRight: 5 }} />
                       <Text style={[s.followBtnText, isFollowing && s.followBtnTextActive]}>
                         {isFollowing ? 'Following' : 'Follow'}
                       </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                    </>
+                  )}
+                </Pressy>
               </View>
             </View>
 
             {/* Name & Bio */}
             <View style={s.nameSection}>
-              <Text style={s.vendorName}>{vendor.name}</Text>
+              <View style={s.nameRow}>
+                <Text style={s.vendorName}>{vendor.name}</Text>
+                {vendor.isVerified && <Ionicons name="checkmark-circle" size={16} color={C.info} style={{ marginLeft: 5 }} />}
+              </View>
               {vendor.storeName && <Text style={s.storeName}>{vendor.storeName}</Text>}
-              {vendor.campus && (
-                <Text style={s.campusText}>{CAMPUS_LABELS[vendor.campus] || vendor.campus}</Text>
-              )}
+
+              <View style={s.metaLine}>
+                {vendor.campus && (
+                  <View style={s.metaItem}>
+                    <Ionicons name="school-outline" size={12} color={C.t3} />
+                    <Text style={s.metaItemText}>{CAMPUS_LABELS[vendor.campus] || vendor.campus}</Text>
+                  </View>
+                )}
+                {hasRating && (
+                  <View style={s.metaItem}>
+                    <Ionicons name="star" size={12} color={C.gold} />
+                    <Text style={s.metaItemText}>{(vendor.rating || 0).toFixed(1)} ({vendor.numReviews || 0})</Text>
+                  </View>
+                )}
+                {vendor.totalSales > 0 && (
+                  <View style={s.metaItem}>
+                    <Ionicons name="bag-check-outline" size={12} color={C.t3} />
+                    <Text style={s.metaItemText}>{formatCount(vendor.totalSales)} sold</Text>
+                  </View>
+                )}
+              </View>
+
               {vendor.bio && <Text style={s.bioText}>{vendor.bio}</Text>}
             </View>
 
@@ -355,14 +523,14 @@ const VendorDetailScreen = ({ route, navigation }) => {
             <View style={s.tabBar}>
               <TouchableOpacity
                 style={[s.tab, activeTab === 'products' && s.tabActive]}
-                onPress={() => setActiveTab('products')}
+                onPress={() => handleTabChange('products')}
               >
                 <Ionicons name="grid-outline" size={16} color={activeTab === 'products' ? C.brand : C.t3} />
                 <Text style={[s.tabText, activeTab === 'products' && s.tabTextActive]}>Products</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.tab, activeTab === 'posts' && s.tabActive]}
-                onPress={() => setActiveTab('posts')}
+                onPress={() => handleTabChange('posts')}
               >
                 <Ionicons name="newspaper-outline" size={16} color={activeTab === 'posts' ? C.brand : C.t3} />
                 <Text style={[s.tabText, activeTab === 'posts' && s.tabTextActive]}>Posts</Text>
@@ -376,10 +544,10 @@ const VendorDetailScreen = ({ route, navigation }) => {
             const isAdding = addingProductId === item._id;
             const isAvailable = item.isAvailable && (item.countInStock ?? 0) > 0;
             return (
-              <TouchableOpacity
-                style={s.productCard}
+              <Pressy
                 onPress={() => navigation.navigate('ProductDetail', { productId: item._id, product: item })}
-                activeOpacity={0.88}
+                style={s.productCard}
+                scaleTo={0.97}
               >
                 <View style={s.productImgWrap}>
                   <Image source={{ uri: item.images?.[0] || 'https://via.placeholder.com/300/F5F5F5/BDBDBD?text=No+Image' }} style={s.productImg} />
@@ -399,7 +567,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
                     </TouchableOpacity>
                   </View>
                 </View>
-              </TouchableOpacity>
+              </Pressy>
             );
           }
           return <FeedPostCard post={item} onPress={() => navigation.navigate('FeedPostDetail', { postId: item._id })} />;
@@ -409,14 +577,16 @@ const VendorDetailScreen = ({ route, navigation }) => {
             <View style={s.emptyState}><ActivityIndicator size="small" color={C.brand} /></View>
           ) : (
             <View style={s.emptyState}>
-              <Ionicons name={activeTab === 'products' ? 'cube-outline' : 'newspaper-outline'} size={40} color={C.t3} />
+              <View style={s.emptyIconWrap}>
+                <Ionicons name={activeTab === 'products' ? 'cube-outline' : 'newspaper-outline'} size={32} color={C.brand} />
+              </View>
               <Text style={s.emptyText}>{activeTab === 'products' ? 'No products yet' : 'No posts yet'}</Text>
             </View>
           )
         }
       />
 
-      <ChatFAB 
+      <ChatFAB
       recipientId={vendor?.user?._id || vendor?.user}
       isAuthenticated={isAuthenticated}
       currentUserId={user?._id || user?.id}
@@ -426,7 +596,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
         right: 16,
       }}
     />
-      
+
     </SafeAreaView>
   );
 };
@@ -441,55 +611,66 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   centered: { justifyContent: 'center', alignItems: 'center' },
   listContent: { paddingBottom: 60 },
-  loadingText: { marginTop: 12, fontSize: 15, color: C.t3 },
-  retryBtn: { marginTop: 20, backgroundColor: C.brand, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 14 },
-  retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  loadingText: { marginTop: 4, fontSize: 14, color: C.t3, textAlign: 'center' },
+  errorIconWrap: { width: 76, height: 76, borderRadius: 38, backgroundColor: C.dangerBg, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  errorTitle: { fontSize: 17, fontWeight: '700', color: C.t1, marginBottom: 4 },
+  retryBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 22, backgroundColor: C.brand, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
+  retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
   // Hero
-  heroBanner: { height: 180, backgroundColor: C.brandD, position: 'relative' },
-  bannerImage: { width: '100%', height: '100%' },
-  bannerFallback: { ...StyleSheet.absoluteFillObject, backgroundColor: C.brandD },
-  bannerScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,30,18,0.45)' },
-  backBtn: { position: 'absolute', top: 16, left: 16, zIndex: 20, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
+  heroBanner: { height: BANNER_HEIGHT, backgroundColor: C.brandD, position: 'relative', overflow: 'hidden' },
+  bannerImage: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
+  bannerIconDecor: { position: 'absolute', right: -20, bottom: -20 },
+  bannerTopScrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 90 },
+  bannerBottomScrim: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 70 },
+  bannerTopBar: { position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', zIndex: 20 },
+  circleBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
+  circleBtnDisabled: { opacity: 0.6 },
 
   // Profile — horizontal layout
   profileSection: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 16, gap: 20,
   },
-  avatarRing: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: C.surface, overflow: 'hidden', backgroundColor: C.brandBg, marginTop: -40, ...shadow(0.12, 8, 4) },
-  avatar: { width: '100%', height: '100%' },
-  avatarFallback: { flex: 1, backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center' },
+  avatarRing: { width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: C.surface, overflow: 'visible', backgroundColor: C.brandBg, marginTop: -40, ...shadow(0.12, 8, 4) },
+  avatar: { width: '100%', height: '100%', borderRadius: 37 },
+  avatarFallback: { flex: 1, borderRadius: 37, backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center' },
   avatarInitial: { fontSize: 30, fontWeight: '800', color: '#fff' },
+  avatarVerifiedBadge: {
+    position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: 11,
+    backgroundColor: C.info, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: C.surface,
+  },
 
   profileStats: { flex: 1, gap: 12 },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  statItem: { alignItems: 'center' },
+  statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
+  statItem: { alignItems: 'center', flex: 1 },
+  statDivider: { width: 1, height: 26, backgroundColor: C.elev },
   statValue: { fontSize: 18, fontWeight: '800', color: C.t1 },
   statLabel: { fontSize: 11, color: C.t3, marginTop: 2 },
 
-  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.successBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
-  verifiedText: { fontSize: 10, fontWeight: '700', color: C.success },
   followBtn: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: C.brand, paddingVertical: 9, borderRadius: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: C.brand, paddingVertical: 9, borderRadius: 10,
   },
   followBtnActive: { backgroundColor: C.brandBg, borderWidth: 1.5, borderColor: C.brand },
   followBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   followBtnTextActive: { color: C.brand },
 
   // Name section
-  nameSection: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
-  vendorName: { fontSize: 16, fontWeight: '800', color: C.t1 },
+  nameSection: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4 },
+  nameRow: { flexDirection: 'row', alignItems: 'center' },
+  vendorName: { fontSize: 17, fontWeight: '800', color: C.t1 },
   storeName: { fontSize: 13, color: C.t2, marginTop: 2 },
-  campusText: { fontSize: 12, color: C.t3, marginTop: 4 },
-  bioText: { fontSize: 13, color: C.t2, marginTop: 6, lineHeight: 19 },
+  metaLine: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaItemText: { fontSize: 12, color: C.t2, fontWeight: '500' },
+  bioText: { fontSize: 13, color: C.t2, marginTop: 10, lineHeight: 19 },
 
   // Tabs
   tabBar: {
     flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E2E8F0',
-    marginTop: 14, paddingHorizontal: 16,
+    marginTop: 16, paddingHorizontal: 16,
   },
   tab: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -501,7 +682,7 @@ const s = StyleSheet.create({
   tabTextActive: { color: C.brand },
 
   // Products
-  productCard: { width: CARD_WIDTH, backgroundColor: C.surface, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0', margin: 6, ...shadow(0.04, 6, 2) },
+  productCard: { width: CARD_WIDTH, backgroundColor: C.surface, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#E2E8F0', margin: 6, ...shadow(0.05, 8, 3) },
   productImgWrap: { width: '100%', height: 130, position: 'relative' },
   productImg: { width: '100%', height: '100%' },
   outOfStockOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
@@ -534,7 +715,8 @@ const s = StyleSheet.create({
   feedTime: { fontSize: 10, color: C.t3, marginLeft: 'auto' },
 
   emptyState: { alignItems: 'center', paddingVertical: 50 },
-  emptyText: { marginTop: 8, fontSize: 14, color: C.t3 },
+  emptyIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  emptyText: { fontSize: 14, color: C.t3, fontWeight: '500' },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.48)', justifyContent: 'center', alignItems: 'center', padding: 24 },

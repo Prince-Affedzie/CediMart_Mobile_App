@@ -1,4 +1,4 @@
-// ─── Styles ───────────────────────────────────────────────────────────────
+// src/styles/campusfeed.js
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
-
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const C = {
@@ -125,8 +124,8 @@ export const styles = StyleSheet.create({
   railBtn: { alignItems: 'center', gap: 3 },
   railLabel: { color: C.white, fontSize: 11, fontWeight: '700' },
   railAvatarPlusFollowing: {
-  backgroundColor: '#059669', // Green when following
-},
+    backgroundColor: '#059669', // Green when following
+  },
 
   // Floating header
   floatingHeader: { position: 'absolute', top: 0, left: 0, right: 0 },
@@ -168,12 +167,20 @@ export const styles = StyleSheet.create({
   },
   loadingText: { fontSize: 14, color: C.dim, fontWeight: '500' },
 
-  // FAB
+  // FAB - No fixed bottom position (set dynamically in component)
   fab: {
-    position: 'absolute', bottom: 28, right: 16,
-    width: 52, height: 52, borderRadius: 26, backgroundColor: C.white,
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 8,
+    position: 'absolute',
+    right: 16,
+    width: 52, 
+    height: 52, 
+    borderRadius: 26, 
+    backgroundColor: C.white,
+    justifyContent: 'center', 
+    alignItems: 'center',
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, 
+    shadowRadius: 8, 
+    elevation: 8,
   },
 });

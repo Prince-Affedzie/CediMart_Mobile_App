@@ -27,6 +27,7 @@ const C = {
   dangerBg:     '#FEF2F2',
   info:         '#0284C7',
   infoBg:       '#F0F9FF',
+  infoBorder:   '#BAE6FD',
   white:        '#FFFFFF',
   black:        '#000000',
   t1:           '#0F172A',
@@ -37,8 +38,6 @@ const C = {
   gray100:      '#F5F5F5',
   gray200:      '#E5E7EB',
 };
-
-const REFRESH_COOLDOWN_MS = 30_000;
 
 // A small on-brand rotation so different contacts get visually distinct
 // avatar colors (when they have no photo) instead of every fallback
@@ -86,28 +85,34 @@ const getProductName = (product) => {
 function InboxScreen({ navigation }) {
   const { inbox, inboxLoading, loadInbox } = useChat();
   const { user } = useAuth();
-  const lastLoadedAt = useRef(null);
+  const hasLoadedOnce = useRef(false);
   const [noticeVisible, setNoticeVisible] = useState(true);
+  const [refreshHintVisible, setRefreshHintVisible] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const noticeAnim = useRef(new Animated.Value(1)).current;
+  const refreshHintAnim = useRef(new Animated.Value(1)).current;
 
+  // Load the inbox once when this screen is first focused. After that,
+  // the person controls refreshing via pull-to-refresh below — no more
+  // silent re-fetching every time the screen regains focus.
   useFocusEffect(
     useCallback(() => {
-      if (!user?._id) return;
-      const now = Date.now();
-      const sinceLastLoad = now - (lastLoadedAt.current ?? 0);
-      if (sinceLastLoad >= REFRESH_COOLDOWN_MS) {
-        loadInbox().then(() => { lastLoadedAt.current = Date.now(); });
-      }
+      if (!user?._id || hasLoadedOnce.current) return;
+      hasLoadedOnce.current = true;
+      if (inbox.length === 0) loadInbox();
     }, [user?._id, loadInbox])
   );
 
   const handleManualRefresh = useCallback(() => {
-    loadInbox().then(() => { lastLoadedAt.current = Date.now(); });
+    loadInbox();
   }, [loadInbox]);
 
   const handleDismissNotice = () => {
     Animated.timing(noticeAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => setNoticeVisible(false));
+  };
+
+  const handleDismissRefreshHint = () => {
+    Animated.timing(refreshHintAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => setRefreshHintVisible(false));
   };
 
   const handleOpen = (conversation) => {
@@ -229,6 +234,14 @@ function InboxScreen({ navigation }) {
         </View>
       )}
 
+      {inbox.length > 0 && refreshHintVisible && (
+        <Animated.View style={[refreshHintStyles.wrap, { opacity: refreshHintAnim }]}>
+          <Ionicons name="arrow-down-circle-outline" size={16} color={C.info} style={{ marginTop: 1 }} />
+          <Text style={refreshHintStyles.text}>Pull down on the list anytime to check for new messages.</Text>
+          <TouchableOpacity onPress={handleDismissRefreshHint} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Ionicons name="close" size={16} color={C.info} /></TouchableOpacity>
+        </Animated.View>
+      )}
+
       {noticeVisible && (
         <Animated.View style={[noticeStyles.wrap, { opacity: noticeAnim }]}>
           <Ionicons name="shield-checkmark" size={16} color={C.accent} style={{ marginTop: 1 }} />
@@ -298,12 +311,12 @@ const EmptyState = ({ navigation }) => (
   <View style={emptyStyles.wrap}>
     <View style={emptyStyles.iconCircle}><Ionicons name="chatbubbles-outline" size={40} color={C.brand} /></View>
     <Text style={emptyStyles.title}>No conversations yet</Text>
-    <Text style={emptyStyles.subtitle}>When you message a vendor or start negotiating on a product, it'll show up here.</Text>
-    {/* Adjust the route name below if 'Discover' isn't what your browse/marketplace screen is called */}
+    {/*<Text style={emptyStyles.subtitle}>When you message a vendor or start negotiating on a product, it'll show up here.</Text>
+    {/* Adjust the route name below if 'Discover' isn't what your browse/marketplace screen is called 
     <TouchableOpacity style={emptyStyles.cta} onPress={() => navigation.navigate('Discover')} activeOpacity={0.85}>
       <Ionicons name="storefront-outline" size={16} color="#fff" />
       <Text style={emptyStyles.ctaText}>Explore vendors</Text>
-    </TouchableOpacity>
+    </TouchableOpacity>*/}
   </View>
 );
 
@@ -420,6 +433,11 @@ const noticeStyles = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 14, marginTop: 10, marginBottom: 4, backgroundColor: C.accentBg, borderWidth: 1, borderColor: C.accentBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
   text: { flex: 1, fontSize: 12, color: '#78350F', lineHeight: 17 },
   bold: { fontWeight: '700' },
+});
+
+const refreshHintStyles = StyleSheet.create({
+  wrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 14, marginTop: 10, marginBottom: 4, backgroundColor: C.infoBg, borderWidth: 1, borderColor: C.infoBorder, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
+  text: { flex: 1, fontSize: 12, color: C.brandD, lineHeight: 17 },
 });
 
 const skeletonStyles = StyleSheet.create({

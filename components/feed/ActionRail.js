@@ -61,21 +61,21 @@ export const ActionRail = ({ post, isLiked, isSaved, onLike, onComment, onFollow
     </TouchableOpacity>
 
     <TouchableOpacity style={styles.railBtn} onPress={onLike} activeOpacity={0.7}>
-      <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={30} color={isLiked ? C.red : C.white} />
+      <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={28} color={isLiked ? C.red : C.white} />
       <Text style={styles.railLabel}>{formatCount((post.likes?.length || 0) + (isLiked ? 1 : 0))}</Text>
     </TouchableOpacity>
 
     <TouchableOpacity style={styles.railBtn} onPress={onComment} activeOpacity={0.7}>
       <Ionicons name="chatbubble-ellipses-outline" size={28} color={C.white} />
-      <Text style={styles.railLabel}>{formatCount(post.comments?.length || 0)}</Text>
+      <Text style={styles.railLabel}>{formatCount(post.commentCount || 0)}</Text>
     </TouchableOpacity>
 
     <TouchableOpacity style={styles.railBtn} onPress={onSave} activeOpacity={0.7}>
-      <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={27} color={isSaved ? C.brand : C.white} />
+      <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={28} color={isSaved ? C.brand : C.white} />
     </TouchableOpacity>
 
     <TouchableOpacity style={styles.railBtn} onPress={onShare} activeOpacity={0.7}>
-      <Ionicons name="arrow-redo-outline" size={27} color={C.white} />
+      <Ionicons name="arrow-redo-outline" size={28} color={C.white} />
       
     </TouchableOpacity>
     <TouchableOpacity style={styles.railBtn} onPress={onReport} activeOpacity={0.7}>

@@ -69,11 +69,11 @@ const CAMPUS_OPTIONS = [
   { value: 'ATU', label: 'ATU' },
 ];
 
-const INSPO_ITEMS = [
-  { type: 'lifestyle', icon: 'camera-outline', label: 'Hostel Tour', color: '#F97316' },
-  { type: 'product_reel', icon: 'pricetag-outline', label: 'Sell Items', color: '#0D9488' },
+const INSPO_ITEMS = [ 
+  { type: 'product_reel', icon: 'pricetag-outline', label: 'Sell your brand', color: '#0D9488' },
   { type: 'service_reel', icon: 'construct-outline', label: 'Your Services', color: '#7C3AED' },
   { type: 'campus_event', icon: 'calendar-outline', label: 'Campus Events', color: '#0284C7' },
+  { type: 'lifestyle', icon: 'camera-outline', label: 'Hostel Tour', color: '#F97316' },
   { type: 'campus_hack', icon: 'bulb-outline', label: 'Campus Hacks', color: '#F59E0B' },
   { type: 'achievement', icon: 'trophy-outline', label: 'Your Wins', color: '#059669' },
   { type: 'funny_moment', icon: 'happy-outline', label: 'Funny Moments', color: '#EC4899' },

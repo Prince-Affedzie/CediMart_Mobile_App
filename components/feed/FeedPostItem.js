@@ -74,6 +74,7 @@ export const FeedPostItem = ({
   onFollow,
   onReport,
   onProductPress,
+  onVendorPress,
   itemHeight,
 }) => {
   const [isLiked, setIsLiked] = useState(false);
@@ -100,6 +101,7 @@ export const FeedPostItem = ({
     ? `${post.author.firstName || ''} ${post.author.lastName || ''}`.trim()
     : 'Unknown';
   const authorInitial = (post.author?.firstName || '?').charAt(0).toUpperCase();
+  const isVendor = post.author?.role === 'vendor';
 
   // ── Cache check ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -124,7 +126,7 @@ export const FeedPostItem = ({
     (player) => {
       player.loop = true;
       player.timeUpdateEventInterval = TIME_UPDATE_INTERVAL;
-      if (isActive) player.play();
+      if (isActive && screenFocused) player.play();
       else player.pause();
     }
   );
@@ -179,6 +181,7 @@ export const FeedPostItem = ({
     };
   }, [isActive, player, isVideo]);
 
+  // ── Play/Pause based on active state, screen focus, and app state ─────
   useEffect(() => {
     if (!player || !isVideo) return;
     if (isActive && screenFocused && !paused) player.play();
@@ -295,6 +298,15 @@ export const FeedPostItem = ({
 
       <View style={[styles.bottomContent, (!post.media?.[0] && !post.linkedProduct) && styles.bottomContentTextOnly]}>
         <View style={styles.bottomLeft}>
+          {/* Vendor Shop Button */}
+          {isVendor && onVendorPress && (
+            <TouchableOpacity style={localStyles.viewShopBtn} onPress={onVendorPress} activeOpacity={0.85}>
+              <Ionicons name="storefront-outline" size={14} color="#fff" />
+              <Text style={localStyles.viewShopText}>View Shop</Text>
+              <Ionicons name="chevron-forward" size={12} color="#fff" />
+            </TouchableOpacity>
+          )}
+
           {post.linkedProduct && (
             <TouchableOpacity style={[styles.productChip, (!post.media?.[0] && post.linkedProduct) && styles.productChipTextOnly]} onPress={onProductPress} activeOpacity={0.85}>
               {post.linkedProduct.images?.[0] ? (
@@ -346,4 +358,20 @@ const localStyles = StyleSheet.create({
   progressFill: { height: '100%', backgroundColor: '#fff', borderRadius: 1.5 },
   progressTimeRow: { alignItems: 'flex-end', paddingHorizontal: 10, paddingTop: 4 },
   progressTimeText: { color: '#fff', fontSize: 11, fontWeight: '600', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  viewShopBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(20, 184, 166, 0.8)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  viewShopText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });

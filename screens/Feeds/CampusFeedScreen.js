@@ -14,8 +14,9 @@ import {
   Animated,
   Alert,
   RefreshControl,
+  AppState,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -74,6 +75,7 @@ const getBackgroundGradient = (type) => {
 const CampusFeedScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +88,7 @@ const CampusFeedScreen = () => {
   const [hasMore, setHasMore] = useState(true);
   const [activeType, setActiveType] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [appState, setAppState] = useState(AppState.currentState);
   const flatListRef = useRef(null);
 
   const itemHeight = SCREEN_H;
@@ -114,82 +117,94 @@ const CampusFeedScreen = () => {
 
   const handleRefresh = () => fetchFeed(1, true);
 
-  
-
   useEffect(() => {
     fetchFeed(1);
     setActiveIndex(0);
     flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
   }, [activeType]);
 
+  useEffect(() => {
+    if (posts.length > 0) {
+      feedPrefetchService.updatePostIndexMap(posts);
+    }
+  }, [posts]);
 
-useEffect(() => {
-  if (posts.length > 0) {
-    feedPrefetchService.updatePostIndexMap(posts);
-  }
-}, [posts]);
+  useEffect(() => {
+    if (posts.length > 0 && activeIndex >= 0) {
+      feedPrefetchService.prefetchNext(activeIndex, posts);
+    }
+  }, [activeIndex, posts]);
 
+  useEffect(() => {
+    if (!isFocused) {
+      feedPrefetchService.pauseAll();
+    }
+  }, [isFocused]);
 
-useEffect(() => {
-  if (posts.length > 0 && activeIndex >= 0) {
-    // Delay prefetch slightly so current video loads first
-    feedPrefetchService.prefetchNext(activeIndex, posts);
-  }
-}, [activeIndex, posts]);
+  // ── Pause videos when app goes to background ──────────────────────────
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (appState === 'active' && nextAppState !== 'active') {
+        // App is going to background - pause all videos
+        feedPrefetchService.pauseAll();
+        // Force re-render to pause active video
+        setAppState(nextAppState);
+      } else if (nextAppState === 'active') {
+        // App is coming back to foreground
+        setAppState(nextAppState);
+      }
+    });
 
-//  Stop prefetching the moment this screen loses focus — otherwise the
-// service keeps downloading and queuing in the background on a screen
-// the user can no longer see, burning data for nothing.
-useEffect(() => {
-  if (!isFocused) {
-    feedPrefetchService.pauseAll();
-  }
-}, [isFocused]);
+    return () => {
+      subscription.remove();
+    };
+  }, [appState]);
 
   const handleLoadMore = () => {
     if (hasMore && !loadingMore && !loading) fetchFeed(page + 1);
   };
-
 
   const handleFollow = async (authorId) => {
     if (!user) {
       Alert.alert('Login Required', 'Please login or sign up to Follow.');
       return;
     }
-   if (!authorId) return;
-  try {
-    await followUser(authorId);
-  } catch (err) {
-    console.error('Follow error:', err);
-  }
-};
+    if (!authorId) return;
+    try {
+      await followUser(authorId);
+    } catch (err) {
+      console.error('Follow error:', err);
+    }
+  };
 
   const handleLike = async (postId) => {
-     if (!user) {
+    if (!user) {
       Alert.alert('Login Required', 'Please login or sign up to like this posts.');
       return;
     }
     try { await toggleLike(postId); } catch (err) { console.error('Like error:', err); }
   };
+
   const handleSave = async (postId) => {
-     if (!user) {
+    if (!user) {
       Alert.alert('Login Required', 'Please login or sign up to save this posts.');
       return;
     }
     try { await toggleSave(postId); } catch (err) { console.error('Save error:', err); }
   };
+
   const handleComment = (post) => {
-     if (!user) {
+    if (!user) {
       Alert.alert('Login Required', 'Please login or sign up to comment.');
       return;
     }
-  // Pause video when opening comments
-  setCommentPost(post);
-};
+    setCommentPost(post);
+  };
 
-const handleCloseComments = () => {
-  setCommentPost(null);
-};
+  const handleCloseComments = () => {
+    setCommentPost(null);
+  };
+
   const handleShare = async (post) => {
     try {
       const { Share } = require('react-native');
@@ -199,8 +214,13 @@ const handleCloseComments = () => {
       });
     } catch (err) {}
   };
+
   const handleProductPress = (product) =>
     navigation.navigate('ProductDetail', { productId: product._id });
+
+  const handleVendorPress = (vendorId) =>
+    navigation.navigate('VendorDetail', {vendorId:vendorId });
+
   const handleCreatePost = () => navigation.navigate('CreateFeedPost');
 
   const viewedIds = useRef(new Set());
@@ -216,7 +236,6 @@ const handleCloseComments = () => {
     }
   }).current;
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 70 }).current;
-
 
   const handleReport = (post) => {
     if (!user) {
@@ -234,7 +253,7 @@ const handleCloseComments = () => {
     <FeedPostItem
       post={item}
       isActive={index === activeIndex}
-      screenFocused={isFocused}
+      screenFocused={isFocused && appState === 'active'}
       onLike={handleLike}
       onComment={() => handleComment(item)}
       onSave={handleSave}
@@ -242,6 +261,7 @@ const handleCloseComments = () => {
       onReport={() => handleReport(item)}
       onShare={() => handleShare(item)}
       onProductPress={() => item.linkedProduct && handleProductPress(item.linkedProduct)}
+      onVendorPress={item.vendorId ? () => handleVendorPress(item.vendorId) : undefined}
       itemHeight={itemHeight}
       useCache={true}
     />
@@ -257,7 +277,7 @@ const handleCloseComments = () => {
         <Text style={styles.emptyTitle}>
           {activeType ? `No ${FEED_TYPES.find((t) => t.key === activeType)?.label} posts yet` : 'No posts yet'}
         </Text>
-        <Text style={styles.emptySubtitle}>Be the first to share something on campus!</Text>
+        <Text style={styles.emptySubtitle}>Market your brand, products and services with videos!</Text>
         <TouchableOpacity style={styles.createFirstBtn} onPress={handleCreatePost} activeOpacity={0.85}>
           <Ionicons name="add" size={18} color="#0F172A" />
           <Text style={styles.createFirstBtnText}>Create a Post</Text>
@@ -300,12 +320,12 @@ const handleCloseComments = () => {
         initialNumToRender={3}
         maxToRenderPerBatch={4}
         windowSize={5}
-            />
+      />
 
       {/* Floating header */}
       <SafeAreaView style={styles.floatingHeader} edges={['top']} pointerEvents="box-none">
         <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>Campus Feed</Text>
+          <Text style={styles.headerTitle}>Feed</Text>
           <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Notification')}>
             <Ionicons name="notifications-outline" size={20} color={C.white} />
           </TouchableOpacity>
@@ -314,33 +334,32 @@ const handleCloseComments = () => {
       </SafeAreaView>
 
       <CommentsSheet
-      visible={!!commentPost}
-      onClose={handleCloseComments}
-      postId={commentPost?._id}
-     />
-     <ReportSheet
+        visible={!!commentPost}
+        onClose={handleCloseComments}
+        postId={commentPost?._id}
+      />
+      <ReportSheet
         visible={!!reportPost}
         onClose={handleCloseReport}
         contentType="FeedPost"
         contentId={reportPost?._id}
       />
 
-      {/* Create Post FAB */}
-      <TouchableOpacity style={styles.fab} onPress={handleCreatePost} activeOpacity={0.85}>
+      {/* Create Post FAB - Dynamic bottom position using safe area insets */}
+      <TouchableOpacity 
+        style={[
+          styles.fab, 
+          { bottom: insets.bottom + 8 }
+        ]} 
+        onPress={handleCreatePost} 
+        activeOpacity={0.85}
+      >
         <Ionicons name="add" size={24} color="#0F172A" />
       </TouchableOpacity>
 
-      {/*
-        Absolutely positioned (via ReelSkeleton's own styles), independent
-        of the FlatList's flex flow — this is what fixes it not covering
-        the full screen. It was previously flowing as a normal sibling
-        after an effectively-zero-height empty FlatList.
-      */}
       {loading && posts.length === 0 && <ReelSkeleton />}
     </View>
   );
 };
-
-
 
 export default CampusFeedScreen;

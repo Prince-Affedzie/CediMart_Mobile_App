@@ -159,10 +159,11 @@ const DropdownSelector = ({
     (item) => (typeof item === 'string' ? item : item.key) === selectedValue,
   );
 
+  // FIXED: Only show label text without icon name
   const triggerLabel = selectedItem
     ? typeof selectedItem === 'string'
       ? selectedItem
-      : (selectedItem.icon ? selectedItem.icon + '  ' : '') + (selectedItem.label || formatDisplayName(selectedItem.key))
+      : (selectedItem.label || formatDisplayName(selectedItem.key))
     : placeholder;
 
   return (
@@ -225,7 +226,15 @@ const DropdownSelector = ({
                   ) : (
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        {item.icon && <Text style={bsStyles.itemEmoji}>{item.icon}</Text>}
+                        {/* FIXED: Render Ionicons component instead of text */}
+                        {item.icon && (
+                          <Ionicons 
+                            name={item.icon} 
+                            size={22} 
+                            color={isSelected ? C.brand : C.t2}
+                            style={{ width: 32, textAlign: 'center' }}
+                          />
+                        )}
                         <Text style={[bsStyles.itemText, isSelected && bsStyles.itemTextActive]}>
                           {item.label || formatDisplayName(item.key)}
                         </Text>
@@ -698,8 +707,15 @@ const AddProductScreen = ({ navigation }) => {
               badge={aiDraftFields.category && <AiDraftBadge />}
               renderItem={({ item, isSelected }) => (
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 22, width: 32, textAlign: 'center' }}>{item.icon}</Text>
-                  <Text style={[bsStyles.itemText, { marginLeft: 12 }, isSelected && bsStyles.itemTextActive]}>{formatDisplayName(item.key)}</Text>
+                  <Ionicons 
+                    name={item.icon} 
+                    size={22} 
+                    color={isSelected ? C.brand : C.t2}
+                    style={{ width: 32, textAlign: 'center' }}
+                  />
+                  <Text style={[bsStyles.itemText, { marginLeft: 12 }, isSelected && bsStyles.itemTextActive]}>
+                    {formatDisplayName(item.key)}
+                  </Text>
                 </View>
               )}
             />
@@ -835,7 +851,12 @@ const AddProductScreen = ({ navigation }) => {
                 const active = selectedTags.includes(key);
                 return (
                   <TouchableOpacity key={key} style={[styles.tagChip, active && styles.tagChipActive]} onPress={() => toggleTag(key)} activeOpacity={0.75}>
-                    <Text style={styles.tagEmoji}>{icon}</Text>
+                    {/* FIXED: Render Ionicons component instead of text emoji */}
+                    <Ionicons 
+                      name={icon} 
+                      size={16} 
+                      color={active ? C.brand : C.t2}
+                    />
                     <Text style={[styles.tagLabel, active && styles.tagLabelActive]}>{formatDisplayName(key)}</Text>
                     {active && <Ionicons name="checkmark-circle" size={12} color={C.brand} />}
                   </TouchableOpacity>

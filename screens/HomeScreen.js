@@ -517,7 +517,7 @@ const HomeScreen = () => {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
             {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
               <TouchableOpacity key={key} style={styles.categoryPill} onPress={() => handleCategoryPress(key, cfg.label)} activeOpacity={0.8}>
-                <View style={[styles.categoryIconCircle, { backgroundColor: cfg.color, borderColor: cfg.color }]}><Text style={styles.categoryEmoji}>{cfg.icon}</Text></View>
+                <View style={[styles.categoryIconCircle, { backgroundColor: cfg.color, borderColor: cfg.color }]}><Ionicons style={styles.categoryEmoji} name ={cfg.icon}  size={14}/></View>
                 <Text style={styles.categoryName} numberOfLines={1}>{cfg.label}</Text>
               </TouchableOpacity>
             ))}
@@ -646,7 +646,7 @@ const HomeScreen = () => {
         onPress={() => navigation.navigate('Products')} 
         bottomOffset={30} // Push up if there's another FAB
       />
-      
+
       <AIFAB style={{ position: 'absolute', bottom: 24, right: 16 }} />
     </SafeAreaView>
   );

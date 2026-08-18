@@ -582,4 +582,133 @@ export const styles = StyleSheet.create({
     fontWeight: '800',
     color: C.danger,
   },
+  // Add these to your existing styles in products.js
+
+// ─── Top Bar ──────────────────────────────────────────────
+topBar: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  paddingHorizontal: 16,
+  paddingTop: 12,
+  paddingBottom: 8,
+  backgroundColor: '#FFFFFF',
+},
+topBarTitleWrap: {
+  flex: 1,
+  flexDirection: 'row',
+  alignItems: 'baseline',
+  gap: 8,
+},
+topBarTitle: {
+  fontSize: 22,
+  fontWeight: '800',
+  color: '#1A1A1A',
+  letterSpacing: -0.3,
+},
+topBarCount: {
+  fontSize: 13,
+  color: '#9E9E9E',
+  fontWeight: '500',
+},
+topBarCartBtn: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: '#E8F5E9',
+  justifyContent: 'center',
+  alignItems: 'center',
+  position: 'relative',
+},
+cartBadge: {
+  position: 'absolute',
+  top: -2,
+  right: -2,
+  backgroundColor: '#F97316',
+  borderRadius: 10,
+  minWidth: 18,
+  height: 18,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: 4,
+  borderWidth: 2,
+  borderColor: '#FFFFFF',
+},
+cartBadgeText: {
+  color: '#FFFFFF',
+  fontSize: 10,
+  fontWeight: '800',
+},
+
+// ─── Search Bar ──────────────────────────────────────────
+searchBarWrap: {
+  paddingHorizontal: 16,
+  paddingBottom: 12,
+  backgroundColor: '#FFFFFF',
+},
+searchBarActive: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#F5F5F5',
+  borderRadius: 12,
+  height: 44,
+  borderWidth: 1,
+  borderColor: '#E0E0E0',
+},
+searchBarInput: {
+  flex: 1,
+  fontSize: 14,
+  color: '#1A1A1A',
+  paddingHorizontal: 10,
+  height: '100%',
+},
+
+// ─── Category Tabs (Updated with icon container) ────────
+catStrip: {
+  backgroundColor: '#FFFFFF',
+  paddingBottom: 12,
+},
+catStripInner: {
+  paddingHorizontal: 12,
+  gap: 10,
+  alignItems: 'flex-start',
+},
+catTab: {
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  borderRadius: 16,
+  minWidth: 72,
+  gap: 6,
+},
+catTabActive: {
+  backgroundColor: '#0D9488',
+  borderRadius: 26,
+},
+catIconWrap: {
+  width: 42,
+  height: 42,
+  borderRadius: 26,
+  backgroundColor: '#F5F5F5',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: 2,
+},
+catIconWrapActive: {
+  backgroundColor: 'rgba(255,255,255,0.2)',
+},
+catTabEmoji: {
+  fontSize: 18,
+},
+catTabText: {
+  fontSize: 11,
+  fontWeight: '600',
+  color: '#616161',
+  textAlign: 'center',
+},
+catTabTextActive: {
+  color: '#FFFFFF',
+  fontWeight: '700',
+},
 });

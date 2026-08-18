@@ -5,22 +5,28 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   TextInput,
   Image,
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  Pressable,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import { getVendors } from '../apis/vendorApi';
 
 const { width } = Dimensions.get('window');
 const GRID_GAP = 12;
 const CARD_WIDTH = (width - 16 * 2 - GRID_GAP) / 2;
-const BANNER_HEIGHT = 120;
+const BANNER_HEIGHT = 116;
 
 // ─── Design Tokens ──────────────────────────────────────────────────────────
 const C = {
@@ -41,26 +47,31 @@ const C = {
   infoBg: '#F0F9FF',
   danger: '#DC2626',
   gold: '#F59E0B',
+  skeleton: '#EEF2F6',
 };
 
-const CATEGORIES = [
-  { key: '', label: 'All' },
-  { key: 'electronics', label: 'Electronics' },
-  { key: 'phones and tablets', label: 'Phones & Tablets' },
-  { key: 'computers and laptops', label: 'Computers' },
-  { key: 'gaming', label: 'Gaming' },
-  { key: 'fashion', label: 'Fashion' },
-  { key: 'books-course-materials', label: 'Books' },
-  { key: 'hostel-items', label: 'Hostel Items' },
-  { key: 'appliances', label: 'Appliances' },
-  { key: 'furniture', label: 'Furniture' },
-  { key: 'beauty and grooming', label: 'Beauty' },
-  { key: 'sports and fitness', label: 'Sports' },
-  { key: 'accessories', label: 'Accessories' },
-  { key: 'food and drinks', label: 'Food & Drinks' },
-  { key: 'services', label: 'Services' },
-  { key: 'other', label: 'Other' },
-];
+// ─── Category → { color, icon } — used for the fallback banner, tag, and
+// chip icons, so browsing by category is visually consistent (every
+// "Fashion" vendor reads the same color family even without a photo). ────
+const CATEGORY_META = {
+  '':                        { label: 'All',              icon: 'grid-outline',                  color: C.brand },
+  'electronics':              { label: 'Electronics',      icon: 'hardware-chip-outline',          color: '#2563EB' },
+  'phones and tablets':       { label: 'Phones & Tablets', icon: 'phone-portrait-outline',         color: '#7C3AED' },
+  'computers and laptops':    { label: 'Computers',        icon: 'laptop-outline',                 color: '#0891B2' },
+  'gaming':                   { label: 'Gaming',           icon: 'game-controller-outline',        color: '#DB2777' },
+  'fashion':                  { label: 'Fashion',          icon: 'shirt-outline',                  color: '#DC2626' },
+  'books-course-materials':   { label: 'Books',            icon: 'book-outline',                   color: '#B45309' },
+  'hostel-items':             { label: 'Hostel Items',     icon: 'bed-outline',                    color: '#0D9488' },
+  'appliances':                { label: 'Appliances',      icon: 'tv-outline',                     color: '#475569' },
+  'furniture':                { label: 'Furniture',        icon: 'cube-outline',                   color: '#92400E' },
+  'beauty and grooming':      { label: 'Beauty',           icon: 'sparkles-outline',                color: '#EC4899' },
+  'sports and fitness':       { label: 'Sports',           icon: 'basketball-outline',              color: '#16A34A' },
+  'accessories':              { label: 'Accessories',      icon: 'watch-outline',                   color: '#CA8A04' },
+  'food and drinks':          { label: 'Food & Drinks',    icon: 'fast-food-outline',               color: '#EA580C' },
+  'services':                  { label: 'Services',        icon: 'construct-outline',               color: '#0284C7' },
+  'other':                     { label: 'Other',           icon: 'ellipsis-horizontal-circle-outline', color: '#64748B' },
+};
+const CATEGORIES = Object.keys(CATEGORY_META).map((key) => ({ key, ...CATEGORY_META[key] }));
 
 const CAMPUSES = [
   { key: '', label: 'All campuses' },
@@ -76,74 +87,119 @@ const CAMPUSES = [
 ];
 
 const SORT_OPTIONS = [
-  { key: 'createdAt', order: 'desc', label: 'Newest' },
-  { key: 'rating', order: 'desc', label: 'Top rated' },
-  { key: 'totalSales', order: 'desc', label: 'Most sales' },
+  { key: 'createdAt', order: 'desc', label: 'Newest first', icon: 'time-outline' },
+  { key: 'rating', order: 'desc', label: 'Top rated', icon: 'star-outline' },
+  { key: 'totalSales', order: 'desc', label: 'Most sales', icon: 'trending-up-outline' },
 ];
 
 const PAGE_LIMIT = 16;
 const SEARCH_DEBOUNCE_MS = 400;
 
-const FALLBACK_COLORS = [
-  '#0D9488', '#7C3AED', '#F97316', '#0284C7', '#059669', '#EC4899',
-];
-
-const getFallbackColor = (id = '') => {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return FALLBACK_COLORS[hash % FALLBACK_COLORS.length];
-};
-
 const isRealImageUrl = (val) => !!val && /^https?:\/\//i.test(val);
 
-// ─── Category / Filter Chip ────────────────────────────────────────────────
-const Chip = ({ label, active, onPress, icon }) => (
+// Darkens a #rrggbb hex by `percent` (0–100) — used to build a 2-stop
+// gradient out of a single category color instead of a flat fill.
+const shade = (hex, percent) => {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const r = Math.max(0, (num >> 16) - amt);
+  const g = Math.max(0, ((num >> 8) & 0x00ff) - amt);
+  const b = Math.max(0, (num & 0x0000ff) - amt);
+  return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
+};
+
+// ─── Press-scale wrapper for a tactile, premium feel on tap ────────────────
+const Pressy = ({ onPress, style, children, scaleTo = 0.96 }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const onPressIn = () => Animated.spring(scale, { toValue: scaleTo, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
+  const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 6 }).start();
+  return (
+    <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
+      <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
+    </Pressable>
+  );
+};
+
+// ─── Category chip (icon + label) ──────────────────────────────────────────
+const CategoryChip = ({ item, active, onPress }) => (
   <TouchableOpacity
-    style={[styles.chip, active && styles.chipActive]}
+    style={[styles.chip, active && { backgroundColor: item.color, borderColor: item.color }]}
     onPress={onPress}
     activeOpacity={0.8}
   >
-    {icon ? <Ionicons name={icon} size={13} color={active ? '#fff' : C.textOff} style={{ marginRight: 4 }} /> : null}
-    <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+    <Ionicons name={item.icon} size={13} color={active ? '#fff' : item.color} style={{ marginRight: 5 }} />
+    <Text style={[styles.chipText, active && styles.chipTextActive]}>{item.label}</Text>
   </TouchableOpacity>
+);
+
+// ─── Bottom-sheet style option picker (used for Campus + Sort) ─────────────
+const OptionSheet = ({ visible, title, options, selectedKey, onSelect, onClose }) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Pressable style={sheetStyles.backdrop} onPress={onClose}>
+      <Pressable style={sheetStyles.sheet} onPress={() => {}}>
+        <View style={sheetStyles.handle} />
+        <Text style={sheetStyles.title}>{title}</Text>
+        <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+          {options.map((opt) => {
+            const isSelected = opt.key === selectedKey;
+            return (
+              <TouchableOpacity
+                key={opt.key || 'all'}
+                style={[sheetStyles.option, isSelected && sheetStyles.optionSelected]}
+                onPress={() => onSelect(opt)}
+                activeOpacity={0.7}
+              >
+                {opt.icon && <Ionicons name={opt.icon} size={17} color={isSelected ? C.brand : C.textOff} style={{ marginRight: 10 }} />}
+                <Text style={[sheetStyles.optionText, isSelected && sheetStyles.optionTextSelected]}>{opt.label}</Text>
+                {isSelected && <Ionicons name="checkmark-circle" size={18} color={C.brand} />}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </Pressable>
+    </Pressable>
+  </Modal>
 );
 
 // ─── Vendor Grid Card ───────────────────────────────────────────────────────
 const VendorGridCard = ({ vendor, onPress }) => {
   const hasBanner = isRealImageUrl(vendor.storeBanner);
   const hasAvatar = isRealImageUrl(vendor.profileImage);
-  const fallbackColor = getFallbackColor(vendor._id);
   const displayName = vendor.storeName || vendor.name;
   const campusLabel = CAMPUSES.find((c) => c.key === vendor.campus)?.label || vendor.campus;
   const areaLabel = vendor.location?.campusArea;
   const primaryCategory = vendor.categories?.[0];
-  const categoryLabel = CATEGORIES.find((c) => c.key === primaryCategory)?.label;
+  const categoryMeta = CATEGORY_META[primaryCategory] || CATEGORY_META.other;
   const productCount = vendor.productCount ?? vendor.products?.length ?? 0;
 
   return (
-    <TouchableOpacity style={styles.gridCard} onPress={() => onPress(vendor)} activeOpacity={0.88}>
+    <Pressy onPress={() => onPress(vendor)} style={styles.gridCard}>
       {/* Banner */}
       <View style={styles.bannerWrap}>
         {hasBanner ? (
           <Image source={{ uri: vendor.storeBanner }} style={styles.banner} resizeMode="cover" />
         ) : (
-          <View style={[styles.banner, { backgroundColor: fallbackColor }]}>
-            <Ionicons name="storefront-outline" size={28} color="rgba(255,255,255,0.35)" />
-            <View style={styles.bannerPattern}>
-              <Ionicons name="storefront-outline" size={70} color="rgba(255,255,255,0.05)" style={{ position: 'absolute', right: -15, bottom: -20 }} />
-            </View>
-          </View>
+          <LinearGradient
+            colors={[categoryMeta.color, shade(categoryMeta.color, 22)]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.banner}
+          >
+            <Ionicons name={categoryMeta.icon} size={68} color="rgba(255,255,255,0.14)" style={styles.bannerIconDecor} />
+          </LinearGradient>
         )}
+        <View style={styles.bannerScrim} pointerEvents="none" />
 
         {vendor.isVerified && (
           <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={14} color="#fff" />
+            <Ionicons name="checkmark-circle" size={13} color="#fff" />
           </View>
         )}
 
-        {categoryLabel && (
-          <View style={styles.categoryTag}>
-            <Text style={styles.categoryTagText} numberOfLines={1}>{categoryLabel}</Text>
+        {primaryCategory !== undefined && categoryMeta && (
+          <View style={[styles.categoryTag, { backgroundColor: hasBanner ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.22)' }]}>
+            <Ionicons name={categoryMeta.icon} size={9} color="#fff" />
+            <Text style={styles.categoryTagText} numberOfLines={1}>{categoryMeta.label}</Text>
           </View>
         )}
 
@@ -152,8 +208,8 @@ const VendorGridCard = ({ vendor, onPress }) => {
           {hasAvatar ? (
             <Image source={{ uri: vendor.profileImage }} style={styles.avatar} />
           ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitial}>{displayName?.charAt(0)?.toUpperCase() || '?'}</Text>
+            <View style={[styles.avatarPlaceholder, { backgroundColor: categoryMeta.color + '22' }]}>
+              <Text style={[styles.avatarInitial, { color: categoryMeta.color }]}>{displayName?.charAt(0)?.toUpperCase() || '?'}</Text>
             </View>
           )}
         </View>
@@ -162,20 +218,57 @@ const VendorGridCard = ({ vendor, onPress }) => {
       {/* Body */}
       <View style={styles.cardBody}>
         <Text style={styles.storeName} numberOfLines={1}>{displayName}</Text>
-        <Text style={styles.metaText} numberOfLines={1}>
-          {campusLabel || 'Campus not set'}{areaLabel ? ` · ${areaLabel}` : ''}
-        </Text>
+        <View style={styles.metaRow}>
+          <Ionicons name="location-outline" size={10.5} color={C.textMuted} />
+          <Text style={styles.metaText} numberOfLines={1}>
+            {campusLabel || 'Campus not set'}{areaLabel ? ` · ${areaLabel}` : ''}
+          </Text>
+        </View>
 
         <View style={styles.statsRow}>
-          <Ionicons name="star" size={12} color={C.gold} />
-          <Text style={styles.statsText}>{vendor.rating?.toFixed(1) || '0.0'}</Text>
-          <View style={styles.statsDot} />
-          <Text style={styles.statsText}>{productCount} item{productCount !== 1 ? 's' : ''}</Text>
+          <View style={styles.statChip}>
+            <Ionicons name="star" size={11} color={C.gold} />
+            <Text style={styles.statChipText}>{vendor.rating?.toFixed(1) || '0.0'}</Text>
+          </View>
+          <View style={styles.statChip}>
+            <Ionicons name="cube-outline" size={11} color={C.textOff} />
+            <Text style={styles.statChipText}>{productCount}</Text>
+          </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressy>
   );
 };
+
+// ─── Skeleton grid (shown on first load, in place of the old spinner) ──────
+const SkeletonCard = ({ delay = 0 }) => {
+  const shimmer = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const anim = Animated.loop(Animated.sequence([
+      Animated.timing(shimmer, { toValue: 1, duration: 800, delay, useNativeDriver: true }),
+      Animated.timing(shimmer, { toValue: 0, duration: 800, useNativeDriver: true }),
+    ]));
+    anim.start();
+    return () => anim.stop();
+  }, []);
+  const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.85] });
+  return (
+    <View style={styles.gridCard}>
+      <Animated.View style={[styles.banner, { backgroundColor: C.skeleton, opacity }]} />
+      <View style={styles.cardBody}>
+        <Animated.View style={[skeletonStyles.line, { width: '70%', height: 13, opacity }]} />
+        <Animated.View style={[skeletonStyles.line, { width: '50%', height: 10, marginTop: 8, opacity }]} />
+        <Animated.View style={[skeletonStyles.line, { width: '35%', height: 10, marginTop: 10, opacity }]} />
+      </View>
+    </View>
+  );
+};
+
+const SkeletonGrid = () => (
+  <View style={styles.skeletonGrid}>
+    {[0, 100, 200, 300, 400, 500].map((delay, i) => <SkeletonCard key={i} delay={delay} />)}
+  </View>
+);
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 const DiscoverScreen = () => {
@@ -195,7 +288,8 @@ const DiscoverScreen = () => {
   const [activeCategory, setActiveCategory] = useState('');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
-  const [showCampusFilter, setShowCampusFilter] = useState(false);
+  const [showCampusSheet, setShowCampusSheet] = useState(false);
+  const [showSortSheet, setShowSortSheet] = useState(false);
 
   const searchTimer = useRef(null);
 
@@ -253,22 +347,44 @@ const DiscoverScreen = () => {
     if (hasMore && !loadingMore && !loading) fetchVendors(page + 1);
   };
   const handleVendorPress = (vendor) => {
+    Haptics.selectionAsync().catch(() => {});
     navigation.navigate('VendorDetail', { vendorId: vendor._id });
+  };
+  const toggleVerified = () => {
+    Haptics.selectionAsync().catch(() => {});
+    setVerifiedOnly((v) => !v);
   };
 
   const activeFilterCount = (activeCampus ? 1 : 0) + (activeCategory ? 1 : 0) + (verifiedOnly ? 1 : 0);
+  const selectedCampusLabel = CAMPUSES.find((c) => c.key === activeCampus)?.label || 'Campus';
 
   const renderHeader = () => (
     <View>
-      {/* Title + stats */}
+      {/* Title */}
       <View style={styles.titleRow}>
-        <View>
-          <Text style={styles.screenTitle}>Discover</Text>
-          <Text style={styles.screenSubtitle}>
-            {stats ? `${stats.totalVendors} vendor${stats.totalVendors !== 1 ? 's' : ''} on campus` : 'Find vendors near you'}
-          </Text>
-        </View>
+        <Text style={styles.screenTitle}>Discover</Text>
+        <Text style={styles.screenSubtitle}>Vendors selling across your campus</Text>
       </View>
+
+      {/* Live stat strip */}
+      {stats && (
+        <View style={styles.statStrip}>
+          <View style={styles.statPill}>
+            <Ionicons name="storefront-outline" size={13} color={C.brand} />
+            <Text style={styles.statPillText}>{stats.totalVendors} vendor{stats.totalVendors !== 1 ? 's' : ''}</Text>
+          </View>
+          <View style={styles.statPill}>
+            <Ionicons name="checkmark-circle-outline" size={13} color={C.info} />
+            <Text style={styles.statPillText}>{stats.verifiedVendors} verified</Text>
+          </View>
+          {stats.averageRating > 0 && (
+            <View style={styles.statPill}>
+              <Ionicons name="star" size={13} color={C.gold} />
+              <Text style={styles.statPillText}>{stats.averageRating.toFixed(1)} avg</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Search bar */}
       <View style={styles.searchBar}>
@@ -289,75 +405,56 @@ const DiscoverScreen = () => {
       </View>
 
       {/* Category chips */}
-      <FlatList
-        data={CATEGORIES}
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.key || 'all'}
         contentContainerStyle={styles.chipRow}
-        renderItem={({ item }) => (
-          <Chip label={item.label} active={activeCategory === item.key} onPress={() => setActiveCategory(item.key)} />
-        )}
-      />
+      >
+        {CATEGORIES.map((item) => (
+          <CategoryChip
+            key={item.key || 'all'}
+            item={item}
+            active={activeCategory === item.key}
+            onPress={() => { Haptics.selectionAsync().catch(() => {}); setActiveCategory(item.key); }}
+          />
+        ))}
+      </ScrollView>
 
       {/* Campus / verified / sort row */}
       <View style={styles.filterRow}>
         <TouchableOpacity
           style={[styles.filterPill, activeCampus && styles.filterPillActive]}
-          onPress={() => setShowCampusFilter((v) => !v)}
+          onPress={() => setShowCampusSheet(true)}
           activeOpacity={0.8}
         >
           <Ionicons name="school-outline" size={14} color={activeCampus ? '#fff' : C.textOff} />
           <Text style={[styles.filterPillText, activeCampus && styles.filterPillTextActive]} numberOfLines={1}>
-            {CAMPUSES.find((c) => c.key === activeCampus)?.label || 'Campus'}
+            {selectedCampusLabel}
           </Text>
-          <Ionicons name={showCampusFilter ? 'chevron-up' : 'chevron-down'} size={13} color={activeCampus ? '#fff' : C.textMuted} />
+          <Ionicons name="chevron-down" size={13} color={activeCampus ? '#fff' : C.textMuted} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.filterPill, verifiedOnly && styles.filterPillActive]}
-          onPress={() => setVerifiedOnly((v) => !v)}
+          onPress={toggleVerified}
           activeOpacity={0.8}
         >
           <Ionicons name="checkmark-circle-outline" size={14} color={verifiedOnly ? '#fff' : C.textOff} />
           <Text style={[styles.filterPillText, verifiedOnly && styles.filterPillTextActive]}>Verified</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.sortPill}
-          onPress={() => {
-            const idx = SORT_OPTIONS.findIndex((o) => o.key === sort.key && o.order === sort.order);
-            setSort(SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length]);
-          }}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="swap-vertical-outline" size={14} color={C.brand} />
+        <TouchableOpacity style={styles.sortPill} onPress={() => setShowSortSheet(true)} activeOpacity={0.8}>
+          <Ionicons name={sort.icon} size={14} color={C.brand} />
           <Text style={styles.sortPillText}>{sort.label}</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Campus dropdown */}
-      {showCampusFilter && (
-        <View style={styles.campusDropdown}>
-          {CAMPUSES.map((c) => (
-            <TouchableOpacity
-              key={c.key || 'all'}
-              style={styles.campusOption}
-              onPress={() => { setActiveCampus(c.key); setShowCampusFilter(false); }}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.campusOptionText, activeCampus === c.key && styles.campusOptionTextActive]}>{c.label}</Text>
-              {activeCampus === c.key && <Ionicons name="checkmark" size={16} color={C.brand} />}
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
 
       {activeFilterCount > 0 && (
         <TouchableOpacity
           style={styles.clearFiltersBtn}
           onPress={() => { setActiveCampus(''); setActiveCategory(''); setVerifiedOnly(false); }}
         >
+          <Ionicons name="close-circle" size={13} color={C.accent} />
           <Text style={styles.clearFiltersText}>Clear {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''}</Text>
         </TouchableOpacity>
       )}
@@ -366,6 +463,7 @@ const DiscoverScreen = () => {
 
   const renderEmpty = () => {
     if (loading) return null;
+    const hasActiveFilters = search || activeCampus || activeCategory || verifiedOnly;
     return (
       <View style={styles.emptyState}>
         <View style={styles.emptyIconWrap}>
@@ -373,10 +471,16 @@ const DiscoverScreen = () => {
         </View>
         <Text style={styles.emptyTitle}>No vendors found</Text>
         <Text style={styles.emptySub}>
-          {search || activeCampus || activeCategory || verifiedOnly
-            ? 'Try adjusting your search or filters'
-            : 'Check back soon as more vendors join CediMart'}
+          {hasActiveFilters ? 'Try adjusting your search or filters' : 'Check back soon as more vendors join CediMart'}
         </Text>
+        {hasActiveFilters && (
+          <TouchableOpacity
+            style={styles.emptyResetBtn}
+            onPress={() => { setSearchInput(''); setActiveCampus(''); setActiveCategory(''); setVerifiedOnly(false); }}
+          >
+            <Text style={styles.emptyResetBtnText}>Reset filters</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -393,18 +497,23 @@ const DiscoverScreen = () => {
   if (loading && vendors.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        {renderHeader()}
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.brand} />
-          <Text style={styles.loadingText}>Finding vendors…</Text>
-        </View>
+        <FlatList
+          key="loading-list" // Add a unique key
+          data={[]}
+          renderItem={null}
+          numColumns={1} // Explicitly set numColumns
+          ListHeaderComponent={renderHeader}
+          ListFooterComponent={<SkeletonGrid />}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
       </SafeAreaView>
     );
   }
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <FlatList
+        key="vendors-grid" // Add a unique key
         data={vendors}
         keyExtractor={(item) => item._id}
         numColumns={2}
@@ -421,6 +530,23 @@ const DiscoverScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.brand} colors={[C.brand]} />
         }
       />
+
+      <OptionSheet
+        visible={showCampusSheet}
+        title="Filter by campus"
+        options={CAMPUSES}
+        selectedKey={activeCampus}
+        onSelect={(opt) => { setActiveCampus(opt.key); setShowCampusSheet(false); }}
+        onClose={() => setShowCampusSheet(false)}
+      />
+      <OptionSheet
+        visible={showSortSheet}
+        title="Sort by"
+        options={SORT_OPTIONS}
+        selectedKey={sort.key}
+        onSelect={(opt) => { setSort(opt); setShowSortSheet(false); }}
+        onClose={() => setShowSortSheet(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -431,24 +557,32 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 16, paddingBottom: 40 },
   columnWrapper: { gap: GRID_GAP },
 
-  titleRow: { paddingTop: 12, marginBottom: 16 },
-  screenTitle: { fontSize: 26, fontWeight: '900', color: C.text, letterSpacing: -0.5 },
+  titleRow: { paddingTop: 14, marginBottom: 12 },
+  screenTitle: { fontSize: 28, fontWeight: '900', color: C.text, letterSpacing: -0.6 },
   screenSubtitle: { fontSize: 13, color: C.textMuted, marginTop: 3 },
+
+  statStrip: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
+  statPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: C.surface, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1, borderColor: C.border,
+  },
+  statPillText: { fontSize: 11.5, fontWeight: '700', color: C.textOff },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: C.surface, borderRadius: 14, paddingHorizontal: 14, height: 46,
-    borderWidth: 1, borderColor: C.border, marginBottom: 14,
+    backgroundColor: C.surface, borderRadius: 15, paddingHorizontal: 14, height: 48,
+    marginBottom: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
   },
   searchInput: { flex: 1, fontSize: 14, color: C.text, height: '100%' },
 
-  chipRow: { gap: 8, paddingBottom: 12 },
+  chipRow: { gap: 8, paddingBottom: 14 },
   chip: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.surface, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: C.surface, borderRadius: 20, paddingHorizontal: 13, paddingVertical: 8,
     borderWidth: 1, borderColor: C.border,
   },
-  chipActive: { backgroundColor: C.brand, borderColor: C.brand },
   chipText: { fontSize: 12.5, fontWeight: '600', color: C.textOff },
   chipTextActive: { color: '#fff' },
 
@@ -468,18 +602,7 @@ const styles = StyleSheet.create({
   },
   sortPillText: { fontSize: 12.5, fontWeight: '700', color: C.brand },
 
-  campusDropdown: {
-    backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.border,
-    marginBottom: 12, overflow: 'hidden',
-  },
-  campusOption: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border,
-  },
-  campusOptionText: { fontSize: 13.5, color: C.textOff },
-  campusOptionTextActive: { color: C.brand, fontWeight: '700' },
-
-  clearFiltersBtn: { alignSelf: 'flex-start', marginBottom: 14 },
+  clearFiltersBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 14, marginTop: 2 },
   clearFiltersText: { fontSize: 12.5, fontWeight: '700', color: C.accent },
 
   // ─── Vendor grid card ────────────────────────────────────────────────────
@@ -488,13 +611,11 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
     borderRadius: 20,
     marginBottom: GRID_GAP,
-    borderWidth: 1,
-    borderColor: C.border,
     overflow: 'visible',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
     elevation: 3,
   },
   bannerWrap: {
@@ -509,23 +630,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  bannerPattern: {
+  bannerIconDecor: { position: 'absolute', right: -14, bottom: -14 },
+  bannerScrim: {
     ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   verifiedBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: 'rgba(2,132,199,0.85)',
+    backgroundColor: 'rgba(2,132,199,0.9)',
     borderRadius: 10,
-    padding: 2,
+    padding: 2.5,
   },
   categoryTag: {
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     borderRadius: 8,
     paddingHorizontal: 7,
     paddingVertical: 3,
@@ -541,65 +665,67 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: C.surface,
     padding: 3,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2,
   },
   avatar: { width: '100%', height: '100%', borderRadius: 21 },
   avatarPlaceholder: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 21,
-    backgroundColor: C.brandDim,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: '100%', height: '100%', borderRadius: 21,
+    justifyContent: 'center', alignItems: 'center',
   },
-  avatarInitial: { fontSize: 17, fontWeight: '800', color: C.brand },
+  avatarInitial: { fontSize: 17, fontWeight: '800' },
 
-  cardBody: {
-    paddingTop: 28,
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-  },
+  cardBody: { paddingTop: 28, paddingHorizontal: 14, paddingBottom: 14 },
   storeName: { fontSize: 14, fontWeight: '800', color: C.text },
-  metaText: { fontSize: 11.5, color: C.textMuted, marginTop: 3 },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 8,
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
+  metaText: { fontSize: 11, color: C.textMuted, flexShrink: 1 },
+
+  statsRow: { flexDirection: 'row', gap: 6, marginTop: 9 },
+  statChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: C.bg, borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3,
   },
-  statsText: { fontSize: 11.5, color: C.textOff, fontWeight: '600' },
-  statsDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: C.textMuted,
-    marginHorizontal: 4,
-  },
+  statChipText: { fontSize: 10.5, color: C.textOff, fontWeight: '700' },
+
+  // Skeleton grid
+  skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
 
   // Empty / loading
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 50,
-    paddingHorizontal: 24,
-  },
+  emptyState: { alignItems: 'center', paddingVertical: 50, paddingHorizontal: 24 },
   emptyIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: C.brandDim,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+    width: 72, height: 72, borderRadius: 36, backgroundColor: C.brandDim,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 16,
   },
   emptyTitle: { fontSize: 17, fontWeight: '700', color: C.text, marginBottom: 6 },
-  emptySub: {
-    fontSize: 13,
-    color: C.textMuted,
-    textAlign: 'center',
-    lineHeight: 19,
-  },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 12, fontSize: 14, color: C.textOff },
+  emptySub: { fontSize: 13, color: C.textMuted, textAlign: 'center', lineHeight: 19 },
+  emptyResetBtn: { marginTop: 18, backgroundColor: C.brand, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11 },
+  emptyResetBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   footerLoader: { paddingVertical: 20, alignItems: 'center' },
+});
+
+const skeletonStyles = StyleSheet.create({
+  line: { backgroundColor: C.skeleton, borderRadius: 6 },
+});
+
+const sheetStyles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.4)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: C.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 28,
+    maxHeight: '70%',
+  },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: 'center', marginBottom: 14 },
+  title: { fontSize: 16, fontWeight: '800', color: C.text, marginBottom: 8, paddingHorizontal: 4 },
+  option: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 13, paddingHorizontal: 8, borderRadius: 12,
+  },
+  optionSelected: { backgroundColor: C.brandDim },
+  optionText: { fontSize: 14.5, color: C.textOff, fontWeight: '500', flex: 1 },
+  optionTextSelected: { color: C.brand, fontWeight: '700' },
 });
 
 export default DiscoverScreen;

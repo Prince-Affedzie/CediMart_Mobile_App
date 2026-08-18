@@ -571,7 +571,11 @@ const GuestProductDetailScreen = () => {
           
               <RecommendEarnButton product={product} />
          
-          <ChatFAB product={product} isAuthenticated={false} style={{ position: 'absolute', bottom: 100, right: 20, zIndex: 20 }} onConversationOpened={(conversation) => { console.log('Conversation opened:', conversation._id); }} />
+          <ChatFAB product={product} isAuthenticated={false} style={{
+           position: 'absolute',
+           bottom: 164,
+           right: 16,
+         }} onConversationOpened={(conversation) => { console.log('Conversation opened:', conversation._id); }} />
         </SafeAreaView>
       </View>
     </View>

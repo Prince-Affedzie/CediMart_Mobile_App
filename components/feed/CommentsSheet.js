@@ -16,9 +16,18 @@ import {
   Modal,
   Pressable,
   Keyboard,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import {addComment, getPostDetail } from '../../apis/feedApi';
+import { 
+  getComments, 
+  addComment, 
+  toggleCommentLike, 
+  updateComment, 
+  deleteComment,
+  reportComment,
+  getReplies,
+} from '../../apis/feedApi';
 import { useAuth } from '../../context/AuthContext';
 
 const { height: SCREEN_H } = Dimensions.get('window');
@@ -33,6 +42,7 @@ const C = {
   textMuted: '#6B7280',
   brand: '#14B8A6',
   border: 'rgba(255,255,255,0.08)',
+  danger: '#FF3B5C',
 };
 
 const getTimeAgo = (date) => {
@@ -55,6 +65,10 @@ const CommentsSheet = ({ visible, onClose, postId, postAuthor }) => {
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [editingComment, setEditingComment] = useState(null);
+  const [expandedReplies, setExpandedReplies] = useState({});
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [likingCommentId, setLikingCommentId] = useState(null);
   const slideAnim = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const inputRef = useRef(null);
@@ -70,13 +84,33 @@ const CommentsSheet = ({ visible, onClose, postId, postAuthor }) => {
     }
   }, [visible, postId]);
 
+  // Add keyboard listeners
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardHeight(e.endCoordinates.height)
+    );
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
+
   const handleClose = () => {
+    Keyboard.dismiss();
     Animated.parallel([
       Animated.timing(slideAnim, { toValue: SHEET_HEIGHT, duration: 250, useNativeDriver: true }),
       Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => {
       setReplyingTo(null);
       setCommentText('');
+      setEditingComment(null);
+      setKeyboardHeight(0);
       onClose();
     });
   };
@@ -84,8 +118,9 @@ const CommentsSheet = ({ visible, onClose, postId, postAuthor }) => {
   const fetchComments = async () => {
     setLoading(true);
     try {
-      const res = await getPostDetail(postId);
-      setComments(res.data?.data?.comments || []);
+      const res = await getComments(postId, { page: 1, limit: 20, sort: 'newest' });
+      
+      setComments(res.data?.data.comments || []);
     } catch (err) {
       console.error('Fetch comments error:', err);
     } finally {
@@ -99,30 +134,57 @@ const CommentsSheet = ({ visible, onClose, postId, postAuthor }) => {
 
     setSubmitting(true);
     try {
-      const res = await addComment(postId, text);
-      const newComment = res.data?.data;
-      
-      if (newComment) {
-        // Add the new comment with user info to the list
-        setComments(prev => [{
-          ...newComment,
-          user: { _id: user?._id, firstName: user?.firstName, lastName: user?.lastName, profileImage: user?.profileImage },
-          text,
-          createdAt: new Date().toISOString(),
-        }, ...prev]);
+      if (editingComment) {
+        // Update existing comment
+        const res = await updateComment(editingComment._id, text);
+        const updatedComment = res.data?.data;
+        if (updatedComment) {
+          setComments(prev => prev.map(c => 
+            c._id === updatedComment._id ? { ...c, ...updatedComment, author: c.author } : c
+          ));
+        }
+        setEditingComment(null);
+      } else if (replyingTo) {
+        // Add reply
+        const res = await addComment(postId, text, replyingTo._id);
+        const newReply = res.data?.data;
+        if (newReply) {
+          setComments(prev => prev.map(c => {
+            if (c._id === replyingTo._id) {
+              return {
+                ...c,
+                replyCount: (c.replyCount || 0) + 1,
+                replies: [...(c.replies || []), {
+                  ...newReply,
+                  author: { _id: user?._id, firstName: user?.firstName, lastName: user?.lastName, profileImage: user?.profileImage },
+                }],
+              };
+            }
+            return c;
+          }));
+        }
+        setReplyingTo(null);
       } else {
-        // Refetch to get the updated list
-        await fetchComments();
+        // Add top-level comment
+        const res = await addComment(postId, text);
+        const newComment = res.data?.data;
+        if (newComment) {
+          setComments(prev => [{
+            ...newComment,
+            author: { _id: user?._id, firstName: user?.firstName, lastName: user?.lastName, profileImage: user?.profileImage },
+          }, ...prev]);
+        }
       }
       
       setCommentText('');
-      setReplyingTo(null);
       Keyboard.dismiss();
       
-      // Scroll to top to show new comment
-      flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      if (!editingComment && !replyingTo) {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }
     } catch (err) {
-      console.error('Add comment error:', err);
+      console.error('Submit comment error:', err);
+      Alert.alert('Error', 'Failed to submit comment. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -130,33 +192,203 @@ const CommentsSheet = ({ visible, onClose, postId, postAuthor }) => {
 
   const handleReply = (comment) => {
     setReplyingTo(comment);
+    setEditingComment(null);
+    setCommentText('');
     inputRef.current?.focus();
   };
 
+  const handleEdit = (comment) => {
+    setEditingComment(comment);
+    setReplyingTo(null);
+    setCommentText(comment.text);
+    inputRef.current?.focus();
+  };
+
+  const handleDelete = (comment) => {
+    Alert.alert(
+      'Delete Comment',
+      'Are you sure you want to delete this comment?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteComment(comment._id);
+              setComments(prev => prev.filter(c => c._id !== comment._id));
+            } catch (err) {
+              console.error('Delete comment error:', err);
+              Alert.alert('Error', 'Failed to delete comment.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleReport = (comment) => {
+    Alert.alert(
+      'Report Comment',
+      'Why are you reporting this comment?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Spam', onPress: () => submitReport(comment, 'spam') },
+        { text: 'Harassment', onPress: () => submitReport(comment, 'harassment') },
+        { text: 'Inappropriate', onPress: () => submitReport(comment, 'inappropriate') },
+      ]
+    );
+  };
+
+  const submitReport = async (comment, reason) => {
+    try {
+      await reportComment(comment._id, reason);
+      Alert.alert('Reported', 'Thank you for your report. We will review this comment.');
+    } catch (err) {
+      console.error('Report comment error:', err);
+      Alert.alert('Error', 'Failed to report comment.');
+    }
+  };
+
+  const handleLike = async (comment) => {
+    if (likingCommentId === comment._id) return;
+    setLikingCommentId(comment._id);
+    try {
+      const res = await toggleCommentLike(comment._id);
+      const { isLiked, likeCount } = res.data?.data || {};
+      setComments(prev => prev.map(c => 
+        c._id === comment._id ? { ...c, isLiked, likeCount } : c
+      ));
+    } catch (err) {
+      console.error('Like comment error:', err);
+    } finally {
+      setLikingCommentId(null);
+    }
+  };
+
+  const handleLoadReplies = async (comment) => {
+    try {
+      const res = await getReplies(comment._id, { page: 1, limit: 10 });
+      const replies = res.data?.data?.replies || [];
+      setComments(prev => prev.map(c => 
+        c._id === comment._id ? { ...c, replies } : c
+      ));
+      setExpandedReplies(prev => ({ ...prev, [comment._id]: true }));
+    } catch (err) {
+      console.error('Load replies error:', err);
+    }
+  };
+
+  const handleLongPress = (comment) => {
+    const isAuthor = comment.author?._id === user?._id || comment.author === user?._id;
+    
+    if (isAuthor) {
+      Alert.alert(
+        'Comment Options',
+        '',
+        [
+          { text: 'Edit', onPress: () => handleEdit(comment) },
+          { text: 'Delete', style: 'destructive', onPress: () => handleDelete(comment) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Comment Options',
+        '',
+        [
+          { text: 'Report', style: 'destructive', onPress: () => handleReport(comment) },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    }
+  };
+
   const renderComment = ({ item }) => {
-    const userName = item.user ? `${item.user.firstName || ''} ${item.user.lastName || ''}`.trim() : 'Unknown';
-    const userInitial = (item.user?.firstName || '?').charAt(0).toUpperCase();
+    const userName = item.author ? `${item.author.firstName || ''} ${item.author.lastName || ''}`.trim() : 'Unknown';
+    const userInitial = (item.author?.firstName || '?').charAt(0).toUpperCase();
+    const isAuthor = item.author?._id === user?._id || item.author === user?._id;
+    const isExpanded = expandedReplies[item._id];
+    const replies = item.replies || [];
 
     return (
       <View style={styles.commentItem}>
         <View style={styles.commentAvatar}>
-          {item.user?.profileImage ? (
-            <Image source={{ uri: item.user.profileImage }} style={styles.commentAvatarImg} />
+          {item.author?.profileImage ? (
+            <Image source={{ uri: item.author.profileImage }} style={styles.commentAvatarImg} />
           ) : (
             <Text style={styles.commentAvatarText}>{userInitial}</Text>
           )}
         </View>
         <View style={styles.commentContent}>
-          <View style={styles.commentBubble}>
-            <Text style={styles.commentUserName}>{userName}</Text>
-            <Text style={styles.commentText}>{item.text}</Text>
-          </View>
+          <TouchableOpacity onLongPress={() => handleLongPress(item)} delayLongPress={400} activeOpacity={0.9}>
+            <View style={styles.commentBubble}>
+              <Text style={styles.commentUserName}>{userName}</Text>
+              <Text style={styles.commentText}>{item.text}</Text>
+              {item.isEdited && (
+                <Text style={styles.editedText}>edited</Text>
+              )}
+            </View>
+          </TouchableOpacity>
+          
           <View style={styles.commentMeta}>
             <Text style={styles.commentTime}>{getTimeAgo(item.createdAt)}</Text>
-            <TouchableOpacity onPress={() => handleReply(item)}>
-              <Text style={styles.replyBtn}>Reply</Text>
+            <TouchableOpacity onPress={() => handleLike(item)} disabled={likingCommentId === item._id}>
+              <Text style={[styles.actionBtn, item.isLiked && styles.actionBtnActive]}>
+                {item.isLiked ? 'Liked' : 'Like'}
+              </Text>
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleReply(item)}>
+              <Text style={styles.actionBtn}>Reply</Text>
+            </TouchableOpacity>
+            {item.likeCount > 0 && (
+              <Text style={styles.likeCount}>{item.likeCount} {item.likeCount === 1 ? 'like' : 'likes'}</Text>
+            )}
           </View>
+
+          {/* Replies */}
+          {replies.length > 0 && (
+            <View style={styles.repliesContainer}>
+              {replies.map(reply => (
+                <View key={reply._id} style={styles.replyItem}>
+                  <View style={[styles.commentAvatar, styles.replyAvatar]}>
+                    {reply.author?.profileImage ? (
+                      <Image source={{ uri: reply.author.profileImage }} style={styles.commentAvatarImg} />
+                    ) : (
+                      <Text style={[styles.commentAvatarText, { fontSize: 11 }]}>
+                        {(reply.author?.firstName || '?').charAt(0).toUpperCase()}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.replyContent}>
+                    <View style={[styles.commentBubble, styles.replyBubble]}>
+                      <Text style={styles.commentUserName}>
+                        {reply.author ? `${reply.author.firstName || ''} ${reply.author.lastName || ''}`.trim() : 'Unknown'}
+                      </Text>
+                      <Text style={styles.commentText}>{reply.text}</Text>
+                    </View>
+                    <View style={styles.commentMeta}>
+                      <Text style={styles.commentTime}>{getTimeAgo(reply.createdAt)}</Text>
+                      {reply.author?._id === user?._id && (
+                        <TouchableOpacity onPress={() => handleLongPress(reply)}>
+                          <Text style={styles.actionBtn}>•••</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Load more replies */}
+          {item.replyCount > replies.length && !isExpanded && (
+            <TouchableOpacity onPress={() => handleLoadReplies(item)} style={styles.loadRepliesBtn}>
+              <Text style={styles.loadRepliesText}>
+                View {item.replyCount - replies.length} more {item.replyCount - replies.length === 1 ? 'reply' : 'replies'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -184,97 +416,127 @@ const CommentsSheet = ({ visible, onClose, postId, postAuthor }) => {
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
       </Animated.View>
 
-      <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.sheetInner}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        >
-          <FlatList
-            ref={flatListRef}
-            data={comments}
-            renderItem={renderComment}
-            keyExtractor={(item, index) => item._id || index.toString()}
-            ListHeaderComponent={renderHeader}
-            ListEmptyComponent={
-              !loading ? (
-                <View style={styles.emptyComments}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={40} color={C.textMuted} />
-                  <Text style={styles.emptyCommentsTitle}>No comments yet</Text>
-                  <Text style={styles.emptyCommentsSub}>Be the first to comment</Text>
-                </View>
-              ) : (
-                <View style={styles.loaderContainer}>
-                  <ActivityIndicator size="small" color={C.brand} />
-                </View>
-              )
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingContainer}
+        keyboardVerticalOffset={0}
+      >
+        <Animated.View 
+          style={[
+            styles.sheet, 
+            { 
+              transform: [{ translateY: slideAnim }],
+              height: keyboardHeight > 0 ? SHEET_HEIGHT - keyboardHeight + 60 : SHEET_HEIGHT,
             }
-            contentContainerStyle={styles.commentsList}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          />
-
-          {/* Reply indicator */}
-          {replyingTo && (
-            <View style={styles.replyIndicator}>
-              <View style={styles.replyIndicatorLeft}>
-                <Ionicons name="arrow-undo-outline" size={14} color={C.brand} />
-                <Text style={styles.replyIndicatorText} numberOfLines={1}>
-                  Replying to {replyingTo.user?.firstName || 'User'}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setReplyingTo(null)}>
-                <Ionicons name="close" size={16} color={C.textMuted} />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Comment input */}
-          <View style={styles.inputContainer}>
-            <View style={styles.inputRow}>
-              <TextInput
-                ref={inputRef}
-                style={styles.input}
-                placeholder={replyingTo ? `Reply to ${replyingTo.user?.firstName || 'User'}...` : 'Add a comment...'}
-                placeholderTextColor={C.textMuted}
-                value={commentText}
-                onChangeText={setCommentText}
-                maxLength={500}
-                multiline
-                returnKeyType="send"
-                onSubmitEditing={handleSubmit}
-              />
-              <TouchableOpacity
-                style={[styles.sendBtn, (!commentText.trim() || submitting) && styles.sendBtnDisabled]}
-                onPress={handleSubmit}
-                disabled={!commentText.trim() || submitting}
-                activeOpacity={0.7}
-              >
-                {submitting ? (
-                  <ActivityIndicator size="small" color="#fff" />
+          ]}
+        >
+          <View style={styles.sheetInner}>
+            <FlatList
+              ref={flatListRef}
+              data={comments}
+              renderItem={renderComment}
+              keyExtractor={(item, index) => item._id || index.toString()}
+              ListHeaderComponent={renderHeader}
+              ListEmptyComponent={
+                !loading ? (
+                  <View style={styles.emptyComments}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={40} color={C.textMuted} />
+                    <Text style={styles.emptyCommentsTitle}>No comments yet</Text>
+                    <Text style={styles.emptyCommentsSub}>Be the first to comment</Text>
+                  </View>
                 ) : (
-                  <Ionicons name="send" size={18} color="#fff" />
-                )}
-              </TouchableOpacity>
+                  <View style={styles.loaderContainer}>
+                    <ActivityIndicator size="small" color={C.brand} />
+                  </View>
+                )
+              }
+              contentContainerStyle={styles.commentsList}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            />
+
+            {/* Reply/Edit indicator */}
+            {(replyingTo || editingComment) && (
+              <View style={styles.replyIndicator}>
+                <View style={styles.replyIndicatorLeft}>
+                  <Ionicons 
+                    name={editingComment ? "pencil-outline" : "arrow-undo-outline"} 
+                    size={14} 
+                    color={C.brand} 
+                  />
+                  <Text style={styles.replyIndicatorText} numberOfLines={1}>
+                    {editingComment 
+                      ? 'Editing comment...' 
+                      : `Replying to ${replyingTo.author?.firstName || 'User'}`}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => { 
+                  setReplyingTo(null); 
+                  setEditingComment(null);
+                  setCommentText('');
+                }}>
+                  <Ionicons name="close" size={16} color={C.textMuted} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Comment input */}
+            <View style={[
+              styles.inputContainer,
+              Platform.OS === 'ios' && keyboardHeight > 0 && { paddingBottom: 10 }
+            ]}>
+              <View style={styles.inputRow}>
+                <TextInput
+                  ref={inputRef}
+                  style={styles.input}
+                  placeholder={
+                    editingComment 
+                      ? 'Edit your comment...' 
+                      : replyingTo 
+                        ? `Reply to ${replyingTo.author?.firstName || 'User'}...` 
+                        : 'Add a comment...'
+                  }
+                  placeholderTextColor={C.textMuted}
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  maxLength={1000}
+                  multiline
+                  returnKeyType="send"
+                  onSubmitEditing={handleSubmit}
+                  blurOnSubmit={false}
+                />
+                <TouchableOpacity
+                  style={[styles.sendBtn, (!commentText.trim() || submitting) && styles.sendBtnDisabled]}
+                  onPress={handleSubmit}
+                  disabled={!commentText.trim() || submitting}
+                  activeOpacity={0.7}
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="send" size={18} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </Animated.View>
+        </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  keyboardAvoidingContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
   sheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: SHEET_HEIGHT,
     backgroundColor: C.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -370,21 +632,67 @@ const styles = StyleSheet.create({
     color: C.text,
     lineHeight: 19,
   },
+  editedText: {
+    fontSize: 9,
+    color: C.textMuted,
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   commentMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
     marginTop: 4,
     paddingLeft: 4,
+    flexWrap: 'wrap',
   },
   commentTime: {
     fontSize: 11,
     color: C.textMuted,
   },
-  replyBtn: {
+  actionBtn: {
     fontSize: 11,
     fontWeight: '600',
     color: C.textOff,
+  },
+  actionBtnActive: {
+    color: C.brand,
+  },
+  likeCount: {
+    fontSize: 10,
+    color: C.textMuted,
+  },
+
+  // Replies
+  repliesContainer: {
+    marginTop: 8,
+    paddingLeft: 20,
+    gap: 8,
+  },
+  replyItem: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  replyAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginTop: 0,
+  },
+  replyContent: {
+    flex: 1,
+  },
+  replyBubble: {
+    backgroundColor: C.surfaceAlt,
+  },
+  loadRepliesBtn: {
+    marginTop: 8,
+    paddingLeft: 4,
+  },
+  loadRepliesText: {
+    fontSize: 11,
+    color: C.brand,
+    fontWeight: '600',
   },
 
   // Empty
@@ -440,7 +748,7 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
     backgroundColor: C.bg,
     paddingBottom: Platform.OS === 'ios' ? 28 : 10,
-    bottom:44,
+    bottom:28,
   },
   inputRow: {
     flexDirection: 'row',

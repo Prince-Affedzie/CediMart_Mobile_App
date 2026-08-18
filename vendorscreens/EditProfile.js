@@ -49,6 +49,12 @@ const CATEGORY_LABELS = {
   'food and drinks': 'Food & Drinks', 'services': 'Services', 'other': 'Other',
 };
 
+const BUSINESS_TYPE_LABELS = {
+  'product': 'Products',
+  'service': 'Services',
+  'both': 'Products & Services',
+};
+
 const SettingsRow = ({ iconName, iconBg, iconColor, label, value, onPress, isLast = false }) => (
   <TouchableOpacity
     style={[styles.settingsRow, isLast && styles.settingsRowLast]}
@@ -116,6 +122,10 @@ const VendorAccountScreen = () => {
   const [campusArea, setCampusArea] = useState('');
   const [hostel, setHostel] = useState('');
   const [bio, setBio] = useState('');
+  const [businessType, setBusinessType] = useState('');
+  const [openingHours, setOpeningHours] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [instagram, setInstagram] = useState('');
 
   const [existingBanner, setExistingBanner] = useState('');
   const [existingProfile, setExistingProfile] = useState('');
@@ -138,6 +148,10 @@ const VendorAccountScreen = () => {
       setCampusArea(profile.location?.campusArea || '');
       setHostel(profile.location?.hostel || '');
       setBio(profile.bio || '');
+      setBusinessType(profile.businessType || '');
+      setOpeningHours(profile.openingHours || '');
+      setWhatsapp(profile.whatsapp || '');
+      setInstagram(profile.instagram || '');
       setExistingBanner(profile.storeBanner || '');
       setExistingProfile(profile.profileImage || '');
       setBannerPreview(profile.storeBanner || '');
@@ -259,6 +273,10 @@ const VendorAccountScreen = () => {
       if (campusArea.trim()) formData.append('campusArea', campusArea.trim());
       if (hostel.trim()) formData.append('hostel', hostel.trim());
       if (bio.trim()) formData.append('bio', bio.trim());
+      if (businessType) formData.append('businessType', businessType);
+      if (openingHours.trim()) formData.append('openingHours', openingHours.trim());
+      if (whatsapp.trim()) formData.append('whatsapp', whatsapp.trim());
+      if (instagram.trim()) formData.append('instagram', instagram.trim());
       if (newBanner) formData.append('storeBanner', newBanner);
       else if (removeBanner) formData.append('removeStoreBanner', 'true');
       if (newProfile) formData.append('profileImage', newProfile);
@@ -292,6 +310,10 @@ const VendorAccountScreen = () => {
       setCampusArea(profile.location?.campusArea || '');
       setHostel(profile.location?.hostel || '');
       setBio(profile.bio || '');
+      setBusinessType(profile.businessType || '');
+      setOpeningHours(profile.openingHours || '');
+      setWhatsapp(profile.whatsapp || '');
+      setInstagram(profile.instagram || '');
       setBannerPreview(profile.storeBanner || '');
       setProfilePreview(profile.profileImage || '');
       setExistingBanner(profile.storeBanner || '');
@@ -348,7 +370,7 @@ const VendorAccountScreen = () => {
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={submitting}>
-                {submitting ? <ActivityIndicator size="small" color="#1B5E20" /> : <Text style={styles.saveBtnText}>Save</Text>}
+                {submitting ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Save</Text>}
               </TouchableOpacity>
             </View>
           ) : (
@@ -473,9 +495,11 @@ const VendorAccountScreen = () => {
                   <Field label="Full Name" value={name} onChangeText={setName} placeholder="Your full name" editable={isEditing} />
                   <Field label="Store Name" value={storeName} onChangeText={setStoreName} placeholder="e.g. Kwame's Electronics" editable={isEditing} />
                   <Field label="Phone" value={phone} onChangeText={setPhone} placeholder="02X XXX XXXX" keyboardType="phone-pad" editable={isEditing} />
+                  <Field label="Business Type" value={businessType ? BUSINESS_TYPE_LABELS[businessType] || businessType : ''} onChangeText={setBusinessType} placeholder="Not set" editable={false} />
                   <Field label="Campus" value={campus ? CAMPUS_LABELS[campus] || campus : ''} editable={false} placeholder="Not set" />
                   <Field label="Campus Area" value={campusArea} onChangeText={setCampusArea} placeholder="e.g. Main Campus" editable={isEditing} />
                   <Field label="Hostel / Hall" value={hostel} onChangeText={setHostel} placeholder="e.g. Mensah Sarbah Hall" editable={isEditing} />
+                  <Field label="Opening Hours" value={openingHours} onChangeText={setOpeningHours} placeholder="e.g. Mon-Fri, 9am-6pm" editable={isEditing} />
                 </View>
               </Section>
 
@@ -492,6 +516,13 @@ const VendorAccountScreen = () => {
                   ) : (
                     <Text style={styles.noDataText}>No categories set</Text>
                   )}
+                </View>
+              </Section>
+
+              <Section label="Social Links">
+                <View style={styles.fieldsContainer}>
+                  <Field label="WhatsApp" value={whatsapp} onChangeText={setWhatsapp} placeholder="e.g. +233 XX XXX XXXX" keyboardType="phone-pad" editable={isEditing} />
+                  <Field label="Instagram" value={instagram} onChangeText={setInstagram} placeholder="e.g. @yourstore" editable={isEditing} />
                 </View>
               </Section>
 
@@ -549,7 +580,7 @@ const VendorAccountScreen = () => {
                 />
               </Section>
 
-                            <Section label="Support">
+              <Section label="Support">
                 <SettingsRow iconName="help-circle-outline" iconBg="#FFF3E0" iconColor="#E65100" label="Help & FAQ" value="Common questions answered" onPress={() => navigation.navigate('VendorSupport')} />
                 <SettingsRow iconName="chatbubble-ellipses-outline" iconBg="#E8F5E9" iconColor="#2E7D32" label="Contact support" value="Chat with our team" onPress={() => navigation.navigate('VendorSupport')} />
                 <SettingsRow iconName="document-text-outline" iconBg="#F5F5F5" iconColor="#616161" label="Privacy policy" value="Terms & conditions" onPress={() => navigation.navigate('PrivacyPolicy')} />
@@ -569,14 +600,14 @@ const VendorAccountScreen = () => {
   );
 };
 
-// ─── Styles (unchanged from original) ─────────────────────────────────────────
+// ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F0F2EE' },
   header: { backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   headerIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
   headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  editIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1A1A1A', justifyContent: 'center', alignItems: 'center' },
+  editIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#2E7D32', justifyContent: 'center', alignItems: 'center' },
   cancelBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0E0E0' },
   cancelBtnText: { fontSize: 13, fontWeight: '600', color: '#1A1A1A' },
   saveBtn: { backgroundColor: '#2E7D32', paddingHorizontal: 18, paddingVertical: 7, borderRadius: 20, minWidth: 68, alignItems: 'center' },
@@ -633,7 +664,7 @@ const styles = StyleSheet.create({
   fieldGroup: {},
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#424242', marginBottom: 7 },
   fieldInput: { backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#E8E8E8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: '#1B2714' },
-  fieldInputDisabled: { backgroundColor: '#F5F5F5', color: '#9E9E9E' },
+  fieldInputDisabled: { backgroundColor: '#F5F5F5', color: '#424242' },
   fieldInputMultiline: { height: 80, textAlignVertical: 'top', paddingTop: 12 },
   categoriesContainer: { padding: 16 },
   categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

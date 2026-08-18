@@ -630,7 +630,8 @@ const GuestHomeScreen = () => {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
             {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
               <TouchableOpacity key={key} style={styles.categoryPill} onPress={() => handleCategoryPress(key)} activeOpacity={0.8}>
-                <View style={[styles.categoryIconCircle, { backgroundColor: cfg.color, borderColor: cfg.color }]}><Text style={styles.categoryEmoji}>{cfg.icon}</Text></View>
+                
+                <View style={[styles.categoryIconCircle, { backgroundColor: cfg.color, borderColor: cfg.color }]}><Ionicons style={styles.categoryEmoji} name ={cfg.icon}  size={14}/></View>
                 <Text style={styles.categoryName} numberOfLines={1}>{cfg.label}</Text>
               </TouchableOpacity>
             ))}

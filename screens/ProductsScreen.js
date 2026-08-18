@@ -29,8 +29,6 @@ import {ProductGridSkeleton} from '../components/SkeletonLoader'
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 44) / 2;
 
-
-
 const SORT_OPTIONS = [
   { id: 'newest',     label: 'Newest First',        icon: 'time-outline' },
   { id: 'oldest',     label: 'Oldest First',         icon: 'hourglass-outline' },
@@ -52,26 +50,6 @@ const CAMPUS_OPTIONS = [
   { id: 'ATU',    label: 'Accra Technical Univ.' },
   { id: 'OTHER',  label: 'Other Campus' },
 ];
-
-// Hero banner images keyed by category id
-const HERO_IMAGES = {
-  all:                    'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780782982/flyer13_1_fyp0xj.png',
-  electronics:            'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780694855/computers_flyer_ceekpj.jpg',
-  'phones and tablets':   'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780694855/computers_flyer_ceekpj.jpg',
-  'computers and laptops':'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780694855/computers_flyer_ceekpj.jpg',
-  gaming:                 'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?w=800',
-  fashion:                'https://res.cloudinary.com/duv3qvvjz/image/upload/v1781101245/fashion_banner_ibwmaz.png',
-  'books-course-materials':'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780695851/books_flyer_ljnqis.jpg',
-  'hostel-items':         'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800',
-  appliances:             'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780690124/appliances_bkv5s1.jpg',
-  furniture:              'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800',
-  'beauty and grooming':  'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780690851/beauty_m4uwn1.jpg',
-  'sports and fitness':   'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780690851/sports_and_fitness_g3ozaa.webp',
-  accessories:            'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800',
-  'food and drinks':      'https://res.cloudinary.com/duv3qvvjz/image/upload/v1781891792/food_nad_provisions_1_m6fvfn.png',
-  services:               'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800',
-  other:                  'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780694282/campus_ecommerce_flyer_1_jqpppo.jpg',
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUB-COMPONENTS
@@ -167,7 +145,7 @@ const GridCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
           <Image source={{ uri: imageUri }} style={styles.gridImg} resizeMode="cover" />
         ) : (
           <View style={[styles.gridImgPlaceholder, { backgroundColor: catCfg.color }]}>
-            <Text style={{ fontSize: 32 }}>{catCfg.emoji}</Text>
+            <Ionicons name={catCfg.icon} size={32} color={catCfg.accent} />
           </View>
         )}
 
@@ -310,7 +288,7 @@ const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
           <Image source={{ uri: imageUri }} style={styles.listImg} resizeMode="cover" />
         ) : (
           <View style={[styles.listImgPlaceholder, { backgroundColor: catCfg.color }]}>
-            <Text style={{ fontSize: 28 }}>{catCfg.emoji}</Text>
+            <Ionicons name={catCfg.icon} size={28} color={catCfg.accent} />
           </View>
         )}
         {outOfStock && (
@@ -333,7 +311,7 @@ const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
         <View style={styles.listTopRow}>
           <Text style={styles.listName} numberOfLines={2}>{item.name}</Text>
           <View style={[styles.listCatChip, { backgroundColor: catCfg.color }]}>
-            <Text style={[styles.listCatText, { color: catCfg.accent }]}>{catCfg.emoji}</Text>
+            <Ionicons name={catCfg.icon} size={16} color={catCfg.accent} />
           </View>
         </View>
 
@@ -480,12 +458,10 @@ const ProductsScreen = ({ navigation, route }) => {
   const fetchIdRef      = useRef(0);
   const isMountedRef    = useRef(true);
   const toastTimeoutRef = useRef(null);
-  const heroScaleAnim   = useRef(new Animated.Value(1.06)).current;
 
   // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     isMountedRef.current = true;
-    Animated.spring(heroScaleAnim, { toValue: 1, tension: 55, friction: 11, useNativeDriver: true }).start();
 
     // Accept initial params from navigation
     if (route.params?.category)    setSelectedCategory(route.params.category);
@@ -521,7 +497,6 @@ const ProductsScreen = ({ navigation, route }) => {
 
   // ── Reload on filter changes ───────────────────────────────────────────────
   useEffect(() => {
-    // Reset subcategory when category changes
     setSelectedSubcategory('');
     loadProducts({ page: 1 });
   }, [selectedCategory]);
@@ -688,11 +663,9 @@ const ProductsScreen = ({ navigation, route }) => {
   // ── Computed values ────────────────────────────────────────────────────────
   const activeCatConfig   = CATEGORIES.find(c => c.id === selectedCategory) || CATEGORIES[0];
   const subcatsForCat     = SUBCATEGORIES[selectedCategory] || [];
-  const heroImage         = HERO_IMAGES[selectedCategory] || HERO_IMAGES.all;
   const activeSortLabel   = SORT_OPTIONS.find(s => s.id === selectedSort)?.label || 'Sort';
   const activeCampusLabel = CAMPUS_OPTIONS.find(c => c.id === selectedCampus)?.label || 'Campus';
 
-  // Active filter count for badge
   const activeFilterCount = [
     selectedCampus, selectedCondition, negotiableOnly, minPrice, maxPrice,
   ].filter(Boolean).length;
@@ -735,7 +708,7 @@ const ProductsScreen = ({ navigation, route }) => {
   // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar backgroundColor="transparent" translucent barStyle="light-content" />
+      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
       {/* Toast */}
       <CartToast visible={toastVisible} productName={addedProductName} />
@@ -787,8 +760,6 @@ const ProductsScreen = ({ navigation, route }) => {
       {/* ── ADVANCED FILTER SHEET ── */}
       <BottomSheet visible={filterSheetVisible} onClose={() => setFilterSheetVisible(false)} title="Advanced Filters">
         <ScrollView style={{ maxHeight: 520 }} showsVerticalScrollIndicator={false}>
-
-          {/* Condition */}
           <Text style={styles.sheetSubHeading}>Condition</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
             {[{ id: '', label: 'Any' }, ...Object.entries(CONDITION_CONFIG).map(([k, v]) => ({ id: k, label: v.label }))].map(opt => {
@@ -805,7 +776,6 @@ const ProductsScreen = ({ navigation, route }) => {
             })}
           </ScrollView>
 
-          {/* Price range */}
           <Text style={styles.sheetSubHeading}>Price Range (GH₵)</Text>
           <View style={styles.priceRow}>
             <View style={styles.priceInputWrap}>
@@ -833,7 +803,6 @@ const ProductsScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          {/* Negotiable toggle */}
           <TouchableOpacity
             style={styles.toggleRow}
             onPress={() => setNegotiableOnly(v => !v)}
@@ -848,7 +817,6 @@ const ProductsScreen = ({ navigation, route }) => {
             </View>
           </TouchableOpacity>
 
-          {/* Apply button */}
           <TouchableOpacity
             style={styles.applyBtn}
             onPress={() => { setFilterSheetVisible(false); loadProducts({ page: 1 }); }}
@@ -856,7 +824,6 @@ const ProductsScreen = ({ navigation, route }) => {
             <Text style={styles.applyBtnText}>Apply Filters</Text>
           </TouchableOpacity>
 
-          {/* Clear filters */}
           {(selectedCondition || negotiableOnly || minPrice || maxPrice) ? (
             <TouchableOpacity
               style={styles.clearFiltersBtn}
@@ -883,143 +850,105 @@ const ProductsScreen = ({ navigation, route }) => {
         keyboardShouldPersistTaps="handled"
         onScrollEndDrag={() => { if (pagination.hasNextPage) handleLoadMore(); }}
       >
-
-        {/* ════════════════════════════════
-            HERO BANNER
-            ════════════════════════════════ */}
-        <View style={styles.heroWrap}>
-          <Animated.Image
-            source={{ uri: heroImage }}
-            style={[styles.heroImg, { transform: [{ scale: heroScaleAnim }] }]}
-            resizeMode="cover"
-          />
-          <View style={styles.heroScrimTop} />
-          <View style={styles.heroScrimBottom} />
-
-          {/* Nav */}
-          <View style={styles.heroNav}>
-            <TouchableOpacity style={styles.heroIconBtn} onPress={() => navigation.goBack()}>
-              <Ionicons name="chevron-back" size={22} color="#fff" />
-            </TouchableOpacity>
-            <View style={styles.heroTitleWrap}>
-              <Text style={styles.heroEmoji}>{activeCatConfig.emoji}</Text>
-              <Text style={styles.heroTitle}>
-                {activeCatConfig.id === 'all' ? 'All Listings' : activeCatConfig.label}
-              </Text>
-              {!loading && (
-                <Text style={styles.heroCount}>{totalProducts.toLocaleString()} item{totalProducts !== 1 ? 's' : ''}</Text>
-              )}
-            </View>
-            <TouchableOpacity
-              style={styles.heroIconBtn}
-              onPress={() => navigation.navigate('Cart')}
-            >
-              <Ionicons name={cartCount > 0 ? 'cart' : 'cart-outline'} size={22} color="#fff" />
-              {cartCount > 0 && (
-                <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+        {/* ── TOP BAR ── */}
+        <View style={styles.topBar}>
+          <View style={styles.topBarTitleWrap}>
+            <Text style={styles.topBarTitle}>
+              {activeCatConfig.id === 'all' ? 'All Listings' : activeCatConfig.label}
+            </Text>
+            {!loading && (
+              <Text style={styles.topBarCount}>{totalProducts.toLocaleString()} item{totalProducts !== 1 ? 's' : ''}</Text>
+            )}
           </View>
-
-          {/* Search bar */}
-          <View style={styles.heroSearchWrap}>
-            {showSearch ? (
-              <View style={styles.heroSearchActive}>
-                <Ionicons name="search-outline" size={17} color="#0D9488" style={{ marginLeft: 13 }} />
-                <TextInput
-                  ref={searchInputRef}
-                  style={styles.heroSearchInput}
-                  placeholder="Search listings…"
-                  placeholderTextColor="#9E9E9E"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  onSubmitEditing={handleSearchSubmit}
-                  returnKeyType="search"
-                  autoFocus
-                />
-                <TouchableOpacity style={styles.heroSearchGoBtn} onPress={handleSearchSubmit}>
-                  <Text style={styles.heroSearchGoBtnText}>Go</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={{ padding: 10 }} onPress={() => { setShowSearch(false); clearSearch(); }}>
-                  <Ionicons name="close-circle" size={17} color="#BDBDBD" />
-                </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.topBarCartBtn}
+            onPress={() => navigation.navigate('Cart')}
+          >
+            <Ionicons name={cartCount > 0 ? 'cart' : 'cart-outline'} size={22} color="#0D9488" />
+            {cartCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
               </View>
-            ) : (
-              <TouchableOpacity style={styles.heroSearchInactive} onPress={() => setShowSearch(true)} activeOpacity={0.85}>
-                <Ionicons name="search-outline" size={17} color="#9E9E9E" style={{ marginRight: 8 }} />
-                <Text style={styles.heroSearchPlaceholder}>
-                  {searchQuery || 'Search listings, brands…'}
-                </Text>
-                {searchQuery ? (
-                  <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name="close-circle" size={16} color="#BDBDBD" />
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.heroSearchMic}>
-                    <Ionicons name="mic-outline" size={15} color="#0D9488" />
-                  </View>
-                )}
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* ── SEARCH BAR ── */}
+        <View style={styles.searchBarWrap}>
+          <View style={styles.searchBarActive}>
+            <Ionicons name="search-outline" size={17} color="#0D9488" style={{ marginLeft: 13 }} />
+            <TextInput
+              ref={searchInputRef}
+              style={styles.searchBarInput}
+              placeholder="Search listings…"
+              placeholderTextColor="#9E9E9E"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearchSubmit}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity style={{ padding: 10 }} onPress={clearSearch}>
+                <Ionicons name="close-circle" size={17} color="#BDBDBD" />
               </TouchableOpacity>
             )}
-
-            {/* Live search dropdown */}
-            {showLiveDropdown && (
-              <View style={styles.liveDropdown}>
-                {liveSearching ? (
-                  <View style={{ padding: 16, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color="#0D9488" />
-                  </View>
-                ) : liveSearchResults.length > 0 ? (
-                  <>
-                    {liveSearchResults.map(p => {
-                      const catCfg = CATEGORIES.find(c => c.id === p.category) || CATEGORIES[CATEGORIES.length - 1];
-                      return (
-                        <TouchableOpacity
-                          key={p._id}
-                          style={styles.liveRow}
-                          onPress={() => {
-                            setShowLiveDropdown(false);
-                            navigation.navigate('ProductDetail', { productId: p._id, product: p });
-                          }}
-                        >
-                          {p.images?.[0] ? (
-                            <Image source={{ uri: p.images[0] }} style={styles.liveThumb} />
-                          ) : (
-                            <View style={[styles.liveThumb, { backgroundColor: catCfg.color, justifyContent: 'center', alignItems: 'center' }]}>
-                              <Text style={{ fontSize: 16 }}>{catCfg.emoji}</Text>
-                            </View>
-                          )}
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.liveRowName} numberOfLines={1}>{p.name}</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                              <Text style={styles.liveRowPrice}>GH₵ {p.price?.toFixed(2)}</Text>
-                              {p.campus && <Text style={styles.liveRowCampus}>{p.campus}</Text>}
-                            </View>
-                          </View>
-                          {p.condition && <ConditionBadge condition={p.condition} />}
-                        </TouchableOpacity>
-                      );
-                    })}
-                    <TouchableOpacity style={styles.liveViewAll} onPress={handleSearchSubmit}>
-                      <Text style={styles.liveViewAllText}>See all results for "{searchQuery}"</Text>
-                      <Ionicons name="arrow-forward" size={13} color="#0D9488" />
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <View style={{ padding: 20, alignItems: 'center' }}>
-                    <Ionicons name="search-outline" size={28} color="#C8E6C9" />
-                    <Text style={{ fontSize: 13, color: '#9E9E9E', marginTop: 8 }}>No results found</Text>
-                  </View>
-                )}
-              </View>
-            )}
           </View>
+
+          {/* Live search dropdown */}
+          {showLiveDropdown && (
+            <View style={styles.liveDropdown}>
+              {liveSearching ? (
+                <View style={{ padding: 16, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color="#0D9488" />
+                </View>
+              ) : liveSearchResults.length > 0 ? (
+                <>
+                  {liveSearchResults.map(p => {
+                    const catCfg = CATEGORIES.find(c => c.id === p.category) || CATEGORIES[CATEGORIES.length - 1];
+                    return (
+                      <TouchableOpacity
+                        key={p._id}
+                        style={styles.liveRow}
+                        onPress={() => {
+                          setShowLiveDropdown(false);
+                          navigation.navigate('ProductDetail', { productId: p._id, product: p });
+                        }}
+                      >
+                        {p.images?.[0] ? (
+                          <Image source={{ uri: p.images[0] }} style={styles.liveThumb} />
+                        ) : (
+                          <View style={[styles.liveThumb, { backgroundColor: catCfg.color, justifyContent: 'center', alignItems: 'center' }]}>
+                            <Ionicons name={catCfg.icon} size={16} color={catCfg.accent} />
+                          </View>
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.liveRowName} numberOfLines={1}>{p.name}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                            <Text style={styles.liveRowPrice}>GH₵ {p.price?.toFixed(2)}</Text>
+                            {p.campus && <Text style={styles.liveRowCampus}>{p.campus}</Text>}
+                          </View>
+                        </View>
+                        {p.condition && <ConditionBadge condition={p.condition} />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  <TouchableOpacity style={styles.liveViewAll} onPress={handleSearchSubmit}>
+                    <Text style={styles.liveViewAllText}>See all results for "{searchQuery}"</Text>
+                    <Ionicons name="arrow-forward" size={13} color="#0D9488" />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Ionicons name="search-outline" size={28} color="#C8E6C9" />
+                  <Text style={{ fontSize: 13, color: '#9E9E9E', marginTop: 8 }}>No results found</Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* ════════════════════════════════
-            CATEGORY TABS
+            CATEGORY TABS (Larger Icons)
             ════════════════════════════════ */}
         <View style={styles.catStrip}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catStripInner}>
@@ -1033,7 +962,13 @@ const ProductsScreen = ({ navigation, route }) => {
                   activeOpacity={0.75}
                   disabled={loading}
                 >
-                  <Text style={styles.catTabEmoji}>{cat.emoji}</Text>
+                  <View style={[styles.catIconWrap, isActive && styles.catIconWrapActive]}>
+                    <Ionicons 
+                      name={cat.icon} 
+                      size={18} 
+                      color={isActive ? '#fff' : cat.accent} 
+                    />
+                  </View>
                   <Text style={[styles.catTabText, isActive && styles.catTabTextActive]}>
                     {cat.label}
                   </Text>
@@ -1044,7 +979,7 @@ const ProductsScreen = ({ navigation, route }) => {
         </View>
 
         {/* ════════════════════════════════
-            SUBCATEGORY ROW (if category has subs)
+            SUBCATEGORY ROW
             ════════════════════════════════ */}
         {subcatsForCat.length > 0 && (
           <View style={styles.subCatStrip}>
@@ -1080,10 +1015,9 @@ const ProductsScreen = ({ navigation, route }) => {
             TOOLBAR
             ════════════════════════════════ */}
         <View style={styles.toolbar}>
-          {/* Left: count + active search tag */}
           <View style={styles.toolbarLeft}>
             {loading ? (
-              <ActivityIndicator size="small" color="#0D94880" />
+              <ActivityIndicator size="small" color="#0D9488" />
             ) : (
               <Text style={styles.toolbarCount}>
                 <Text style={styles.toolbarCountBold}>{totalProducts}</Text> listings
@@ -1099,9 +1033,7 @@ const ProductsScreen = ({ navigation, route }) => {
             ) : null}
           </View>
 
-          {/* Right: campus, sort, filter, view */}
           <View style={styles.toolbarRight}>
-            {/* Campus */}
             <TouchableOpacity
               style={[styles.toolbarChip, selectedCampus && styles.toolbarChipActive]}
               onPress={() => setCampusSheetVisible(true)}
@@ -1113,7 +1045,6 @@ const ProductsScreen = ({ navigation, route }) => {
               <Ionicons name="chevron-down" size={11} color={selectedCampus ? '#fff' : '#0D9488'} />
             </TouchableOpacity>
 
-            {/* Sort */}
             <TouchableOpacity style={styles.toolbarChip} onPress={() => setSortSheetVisible(true)}>
               <Ionicons name="swap-vertical-outline" size={13} color="#0D9488" />
               <Text style={styles.toolbarChipText} numberOfLines={1}>
@@ -1122,7 +1053,6 @@ const ProductsScreen = ({ navigation, route }) => {
               <Ionicons name="chevron-down" size={11} color="#0D9488" />
             </TouchableOpacity>
 
-            {/* Advanced filter */}
             <TouchableOpacity
               style={[styles.toolbarIconBtn, activeFilterCount > 0 && styles.toolbarIconBtnActive]}
               onPress={() => setFilterSheetVisible(true)}
@@ -1135,7 +1065,6 @@ const ProductsScreen = ({ navigation, route }) => {
               )}
             </TouchableOpacity>
 
-            {/* View mode */}
             <View style={styles.viewGroup}>
               <TouchableOpacity
                 style={[styles.viewBtn, viewMode === 'grid' && styles.viewBtnOn]}
@@ -1153,7 +1082,7 @@ const ProductsScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Active campus chip */}
+        {/* Active filters row */}
         {(selectedCampus || selectedCondition || negotiableOnly || minPrice || maxPrice) && (
           <View style={styles.activeFiltersRow}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFiltersContent}>
@@ -1196,37 +1125,37 @@ const ProductsScreen = ({ navigation, route }) => {
         )}
 
         {/* ════════════════════════════════
-    PRODUCTS
-    ════════════════════════════════ */}
-<View style={{ position: 'relative', minHeight: loading && products.length > 0 ? 200 : undefined }}>
-  {loading && products.length === 0 ? (
-   <ProductGridSkeleton/>
-  ) : products.length === 0 ? (
-    renderEmptyState()
-  ) : viewMode === 'grid' ? (
-    <View style={styles.gridWrap}>
-      {products.map(item => (
-        <GridCard key={item._id} item={item} onPress={p => navigation.navigate('ProductDetail', { productId: p._id, product: p })} onAddToCart={handleAddToCart} onQtyChange={handleQtyChange} qtyInCart={getQtyInCart(item._id)} isAdding={addingProductId === item._id} isUpdating={updatingProductId === item._id} />
-      ))}
-    </View>
-  ) : (
-    <View style={styles.listWrap}>
-      {products.map(item => (
-        <ListCard key={item._id} item={item} onPress={p => navigation.navigate('ProductDetail', { productId: p._id, product: p })} onAddToCart={handleAddToCart} onQtyChange={handleQtyChange} qtyInCart={getQtyInCart(item._id)} isAdding={addingProductId === item._id} isUpdating={updatingProductId === item._id} />
-      ))}
-    </View>
-  )}
+            PRODUCTS
+            ════════════════════════════════ */}
+        <View style={{ position: 'relative', minHeight: loading && products.length > 0 ? 200 : undefined }}>
+          {loading && products.length === 0 ? (
+            <ProductGridSkeleton/>
+          ) : products.length === 0 ? (
+            renderEmptyState()
+          ) : viewMode === 'grid' ? (
+            <View style={styles.gridWrap}>
+              {products.map(item => (
+                <GridCard key={item._id} item={item} onPress={p => navigation.navigate('ProductDetail', { productId: p._id, product: p })} onAddToCart={handleAddToCart} onQtyChange={handleQtyChange} qtyInCart={getQtyInCart(item._id)} isAdding={addingProductId === item._id} isUpdating={updatingProductId === item._id} />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.listWrap}>
+              {products.map(item => (
+                <ListCard key={item._id} item={item} onPress={p => navigation.navigate('ProductDetail', { productId: p._id, product: p })} onAddToCart={handleAddToCart} onQtyChange={handleQtyChange} qtyInCart={getQtyInCart(item._id)} isAdding={addingProductId === item._id} isUpdating={updatingProductId === item._id} />
+              ))}
+            </View>
+          )}
 
-  {/* Category-switch overlay — shows over EXISTING products while a new page loads */}
-  {loading && products.length > 0 && (
-    <View style={styles.categorySwitchOverlay}>
-      <View style={styles.categorySwitchCard}>
-        <ActivityIndicator size="small" color="#0D9488" />
-        <Text style={styles.categorySwitchText}>Loading…</Text>
-      </View>
-    </View>
-  )}
-</View>
+          {loading && products.length > 0 && (
+            <View style={styles.categorySwitchOverlay}>
+              <View style={styles.categorySwitchCard}>
+                <ActivityIndicator size="small" color="#0D9488" />
+                <Text style={styles.categorySwitchText}>Loading…</Text>
+              </View>
+            </View>
+          )}
+        </View>
+
         {/* Load more */}
         {!loading && pagination.hasNextPage && (
           <TouchableOpacity style={styles.loadMoreBtn} onPress={handleLoadMore} activeOpacity={0.8}>
@@ -1235,7 +1164,6 @@ const ProductsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         )}
 
-        {/* Loading more indicator */}
         {loading && products.length > 0 && (
           <View style={{ alignItems: 'center', paddingVertical: 20 }}>
             <ActivityIndicator size="small" color="#0D9488" />
@@ -1247,7 +1175,5 @@ const ProductsScreen = ({ navigation, route }) => {
     </SafeAreaView>
   );
 };
-
-
 
 export default ProductsScreen;
