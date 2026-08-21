@@ -249,10 +249,20 @@ const CampusFeedScreen = () => {
     setReportPost(null);
   };
 
+  // 🔥 distanceFromActive lets FeedPostItem decide whether to actually
+  // load a real video player for this row. Only rows within 1 of the
+  // active index get one — everyone else stays on their thumbnail. This
+  // caps how many concurrent video decoders exist at once, which is what
+  // was causing the intermittent black-screen-with-audio bug: mobile
+  // devices only support a handful of concurrent hardware decoder
+  // sessions, and a *paused* player still holds its decoder rather than
+  // releasing it, so several mounted-but-off-screen rows were quietly
+  // exhausting that pool.
   const renderItem = ({ item, index }) => (
     <FeedPostItem
       post={item}
       isActive={index === activeIndex}
+      distanceFromActive={Math.abs(index - activeIndex)}
       screenFocused={isFocused && appState === 'active'}
       onLike={handleLike}
       onComment={() => handleComment(item)}
@@ -317,9 +327,9 @@ const CampusFeedScreen = () => {
         }
         ListEmptyComponent={renderEmpty}
         removeClippedSubviews={Platform.OS === 'android'}
-        initialNumToRender={3}
-        maxToRenderPerBatch={4}
-        windowSize={5}
+        initialNumToRender={2}
+        maxToRenderPerBatch={2}
+        windowSize={3}
       />
 
       {/* Floating header */}
@@ -349,7 +359,7 @@ const CampusFeedScreen = () => {
       <TouchableOpacity 
         style={[
           styles.fab, 
-          { bottom: insets.bottom + 8 }
+          { bottom: insets.bottom + 18 }
         ]} 
         onPress={handleCreatePost} 
         activeOpacity={0.85}

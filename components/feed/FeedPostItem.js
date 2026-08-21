@@ -62,11 +62,23 @@ const BUFFERING_DEBOUNCE_MS = 350;
 const THUMBNAIL_HIDE_DELAY = 400;
 const TIME_UPDATE_INTERVAL = 0.25;
 
+// How many rows away from the active one still get a real, loaded video
+// player. 1 means "previous, current, next" — anything further only shows
+// its thumbnail. This is the whole fix: mobile devices cap concurrent
+// hardware video decoder sessions (often as few as 4–6), and a *paused*
+// player still holds its decoder — it doesn't release it. With enough rows
+// mounted in the FlatList's render window, you blow past that cap and
+// video silently stops producing frames (audio keeps playing off the
+// cheap software audio decoder, which has no such limit) — that's the
+// black-screen-with-sound bug.
+const LOAD_DISTANCE = 1;
+
 // ─── Single Full-Screen Video Post ────────────────────────────────────────
 export const FeedPostItem = ({
   post,
   isActive,
   screenFocused,
+  distanceFromActive = 99, // how many rows away from activeIndex this item is
   onLike,
   onComment,
   onSave,
@@ -102,25 +114,42 @@ export const FeedPostItem = ({
     : 'Unknown';
   const authorInitial = (post.author?.firstName || '?').charAt(0).toUpperCase();
   const isVendor = post.author?.role === 'vendor';
+  // Same condition the chip's own text/color variants already key off of —
+  // reused here so the new Buy Now button flips to the right contrast.
+  const isProductChipLightVariant = !post.media?.[0] && post.linkedProduct;
 
-  // ── Cache check ──────────────────────────────────────────────────────────
+  // Only rows within LOAD_DISTANCE of the active one are allowed to
+  // actually load a video source and get a real player + decoder.
+  const shouldLoadVideo = isVideo && distanceFromActive <= LOAD_DISTANCE;
+
+  // ── Cache check (only runs for rows close enough to load) ───────────────
   useEffect(() => {
-    if (isVideo && media?.url) {
-      setCacheChecked(false);
-      setVideoUrl(null);
-      setShowThumbnail(true);
-      setVideoReady(false);
-      setDuration(0);
-      setCurrentTime(0);
-      
-      feedPrefetchService.getCachedUrl(media.url).then(cached => {
-        setVideoUrl(cached || media.url);
-        setCacheChecked(true);
-      });
-    }
-  }, [post._id, media?.url, isVideo]);
+    if (!isVideo || !media?.url) return;
+
+    // Reset every time we cross the load/no-load boundary, or the video
+    // itself changes. This is what actually frees the decoder for rows
+    // scrolling out of range — clearing videoUrl back to null makes
+    // useVideoPlayer tear down its underlying native player, not just
+    // pause it.
+    setCacheChecked(false);
+    setVideoUrl(null);
+    setShowThumbnail(true);
+    setVideoReady(false);
+    setDuration(0);
+    setCurrentTime(0);
+
+    if (!shouldLoadVideo) return; // stay deferred — thumbnail only, no player
+
+    feedPrefetchService.getCachedUrl(media.url).then(cached => {
+      setVideoUrl(cached || media.url);
+      setCacheChecked(true);
+    });
+  }, [post._id, media?.url, isVideo, shouldLoadVideo]);
 
   // ── Video player ─────────────────────────────────────────────────────────
+  // videoUrl is null for any row outside the load window, so no player /
+  // decoder is created for it at all — this is the key resource-capping
+  // mechanism, stronger than just pausing.
   const player = useVideoPlayer(
     isVideo && videoUrl ? videoUrl : null,
     (player) => {
@@ -174,19 +203,19 @@ export const FeedPostItem = ({
   }, [isActive]);
 
   useEffect(() => {
-    if (!player || !isVideo) return;
+    if (!player || !isVideo || !videoUrl) return;
     player.bufferOptions = {
       preferredForwardBufferDuration: isActive ? 15 : 5,
       maxBufferDuration: isActive ? 30 : 10,
     };
-  }, [isActive, player, isVideo]);
+  }, [isActive, player, isVideo, videoUrl]);
 
   // ── Play/Pause based on active state, screen focus, and app state ─────
   useEffect(() => {
-    if (!player || !isVideo) return;
+    if (!player || !isVideo || !videoUrl) return;
     if (isActive && screenFocused && !paused) player.play();
     else player.pause();
-  }, [isActive, screenFocused, paused, player, isVideo]);
+  }, [isActive, screenFocused, paused, player, isVideo, videoUrl]);
 
   useEffect(() => {
     if (!isActive) {
@@ -222,27 +251,41 @@ export const FeedPostItem = ({
   const handleLike = () => { const n = !isLiked; setIsLiked(n); onLike?.(post._id); };
   const handleSave = () => { setIsSaved(s => !s); onSave?.(post._id); };
 
+  // The Buy Now button navigates to the same place tapping the chip does —
+  // it's just a much more explicit, higher-intent call to action than
+  // relying on people to realize the whole chip is tappable.
+  const handleBuyNow = (e) => {
+    e?.stopPropagation?.();
+    onProductPress?.();
+  };
+
   const progressFraction = duration > 0 ? Math.min(Math.max(currentTime / duration, 0), 1) : 0;
 
   // ── Render background ────────────────────────────────────────────────────
   const renderBackground = () => (
     <>
-      {/* Thumbnail */}
+      {/* Thumbnail — shown for the deferred state AND while the real
+          player is still warming up */}
       {showThumbnail && media?.thumbnailUrl && (
         <Image source={{ uri: media.thumbnailUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={Platform.OS === 'ios' ? 15 : 8} />
       )}
       {showThumbnail && media?.thumbnailUrl && <View style={localStyles.thumbnailOverlay} />}
 
-      {/* Video player */}
-      {cacheChecked && videoUrl ? (
-        <View style={StyleSheet.absoluteFill}>
-          <VideoView style={StyleSheet.absoluteFill} player={player} contentFit="cover" nativeControls={false} pointerEvents="none" allowsFullscreen={false} allowsPictureInPicture={false} />
-        </View>
+      {shouldLoadVideo ? (
+        cacheChecked && videoUrl ? (
+          <View style={StyleSheet.absoluteFill}>
+            <VideoView style={StyleSheet.absoluteFill} player={player} contentFit="cover" nativeControls={false} pointerEvents="none" allowsFullscreen={false} allowsPictureInPicture={false} />
+          </View>
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
+            <ActivityIndicator size="large" color="rgba(255,255,255,0.6)" />
+            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 10 }}>Loading video...</Text>
+          </View>
+        )
       ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
-          <ActivityIndicator size="large" color="rgba(255,255,255,0.6)" />
-          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 10 }}>Loading video...</Text>
-        </View>
+        // Deferred row: no player, no decoder — just the thumbnail above,
+        // or a plain dark fallback if there's no thumbnail yet.
+        !media?.thumbnailUrl && <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} />
       )}
 
       {/* Pause overlay */}
@@ -270,7 +313,7 @@ export const FeedPostItem = ({
       )}
 
       {/* Progress bar — positioned above the bottom content area */}
-      {!showThumbnail && duration > 0 && (
+      {shouldLoadVideo && !showThumbnail && duration > 0 && (
         <View style={localStyles.progressWrap} pointerEvents="none">
           <View style={localStyles.progressTrack}>
             <Animated.View style={[localStyles.progressFill, { width: `${progressFraction * 100}%` }]} />
@@ -308,7 +351,7 @@ export const FeedPostItem = ({
           )}
 
           {post.linkedProduct && (
-            <TouchableOpacity style={[styles.productChip, (!post.media?.[0] && post.linkedProduct) && styles.productChipTextOnly]} onPress={onProductPress} activeOpacity={0.85}>
+            <TouchableOpacity style={[styles.productChip, isProductChipLightVariant && styles.productChipTextOnly]} onPress={onProductPress} activeOpacity={0.85}>
               {post.linkedProduct.images?.[0] ? (
                 <Image source={{ uri: post.linkedProduct.images[0] }} style={styles.productChipImg} />
               ) : (
@@ -316,9 +359,19 @@ export const FeedPostItem = ({
                   <Ionicons name="image-outline" size={14} color={C.dim} />
                 </View>
               )}
-              <Text style={[styles.productChipName, (!post.media?.[0] && post.linkedProduct) && { color: '#0F172A' }]} numberOfLines={1}>{post.linkedProduct.name}</Text>
-              <Text style={[styles.productChipPrice, (!post.media?.[0] && post.linkedProduct) && { color: '#0D9488' }]}>GH₵ {Number(post.linkedProduct.price).toFixed(2)}</Text>
-              <Ionicons name="chevron-forward" size={14} color={C.white} />
+              <View style={localStyles.productChipTextCol}>
+                <Text style={[styles.productChipName, isProductChipLightVariant && { color: '#0F172A' }]} numberOfLines={1}>{post.linkedProduct.name}</Text>
+                <Text style={[styles.productChipPrice, isProductChipLightVariant && { color: '#0D9488' }]}>GH₵ {Number(post.linkedProduct.price).toFixed(2)}</Text>
+              </View>
+              <TouchableOpacity
+                style={[localStyles.buyNowBtn, isProductChipLightVariant ? localStyles.buyNowBtnDark : localStyles.buyNowBtnLight]}
+                onPress={handleBuyNow}
+                activeOpacity={0.8}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Ionicons name="bag-handle-outline" size={12} color={isProductChipLightVariant ? '#fff' : '#0D9488'} />
+                <Text style={[localStyles.buyNowText, { color: isProductChipLightVariant ? '#fff' : '#0D9488' }]}>Buy Now</Text>
+              </TouchableOpacity>
             </TouchableOpacity>
           )}
 
@@ -373,5 +426,35 @@ const localStyles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: '700',
+  },
+  // Product chip now has three zones: image | name+price (flex) | Buy Now.
+  // productChipName/productChipPrice keep their existing shared styles —
+  // this just stacks them in a column instead of them being direct chip
+  // children, freeing horizontal space for the new button.
+  productChipTextCol: {
+    flex: 1,
+    marginRight: 8,
+  },
+  buyNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  // Light pill (white bg, brand-teal text/icon) for use over the dark
+  // translucent chip — video/image posts.
+  buyNowBtnLight: {
+    backgroundColor: '#fff',
+  },
+  // Dark pill (brand-teal bg, white text/icon) for use over the light
+  // chip variant — text-only / product-only posts (styles.productChipTextOnly).
+  buyNowBtnDark: {
+    backgroundColor: '#0D9488',
+  },
+  buyNowText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
 });

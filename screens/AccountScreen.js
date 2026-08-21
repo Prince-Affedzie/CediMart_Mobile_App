@@ -141,9 +141,6 @@ const AccountScreen = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <StatusBar backgroundColor={C.brandD} barStyle="light-content" />
-        <View style={styles.simpleHeader}>
-          <Text style={styles.simpleHeaderTitle}>Account</Text>
-        </View>
         <View style={styles.notLoggedInContainer}>
           <View style={styles.guestAvatarCircle}>
             <Ionicons name="person-outline" size={48} color={C.brandBorder} />

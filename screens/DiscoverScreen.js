@@ -50,28 +50,43 @@ const C = {
   skeleton: '#EEF2F6',
 };
 
-// ─── Category → { color, icon } — used for the fallback banner, tag, and
-// chip icons, so browsing by category is visually consistent (every
-// "Fashion" vendor reads the same color family even without a photo). ────
+// ─── Category → { color, icon } — kept in sync with the vendor sign-up
+// form's category list, including the 6 service-oriented categories added
+// for the business-discovery push (tutoring, photography, repairs, etc).
 const CATEGORY_META = {
-  '':                        { label: 'All',              icon: 'grid-outline',                  color: C.brand },
-  'electronics':              { label: 'Electronics',      icon: 'hardware-chip-outline',          color: '#2563EB' },
-  'phones and tablets':       { label: 'Phones & Tablets', icon: 'phone-portrait-outline',         color: '#7C3AED' },
-  'computers and laptops':    { label: 'Computers',        icon: 'laptop-outline',                 color: '#0891B2' },
-  'gaming':                   { label: 'Gaming',           icon: 'game-controller-outline',        color: '#DB2777' },
-  'fashion':                  { label: 'Fashion',          icon: 'shirt-outline',                  color: '#DC2626' },
-  'books-course-materials':   { label: 'Books',            icon: 'book-outline',                   color: '#B45309' },
-  'hostel-items':             { label: 'Hostel Items',     icon: 'bed-outline',                    color: '#0D9488' },
-  'appliances':                { label: 'Appliances',      icon: 'tv-outline',                     color: '#475569' },
-  'furniture':                { label: 'Furniture',        icon: 'cube-outline',                   color: '#92400E' },
-  'beauty and grooming':      { label: 'Beauty',           icon: 'sparkles-outline',                color: '#EC4899' },
-  'sports and fitness':       { label: 'Sports',           icon: 'basketball-outline',              color: '#16A34A' },
-  'accessories':              { label: 'Accessories',      icon: 'watch-outline',                   color: '#CA8A04' },
-  'food and drinks':          { label: 'Food & Drinks',    icon: 'fast-food-outline',               color: '#EA580C' },
-  'services':                  { label: 'Services',        icon: 'construct-outline',               color: '#0284C7' },
-  'other':                     { label: 'Other',           icon: 'ellipsis-horizontal-circle-outline', color: '#64748B' },
+  '':                          { label: 'All',                  icon: 'grid-outline',                       color: C.brand },
+  'electronics':                { label: 'Electronics',          icon: 'hardware-chip-outline',              color: '#2563EB' },
+  'phones and tablets':         { label: 'Phones & Tablets',     icon: 'phone-portrait-outline',             color: '#7C3AED' },
+  'computers and laptops':      { label: 'Computers',            icon: 'laptop-outline',                     color: '#0891B2' },
+  'gaming':                     { label: 'Gaming',                icon: 'game-controller-outline',            color: '#DB2777' },
+  'fashion':                    { label: 'Fashion',               icon: 'shirt-outline',                      color: '#DC2626' },
+  'books-course-materials':     { label: 'Books',                 icon: 'book-outline',                       color: '#B45309' },
+  'hostel-items':               { label: 'Hostel Items',          icon: 'bed-outline',                        color: '#0D9488' },
+  'appliances':                  { label: 'Appliances',           icon: 'tv-outline',                         color: '#475569' },
+  'furniture':                  { label: 'Furniture',             icon: 'cube-outline',                       color: '#92400E' },
+  'beauty and grooming':        { label: 'Beauty',                icon: 'sparkles-outline',                   color: '#EC4899' },
+  'sports and fitness':         { label: 'Sports',                icon: 'basketball-outline',                 color: '#16A34A' },
+  'accessories':                 { label: 'Accessories',          icon: 'watch-outline',                      color: '#CA8A04' },
+  'food and drinks':            { label: 'Food & Drinks',         icon: 'fast-food-outline',                  color: '#EA580C' },
+  'services':                    { label: 'Services',             icon: 'construct-outline',                  color: '#0284C7' },
+  'tutoring-education':         { label: 'Tutoring',              icon: 'school-outline',                     color: '#4F46E5' },
+  'photography-media':          { label: 'Photography',           icon: 'camera-outline',                     color: '#0EA5E9' },
+  'graphic-design-printing':    { label: 'Design & Print',        icon: 'color-palette-outline',              color: '#9333EA' },
+  'repair-services':            { label: 'Repairs',               icon: 'build-outline',                      color: '#65A30D' },
+  'events-catering':            { label: 'Events & Catering',     icon: 'restaurant-outline',                 color: '#F59E0B' },
+  'accommodation-housing':      { label: 'Housing',               icon: 'home-outline',                       color: '#0F766E' },
+  'other':                       { label: 'Other',                icon: 'ellipsis-horizontal-circle-outline', color: '#64748B' },
 };
 const CATEGORIES = Object.keys(CATEGORY_META).map((key) => ({ key, ...CATEGORY_META[key] }));
+
+// 🔥 NEW: primary Shops/Services split — this is the core navigation axis
+// from the business-discovery plan ("I need a product" vs "I need a
+// service"), so it's a persistent segmented control, not buried in a sheet.
+const BUSINESS_TYPE_FILTERS = [
+  { key: '', label: 'All', icon: 'apps-outline' },
+  { key: 'product', label: 'Shops', icon: 'storefront-outline' },
+  { key: 'service', label: 'Services', icon: 'construct-outline' },
+];
 
 const CAMPUSES = [
   { key: '', label: 'All campuses' },
@@ -119,6 +134,26 @@ const Pressy = ({ onPress, style, children, scaleTo = 0.96 }) => {
     </Pressable>
   );
 };
+
+// ─── Shops / Services segmented control ─────────────────────────────────────
+const BusinessTypeTabs = ({ value, onChange }) => (
+  <View style={styles.businessTypeTabs}>
+    {BUSINESS_TYPE_FILTERS.map((opt) => {
+      const active = value === opt.key;
+      return (
+        <TouchableOpacity
+          key={opt.key || 'all'}
+          style={[styles.businessTypeTab, active && styles.businessTypeTabActive]}
+          onPress={() => { Haptics.selectionAsync().catch(() => {}); onChange(opt.key); }}
+          activeOpacity={0.8}
+        >
+          <Ionicons name={opt.icon} size={14} color={active ? '#fff' : C.textOff} />
+          <Text style={[styles.businessTypeTabText, active && styles.businessTypeTabTextActive]}>{opt.label}</Text>
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+);
 
 // ─── Category chip (icon + label) ──────────────────────────────────────────
 const CategoryChip = ({ item, active, onPress }) => (
@@ -171,6 +206,7 @@ const VendorGridCard = ({ vendor, onPress }) => {
   const primaryCategory = vendor.categories?.[0];
   const categoryMeta = CATEGORY_META[primaryCategory] || CATEGORY_META.other;
   const productCount = vendor.productCount ?? vendor.products?.length ?? 0;
+  const isServiceOnly = vendor.businessType === 'service';
 
   return (
     <Pressy onPress={() => onPress(vendor)} style={styles.gridCard}>
@@ -225,15 +261,35 @@ const VendorGridCard = ({ vendor, onPress }) => {
           </Text>
         </View>
 
+        {/* 🔥 NEW: opening hours, when a business has set one — most
+            relevant for service businesses (tutors, repairs) where "when
+            can I reach them" matters more than a product catalog. */}
+        {!!vendor.openingHours && (
+          <View style={styles.metaRow}>
+            <Ionicons name="time-outline" size={10.5} color={C.textMuted} />
+            <Text style={styles.metaText} numberOfLines={1}>{vendor.openingHours}</Text>
+          </View>
+        )}
+
         <View style={styles.statsRow}>
           <View style={styles.statChip}>
             <Ionicons name="star" size={11} color={C.gold} />
             <Text style={styles.statChipText}>{vendor.rating?.toFixed(1) || '0.0'}</Text>
           </View>
-          <View style={styles.statChip}>
-            <Ionicons name="cube-outline" size={11} color={C.textOff} />
-            <Text style={styles.statChipText}>{productCount}</Text>
-          </View>
+          {/* 🔥 NEW: a pure-service business has no product catalog, so
+              showing "0 items" reads as broken. Show a "Message to book"
+              cue instead — matches how they're actually contacted. */}
+          {isServiceOnly ? (
+            <View style={styles.statChip}>
+              <Ionicons name="chatbubble-ellipses-outline" size={11} color={C.info} />
+              <Text style={styles.statChipText}>Message to book</Text>
+            </View>
+          ) : (
+            <View style={styles.statChip}>
+              <Ionicons name="cube-outline" size={11} color={C.textOff} />
+              <Text style={styles.statChipText}>{productCount}</Text>
+            </View>
+          )}
         </View>
       </View>
     </Pressy>
@@ -284,6 +340,7 @@ const DiscoverScreen = () => {
 
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [activeBusinessType, setActiveBusinessType] = useState(''); // 🔥 NEW
   const [activeCampus, setActiveCampus] = useState('');
   const [activeCategory, setActiveCategory] = useState('');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
@@ -312,6 +369,7 @@ const DiscoverScreen = () => {
           search: search || undefined,
           campus: activeCampus || undefined,
           category: activeCategory || undefined,
+          businessType: activeBusinessType || undefined, // 🔥 NEW
           isVerified: verifiedOnly ? true : undefined,
           sortBy: sort.key,
           order: sort.order,
@@ -335,12 +393,12 @@ const DiscoverScreen = () => {
         setLoadingMore(false);
       }
     },
-    [search, activeCampus, activeCategory, verifiedOnly, sort]
+    [search, activeCampus, activeCategory, activeBusinessType, verifiedOnly, sort]
   );
 
   useEffect(() => {
     fetchVendors(1);
-  }, [search, activeCampus, activeCategory, verifiedOnly, sort]);
+  }, [search, activeCampus, activeCategory, activeBusinessType, verifiedOnly, sort]);
 
   const handleRefresh = () => fetchVendors(1, { refresh: true });
   const handleLoadMore = () => {
@@ -354,8 +412,15 @@ const DiscoverScreen = () => {
     Haptics.selectionAsync().catch(() => {});
     setVerifiedOnly((v) => !v);
   };
+  const resetAllFilters = () => {
+    setActiveBusinessType('');
+    setActiveCampus('');
+    setActiveCategory('');
+    setVerifiedOnly(false);
+  };
 
-  const activeFilterCount = (activeCampus ? 1 : 0) + (activeCategory ? 1 : 0) + (verifiedOnly ? 1 : 0);
+  const activeFilterCount =
+    (activeCampus ? 1 : 0) + (activeCategory ? 1 : 0) + (verifiedOnly ? 1 : 0) + (activeBusinessType ? 1 : 0);
   const selectedCampusLabel = CAMPUSES.find((c) => c.key === activeCampus)?.label || 'Campus';
 
   const renderHeader = () => (
@@ -363,35 +428,45 @@ const DiscoverScreen = () => {
       {/* Title */}
       <View style={styles.titleRow}>
         <Text style={styles.screenTitle}>Discover</Text>
-        <Text style={styles.screenSubtitle}>Vendors selling across your campus</Text>
+        <Text style={styles.screenSubtitle}>Shops and services across your campus</Text>
       </View>
 
       {/* Live stat strip */}
       {stats && (
         <View style={styles.statStrip}>
           <View style={styles.statPill}>
-            <Ionicons name="storefront-outline" size={13} color={C.brand} />
-            <Text style={styles.statPillText}>{stats.totalVendors} vendor{stats.totalVendors !== 1 ? 's' : ''}</Text>
+            <Ionicons name="apps-outline" size={13} color={C.brand} />
+            <Text style={styles.statPillText}>{stats.totalVendors} total</Text>
           </View>
-          <View style={styles.statPill}>
-            <Ionicons name="checkmark-circle-outline" size={13} color={C.info} />
-            <Text style={styles.statPillText}>{stats.verifiedVendors} verified</Text>
-          </View>
-          {stats.averageRating > 0 && (
+          {stats.productBusinesses > 0 && (
             <View style={styles.statPill}>
-              <Ionicons name="star" size={13} color={C.gold} />
-              <Text style={styles.statPillText}>{stats.averageRating.toFixed(1)} avg</Text>
+              <Ionicons name="storefront-outline" size={13} color={C.accent} />
+              <Text style={styles.statPillText}>{stats.productBusinesses} shops</Text>
             </View>
           )}
+          {stats.serviceBusinesses > 0 && (
+            <View style={styles.statPill}>
+              <Ionicons name="construct-outline" size={13} color={C.info} />
+              <Text style={styles.statPillText}>{stats.serviceBusinesses} services</Text>
+            </View>
+          )}
+          <View style={styles.statPill}>
+            <Ionicons name="checkmark-circle-outline" size={13} color={C.success} />
+            <Text style={styles.statPillText}>{stats.verifiedVendors} verified</Text>
+          </View>
         </View>
       )}
+
+      {/* 🔥 NEW: Shops / Services segmented control — the primary way to
+          browse per the business-discovery plan */}
+      <BusinessTypeTabs value={activeBusinessType} onChange={setActiveBusinessType} />
 
       {/* Search bar */}
       <View style={styles.searchBar}>
         <Ionicons name="search-outline" size={18} color={C.textMuted} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search vendors, stores, campus area..."
+          placeholder="Search vendors, tags, campus area..."
           placeholderTextColor={C.textMuted}
           value={searchInput}
           onChangeText={setSearchInput}
@@ -450,10 +525,7 @@ const DiscoverScreen = () => {
       </View>
 
       {activeFilterCount > 0 && (
-        <TouchableOpacity
-          style={styles.clearFiltersBtn}
-          onPress={() => { setActiveCampus(''); setActiveCategory(''); setVerifiedOnly(false); }}
-        >
+        <TouchableOpacity style={styles.clearFiltersBtn} onPress={resetAllFilters}>
           <Ionicons name="close-circle" size={13} color={C.accent} />
           <Text style={styles.clearFiltersText}>Clear {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''}</Text>
         </TouchableOpacity>
@@ -463,7 +535,7 @@ const DiscoverScreen = () => {
 
   const renderEmpty = () => {
     if (loading) return null;
-    const hasActiveFilters = search || activeCampus || activeCategory || verifiedOnly;
+    const hasActiveFilters = search || activeCampus || activeCategory || verifiedOnly || activeBusinessType;
     return (
       <View style={styles.emptyState}>
         <View style={styles.emptyIconWrap}>
@@ -476,7 +548,7 @@ const DiscoverScreen = () => {
         {hasActiveFilters && (
           <TouchableOpacity
             style={styles.emptyResetBtn}
-            onPress={() => { setSearchInput(''); setActiveCampus(''); setActiveCategory(''); setVerifiedOnly(false); }}
+            onPress={() => { setSearchInput(''); resetAllFilters(); }}
           >
             <Text style={styles.emptyResetBtnText}>Reset filters</Text>
           </TouchableOpacity>
@@ -498,10 +570,10 @@ const DiscoverScreen = () => {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <FlatList
-          key="loading-list" // Add a unique key
+          key="loading-list"
           data={[]}
           renderItem={null}
-          numColumns={1} // Explicitly set numColumns
+          numColumns={1}
           ListHeaderComponent={renderHeader}
           ListFooterComponent={<SkeletonGrid />}
           contentContainerStyle={styles.listContent}
@@ -513,7 +585,7 @@ const DiscoverScreen = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <FlatList
-        key="vendors-grid" // Add a unique key
+        key="vendors-grid"
         data={vendors}
         keyExtractor={(item) => item._id}
         numColumns={2}
@@ -568,6 +640,19 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: C.border,
   },
   statPillText: { fontSize: 11.5, fontWeight: '700', color: C.textOff },
+
+  // 🔥 NEW: Shops / Services segmented control
+  businessTypeTabs: {
+    flexDirection: 'row', backgroundColor: C.surface, borderRadius: 14, padding: 4,
+    borderWidth: 1, borderColor: C.border, marginBottom: 14,
+  },
+  businessTypeTab: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: 11,
+  },
+  businessTypeTabActive: { backgroundColor: C.brand },
+  businessTypeTabText: { fontSize: 12.5, fontWeight: '700', color: C.textOff },
+  businessTypeTabTextActive: { color: '#fff' },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -679,7 +764,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
   metaText: { fontSize: 11, color: C.textMuted, flexShrink: 1 },
 
-  statsRow: { flexDirection: 'row', gap: 6, marginTop: 9 },
+  statsRow: { flexDirection: 'row', gap: 6, marginTop: 9, flexWrap: 'wrap' },
   statChip: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     backgroundColor: C.bg, borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3,

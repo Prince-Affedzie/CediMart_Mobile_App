@@ -107,7 +107,7 @@ export const styles = StyleSheet.create({
   productChipPrice: { color: C.brand, fontSize: 12.5, fontWeight: '800' },
 
   // Action rail
-  rail: { alignItems: 'center', gap: 12, paddingBottom: 4, marginBottom: 80 },
+  rail: { alignItems: 'center', gap: 8, paddingBottom: 4, marginBottom: 90 },
   railAvatarWrap: { alignItems: 'center', marginBottom: 8 },
   railAvatar: {
     width: 46, height: 46, borderRadius: 23, borderWidth: 2, borderColor: C.white,

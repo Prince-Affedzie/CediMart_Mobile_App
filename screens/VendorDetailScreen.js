@@ -4,7 +4,7 @@ import {
   View, Text, TouchableOpacity, Image,
   StyleSheet, ActivityIndicator, RefreshControl,
   Dimensions, Alert, Modal, Platform, FlatList,
-  Animated, Pressable, Share,
+  Animated, Pressable, Share, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -19,8 +19,6 @@ import { useAuth } from '../context/AuthContext';
 import ChatFAB from '../components/ChatFAB';
 import { shareVendorProfile } from '../utils/shareUtils';
 
-
-
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 const BANNER_HEIGHT = 190;
@@ -29,6 +27,12 @@ const CAMPUS_LABELS = {
   UG: 'University of Ghana', KNUST: 'KNUST', UCC: 'University of Cape Coast',
   UEW: 'University of Education, Winneba', UPSA: 'UPSA', GIMPA: 'GIMPA',
   ASHESI: 'Ashesi University', ATU: 'Accra Technical University', OTHER: 'Other',
+};
+
+const BUSINESS_TYPE_LABELS = {
+  'product': 'Products',
+  'service': 'Services',
+  'both': 'Products & Services',
 };
 
 const FEED_TYPE_CONFIG = {
@@ -41,8 +45,16 @@ const FEED_TYPE_CONFIG = {
   achievement: { icon: 'trophy-outline', color: '#059669', label: 'Achievement' },
 };
 
-// Kept in sync with the category palette on the Discover screen, so a
-// vendor's fallback banner here matches the color they were browsed under.
+const CATEGORY_LABELS = {
+  'electronics': 'Electronics', 'phones and tablets': 'Phones & Tablets',
+  'computers and laptops': 'Computers & Laptops', 'gaming': 'Gaming',
+  'fashion': 'Fashion', 'books-course-materials': 'Books & Course Materials',
+  'hostel-items': 'Hostel Items', 'appliances': 'Appliances',
+  'furniture': 'Furniture', 'beauty and grooming': 'Beauty & Grooming',
+  'sports and fitness': 'Sports & Fitness', 'accessories': 'Accessories',
+  'food and drinks': 'Food & Drinks', 'services': 'Services', 'other': 'Other',
+};
+
 const CATEGORY_COLORS = {
   'electronics': '#2563EB',
   'phones and tablets': '#7C3AED',
@@ -70,6 +82,7 @@ const C = {
   bg: '#F8FAFC', surface: '#FFFFFF', elev: '#F1F5F9',
   t1: '#0F172A', t2: '#475569', t3: '#94A3B8',
   white: '#FFFFFF', gold: '#F59E0B', skeleton: '#EEF2F6',
+  info: '#0284C7', infoBg: '#F0F9FF',
 };
 
 const shade = (hex, percent) => {
@@ -145,7 +158,7 @@ const FeedPostCard = ({ post, onPress }) => {
           </View>
           <View style={s.feedStat}>
             <Ionicons name="chatbubble-outline" size={10} color={C.t3} />
-            <Text style={s.feedStatText}>{formatCount(post.comments?.length || 0)}</Text>
+            <Text style={s.feedStatText}>{formatCount(post.commentCount || 0)}</Text>
           </View>
           <Text style={s.feedTime}>{getTimeAgo(post.createdAt)}</Text>
         </View>
@@ -204,9 +217,10 @@ const VendorDetailScreen = ({ route, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [addedProductName, setAddedProductName] = useState('');
   const [sharing, setSharing] = useState(false);
+  const [showFullBio, setShowFullBio] = useState(false);
 
   // Tabs
-  const [activeTab, setActiveTab] = useState('products'); // 'products' | 'posts'
+  const [activeTab, setActiveTab] = useState('products'); // 'products' | 'posts' | 'about'
 
   // Feed & Follow
   const [feedPosts, setFeedPosts] = useState([]);
@@ -224,7 +238,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
       if (res.status === 200 && res.data.success) {
         const vendorData = res.data.data;
         setVendor(vendorData);
-        setFollowerCount(vendorData.user.followersCount || 0);
+        setFollowerCount(vendorData.user?.followersCount || vendorData.followersCount || 0);
         if (vendorData.user) {
           fetchVendorFeed(vendorData.user._id || vendorData.user);
         }
@@ -242,11 +256,8 @@ const VendorDetailScreen = ({ route, navigation }) => {
   const fetchVendorFeed = async (userId) => {
     setFeedLoading(true);
     try {
-      const res = await getFeed({ limit: 20 });
-      const allPosts = res.data?.data?.posts || [];
-      const vendorPosts = allPosts.filter(
-        post => post.author?._id === userId || post.author === userId
-      );
+      const res = await getFeed({ limit: 20, author: userId });
+      const vendorPosts = res.data?.data?.posts || [];
       setFeedPosts(vendorPosts);
     } catch (err) {
       console.error('Feed fetch error:', err);
@@ -298,10 +309,27 @@ const VendorDetailScreen = ({ route, navigation }) => {
     }
   };
 
-
   const handleTabChange = (tab) => {
     Haptics.selectionAsync().catch(() => {});
     setActiveTab(tab);
+  };
+
+  const handleWhatsApp = () => {
+    if (vendor?.whatsapp) {
+      const phone = vendor.whatsapp.replace(/[^0-9]/g, '');
+      Linking.openURL(`https://wa.me/${phone}`).catch(() => {
+        Alert.alert('Error', 'Could not open WhatsApp');
+      });
+    }
+  };
+
+  const handleInstagram = () => {
+    if (vendor?.instagram) {
+      const handle = vendor.instagram.replace('@', '');
+      Linking.openURL(`https://instagram.com/${handle}`).catch(() => {
+        Alert.alert('Error', 'Could not open Instagram');
+      });
+    }
   };
 
   useEffect(() => { fetchVendor(); }, [vendorId]);
@@ -344,6 +372,8 @@ const VendorDetailScreen = ({ route, navigation }) => {
   const products = vendor?.products || [];
   const bannerCategoryColor = CATEGORY_COLORS[vendor?.categories?.[0]] || C.brandD;
   const hasRating = vendor?.rating > 0 || vendor?.numReviews > 0;
+  const categories = vendor?.categories || [];
+  const businessType = vendor?.businessType;
 
   if (loading && !refreshing) {
     return (
@@ -390,10 +420,10 @@ const VendorDetailScreen = ({ route, navigation }) => {
       </Modal>
 
       <FlatList
-        data={activeTab === 'products' ? products : feedPosts}
+        data={activeTab === 'products' ? products : activeTab === 'posts' ? feedPosts : []}
         keyExtractor={(item, index) => item._id || index.toString()}
         numColumns={activeTab === 'products' ? 2 : 1}
-        key={activeTab} // Force re-render on tab change
+        key={activeTab}
         columnWrapperStyle={activeTab === 'products' ? { paddingHorizontal: 10 } : undefined}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.brand} />}
         showsVerticalScrollIndicator={false}
@@ -414,9 +444,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
                   <Ionicons name="storefront-outline" size={90} color="rgba(255,255,255,0.10)" style={s.bannerIconDecor} />
                 </LinearGradient>
               )}
-              {/* Top scrim keeps back/share buttons legible over any photo */}
               <LinearGradient colors={['rgba(0,0,0,0.45)', 'transparent']} style={s.bannerTopScrim} pointerEvents="none" />
-              {/* Bottom scrim blends the banner into the profile section */}
               <LinearGradient colors={['transparent', 'rgba(10,30,18,0.35)']} style={s.bannerBottomScrim} pointerEvents="none" />
 
               <View style={s.bannerTopBar}>
@@ -437,7 +465,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
               </View>
             </View>
 
-            {/* Profile Info — horizontal layout like Instagram */}
+            {/* Profile Info */}
             <View style={s.profileSection}>
               <View style={s.avatarRing}>
                 {isValidImage(vendor.profileImage) ? (
@@ -514,9 +542,82 @@ const VendorDetailScreen = ({ route, navigation }) => {
                     <Text style={s.metaItemText}>{formatCount(vendor.totalSales)} sold</Text>
                   </View>
                 )}
+                {businessType && (
+                  <View style={s.metaItem}>
+                    <Ionicons name="briefcase-outline" size={12} color={C.brand} />
+                    <Text style={[s.metaItemText, { color: C.brand, fontWeight: '600' }]}>
+                      {BUSINESS_TYPE_LABELS[businessType] || businessType}
+                    </Text>
+                  </View>
+                )}
               </View>
 
-              {vendor.bio && <Text style={s.bioText}>{vendor.bio}</Text>}
+              {/* Categories */}
+              {categories.length > 0 && (
+                <View style={s.categoriesWrap}>
+                  {categories.slice(0, 4).map(cat => (
+                    <View key={cat} style={[s.categoryChip, { backgroundColor: (CATEGORY_COLORS[cat] || C.brand) + '15' }]}>
+                      <Text style={[s.categoryChipText, { color: CATEGORY_COLORS[cat] || C.brand }]}>
+                        {CATEGORY_LABELS[cat] || cat}
+                      </Text>
+                    </View>
+                  ))}
+                  {categories.length > 4 && (
+                    <View style={[s.categoryChip, { backgroundColor: C.gray100 }]}>
+                      <Text style={[s.categoryChipText, { color: C.t3 }]}>+{categories.length - 4}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Opening Hours */}
+              {vendor.openingHours && (
+                <View style={s.openingHoursRow}>
+                  <Ionicons name="time-outline" size={13} color={C.accent} />
+                  <Text style={s.openingHoursText}>{vendor.openingHours}</Text>
+                </View>
+              )}
+
+              {/* Location Details */}
+              {vendor.location?.campusArea && (
+                <View style={s.locationRow}>
+                  <Ionicons name="location-outline" size={13} color={C.t3} />
+                  <Text style={s.locationText}>
+                    {vendor.location.campusArea}
+                    {vendor.location.hostel ? ` · ${vendor.location.hostel}` : ''}
+                  </Text>
+                </View>
+              )}
+
+              {/* Bio */}
+              {vendor.bio && (
+                <TouchableOpacity onPress={() => setShowFullBio(!showFullBio)} activeOpacity={0.8}>
+                  <Text style={s.bioText} numberOfLines={showFullBio ? undefined : 3}>
+                    {vendor.bio}
+                  </Text>
+                  {vendor.bio.length > 120 && (
+                    <Text style={s.readMoreText}>{showFullBio ? 'Show less' : 'Read more'}</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+
+              {/* Social Links */}
+              {(vendor.whatsapp || vendor.instagram) && (
+                <View style={s.socialRow}>
+                  {vendor.whatsapp && (
+                    <TouchableOpacity style={s.socialBtn} onPress={handleWhatsApp} activeOpacity={0.8}>
+                      <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                      <Text style={s.socialBtnText}>WhatsApp</Text>
+                    </TouchableOpacity>
+                  )}
+                  {vendor.instagram && (
+                    <TouchableOpacity style={s.socialBtn} onPress={handleInstagram} activeOpacity={0.8}>
+                      <Ionicons name="logo-instagram" size={16} color="#E4405F" />
+                      <Text style={s.socialBtnText}>Instagram</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
             </View>
 
             {/* Tabs */}
@@ -587,15 +688,15 @@ const VendorDetailScreen = ({ route, navigation }) => {
       />
 
       <ChatFAB
-      recipientId={vendor?.user?._id || vendor?.user}
-      isAuthenticated={isAuthenticated}
-      currentUserId={user?._id || user?.id}
-      style={{
-        position: 'absolute',
-        bottom: 74,
-        right: 16,
-      }}
-    />
+        recipientId={vendor?.user?._id || vendor?.user}
+        isAuthenticated={isAuthenticated}
+        currentUserId={user?._id || user?.id}
+        style={{
+          position: 'absolute',
+          bottom: 74,
+          right: 16,
+        }}
+      />
 
     </SafeAreaView>
   );
@@ -627,7 +728,7 @@ const s = StyleSheet.create({
   circleBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
   circleBtnDisabled: { opacity: 0.6 },
 
-  // Profile — horizontal layout
+  // Profile
   profileSection: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 16, gap: 20,
@@ -665,7 +766,32 @@ const s = StyleSheet.create({
   metaLine: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaItemText: { fontSize: 12, color: C.t2, fontWeight: '500' },
+  
+  // Categories
+  categoriesWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  categoryChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16 },
+  categoryChipText: { fontSize: 11, fontWeight: '700' },
+  
+  // Opening hours
+  openingHoursRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  openingHoursText: { fontSize: 12.5, color: C.t2, fontWeight: '500' },
+  
+  // Location
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  locationText: { fontSize: 12.5, color: C.t2 },
+  
+  // Bio
   bioText: { fontSize: 13, color: C.t2, marginTop: 10, lineHeight: 19 },
+  readMoreText: { fontSize: 12, color: C.brand, fontWeight: '600', marginTop: 4 },
+  
+  // Social links
+  socialRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  socialBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: C.surface, paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 20, borderWidth: 1, borderColor: C.elev,
+  },
+  socialBtnText: { fontSize: 12, fontWeight: '600', color: C.t1 },
 
   // Tabs
   tabBar: {

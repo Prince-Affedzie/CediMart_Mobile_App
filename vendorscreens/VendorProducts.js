@@ -181,7 +181,18 @@ const MyProductsScreen = ({ navigation }) => {
     return () => { isMounted = false; };
   }, [refetchProducts, products.length]));
 
-  useEffect(() => { if (!contextLoading && products.length > 0) Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start(); }, [contextLoading, products.length]);
+  // FIX: this used to only fade in when `products.length > 0`, which meant
+  // a vendor with zero products would have contextLoading go false, the
+  // condition would evaluate `true && false` = false, and fadeAnim would
+  // stay at its initial value of 0 forever — the whole Animated.FlatList
+  // (including its correctly-written "No listings yet" empty state) sat at
+  // opacity: 0, permanently invisible. It wasn't missing, it was
+  // transparent. Fade in whenever loading finishes, regardless of count.
+  useEffect(() => {
+    if (!contextLoading) {
+      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+    }
+  }, [contextLoading]);
 
   const stats = useMemo(() => {
     const available = products.filter(p => p.isAvailable && (p.countInStock ?? 0) > 0).length;
