@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-  Dimensions,
   ActivityIndicator,
   RefreshControl,
   Modal,
@@ -23,12 +22,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { getVendors } from '../apis/vendorApi';
 
-const { width } = Dimensions.get('window');
-const GRID_GAP = 12;
-const CARD_WIDTH = (width - 16 * 2 - GRID_GAP) / 2;
-const BANNER_HEIGHT = 116;
-
-// ─── Design Tokens ──────────────────────────────────────────────────────────
+// ─── Design Tokens (unchanged brand palette) ───────────────────────────────
 const C = {
   bg: '#F8FAFC',
   surface: '#FFFFFF',
@@ -79,9 +73,8 @@ const CATEGORY_META = {
 };
 const CATEGORIES = Object.keys(CATEGORY_META).map((key) => ({ key, ...CATEGORY_META[key] }));
 
-// 🔥 NEW: primary Shops/Services split — this is the core navigation axis
-// from the business-discovery plan ("I need a product" vs "I need a
-// service"), so it's a persistent segmented control, not buried in a sheet.
+// Primary Shops/Services split — the core navigation axis from the
+// business-discovery plan ("I need a product" vs "I need a service").
 const BUSINESS_TYPE_FILTERS = [
   { key: '', label: 'All', icon: 'apps-outline' },
   { key: 'product', label: 'Shops', icon: 'storefront-outline' },
@@ -113,7 +106,7 @@ const SEARCH_DEBOUNCE_MS = 400;
 const isRealImageUrl = (val) => !!val && /^https?:\/\//i.test(val);
 
 // Darkens a #rrggbb hex by `percent` (0–100) — used to build a 2-stop
-// gradient out of a single category color instead of a flat fill.
+// gradient out of a single brand color instead of a flat fill.
 const shade = (hex, percent) => {
   const num = parseInt(hex.replace('#', ''), 16);
   const amt = Math.round(2.55 * percent);
@@ -124,7 +117,7 @@ const shade = (hex, percent) => {
 };
 
 // ─── Press-scale wrapper for a tactile, premium feel on tap ────────────────
-const Pressy = ({ onPress, style, children, scaleTo = 0.96 }) => {
+const Pressy = ({ onPress, style, children, scaleTo = 0.97 }) => {
   const scale = useRef(new Animated.Value(1)).current;
   const onPressIn = () => Animated.spring(scale, { toValue: scaleTo, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
   const onPressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 6 }).start();
@@ -134,6 +127,24 @@ const Pressy = ({ onPress, style, children, scaleTo = 0.96 }) => {
     </Pressable>
   );
 };
+
+// ─── Trust hero — sets the "verified campus marketplace" framing up top ────
+const DiscoverHero = () => (
+  <LinearGradient
+    colors={[C.brand, shade(C.brand, 20)]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 1 }}
+    style={styles.hero}
+  >
+    <View style={styles.heroBadge}>
+      <Ionicons name="shield-checkmark" size={12} color="#fff" />
+      <Text style={styles.heroBadgeText}>Verified vendors</Text>
+    </View>
+    <Text style={styles.heroTitle}>Trusted shops,{'\n'}run by students like you</Text>
+    <Text style={styles.heroSub}>Buy and book from vendors on your own campus</Text>
+    <Ionicons name="bag-handle" size={84} color="rgba(255,255,255,0.14)" style={styles.heroIconDecor} />
+  </LinearGradient>
+);
 
 // ─── Shops / Services segmented control ─────────────────────────────────────
 const BusinessTypeTabs = ({ value, onChange }) => (
@@ -155,15 +166,15 @@ const BusinessTypeTabs = ({ value, onChange }) => (
   </View>
 );
 
-// ─── Category chip (icon + label) ──────────────────────────────────────────
-const CategoryChip = ({ item, active, onPress }) => (
-  <TouchableOpacity
-    style={[styles.chip, active && { backgroundColor: item.color, borderColor: item.color }]}
-    onPress={onPress}
-    activeOpacity={0.8}
-  >
-    <Ionicons name={item.icon} size={13} color={active ? '#fff' : item.color} style={{ marginRight: 5 }} />
-    <Text style={[styles.chipText, active && styles.chipTextActive]}>{item.label}</Text>
+// ─── Category quick-filter tile (icon over label) ──────────────────────────
+const CategoryTile = ({ item, active, onPress }) => (
+  <TouchableOpacity style={[styles.categoryTile, active && styles.categoryTileActive]} onPress={onPress} activeOpacity={0.8}>
+    <View style={[styles.categoryTileIconWrap, { backgroundColor: active ? item.color : `${item.color}16` }]}>
+      <Ionicons name={item.icon} size={19} color={active ? '#fff' : item.color} />
+    </View>
+    <Text style={[styles.categoryTileLabel, active && styles.categoryTileLabelActive]} numberOfLines={1}>
+      {item.label}
+    </Text>
   </TouchableOpacity>
 );
 
@@ -196,108 +207,99 @@ const OptionSheet = ({ visible, title, options, selectedKey, onSelect, onClose }
   </Modal>
 );
 
-// ─── Vendor Grid Card ───────────────────────────────────────────────────────
-const VendorGridCard = ({ vendor, onPress }) => {
-  const hasBanner = isRealImageUrl(vendor.storeBanner);
+// ─── Product thumbnail (used in the vendor card's item strip) ─────────────
+const ProductThumb = ({ uri }) =>
+  isRealImageUrl(uri) ? (
+    <Image source={{ uri }} style={styles.thumbImg} />
+  ) : (
+    <View style={[styles.thumbImg, styles.thumbPlaceholder]}>
+      <Ionicons name="image-outline" size={15} color={C.textMuted} />
+    </View>
+  );
+
+// ─── Vendor list card ───────────────────────────────────────────────────────
+const VendorListCard = ({ vendor, onPress }) => {
   const hasAvatar = isRealImageUrl(vendor.profileImage);
   const displayName = vendor.storeName || vendor.name;
   const campusLabel = CAMPUSES.find((c) => c.key === vendor.campus)?.label || vendor.campus;
   const areaLabel = vendor.location?.campusArea;
+  const locationLine = [areaLabel, campusLabel].filter(Boolean).join(', ') || 'Campus not set';
   const primaryCategory = vendor.categories?.[0];
   const categoryMeta = CATEGORY_META[primaryCategory] || CATEGORY_META.other;
-  const productCount = vendor.productCount ?? vendor.products?.length ?? 0;
+  const categoryLine = (vendor.categories || [])
+    .slice(0, 2)
+    .map((c) => CATEGORY_META[c]?.label)
+    .filter(Boolean)
+    .join(' & ') || categoryMeta.label;
   const isServiceOnly = vendor.businessType === 'service';
+  const products = vendor.products || [];
+  const shownProducts = products.slice(0, 3);
+  const extraCount = Math.max(0, (vendor.productCount ?? products.length) - shownProducts.length);
 
   return (
-    <Pressy onPress={() => onPress(vendor)} style={styles.gridCard}>
-      {/* Banner */}
-      <View style={styles.bannerWrap}>
-        {hasBanner ? (
-          <Image source={{ uri: vendor.storeBanner }} style={styles.banner} resizeMode="cover" />
+    <Pressy onPress={() => onPress(vendor)} style={styles.listCard}>
+      <View style={styles.listCardTop}>
+        {hasAvatar ? (
+          <Image source={{ uri: vendor.profileImage }} style={styles.listAvatar} />
         ) : (
-          <LinearGradient
-            colors={[categoryMeta.color, shade(categoryMeta.color, 22)]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.banner}
-          >
-            <Ionicons name={categoryMeta.icon} size={68} color="rgba(255,255,255,0.14)" style={styles.bannerIconDecor} />
-          </LinearGradient>
-        )}
-        <View style={styles.bannerScrim} pointerEvents="none" />
-
-        {vendor.isVerified && (
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={13} color="#fff" />
+          <View style={[styles.listAvatar, styles.listAvatarPlaceholder, { backgroundColor: `${categoryMeta.color}1A` }]}>
+            <Text style={[styles.listAvatarInitial, { color: categoryMeta.color }]}>
+              {displayName?.charAt(0)?.toUpperCase() || '?'}
+            </Text>
           </View>
         )}
 
-        {primaryCategory !== undefined && categoryMeta && (
-          <View style={[styles.categoryTag, { backgroundColor: hasBanner ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.22)' }]}>
-            <Ionicons name={categoryMeta.icon} size={9} color="#fff" />
-            <Text style={styles.categoryTagText} numberOfLines={1}>{categoryMeta.label}</Text>
+        <View style={styles.listCardInfo}>
+          <Text style={styles.listStoreName} numberOfLines={1}>{displayName}</Text>
+          <Text style={styles.listCategoryLine} numberOfLines={1}>{categoryLine}</Text>
+          <View style={styles.listMetaRow}>
+            <Ionicons name="star" size={11} color={C.gold} />
+            <Text style={styles.listMetaText}>{vendor.rating?.toFixed(1) || '0.0'}</Text>
+            {!!vendor.reviewCount && <Text style={styles.listMetaMuted}>({vendor.reviewCount})</Text>}
+            <Text style={styles.listMetaDot}>·</Text>
+            <Ionicons name="location-outline" size={11} color={C.textMuted} />
+            <Text style={styles.listMetaMuted} numberOfLines={1}>{locationLine}</Text>
           </View>
-        )}
+        </View>
 
-        {/* Avatar overlapping the banner's bottom edge */}
-        <View style={styles.avatarRing}>
-          {hasAvatar ? (
-            <Image source={{ uri: vendor.profileImage }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatarPlaceholder, { backgroundColor: categoryMeta.color + '22' }]}>
-              <Text style={[styles.avatarInitial, { color: categoryMeta.color }]}>{displayName?.charAt(0)?.toUpperCase() || '?'}</Text>
+        <View style={styles.listCardRight}>
+          {vendor.isVerified && (
+            <View style={styles.verifiedPill}>
+              <Ionicons name="checkmark-circle" size={11} color={C.success} />
+              <Text style={styles.verifiedPillText}>Verified</Text>
             </View>
           )}
+          <Ionicons name="chevron-forward" size={16} color={C.textMuted} style={{ marginTop: 8 }} />
         </View>
       </View>
 
-      {/* Body */}
-      <View style={styles.cardBody}>
-        <Text style={styles.storeName} numberOfLines={1}>{displayName}</Text>
-        <View style={styles.metaRow}>
-          <Ionicons name="location-outline" size={10.5} color={C.textMuted} />
-          <Text style={styles.metaText} numberOfLines={1}>
-            {campusLabel || 'Campus not set'}{areaLabel ? ` · ${areaLabel}` : ''}
+      {isServiceOnly ? (
+        // A pure-service business has no product catalog, so a thumbnail
+        // strip would read as broken. Show how they're actually booked.
+        <View style={styles.serviceCue}>
+          <Ionicons name="chatbubble-ellipses-outline" size={13} color={C.info} />
+          <Text style={styles.serviceCueText} numberOfLines={1}>
+            {vendor.openingHours ? `Message to book · ${vendor.openingHours}` : 'Message to book'}
           </Text>
         </View>
-
-        {/* 🔥 NEW: opening hours, when a business has set one — most
-            relevant for service businesses (tutors, repairs) where "when
-            can I reach them" matters more than a product catalog. */}
-        {!!vendor.openingHours && (
-          <View style={styles.metaRow}>
-            <Ionicons name="time-outline" size={10.5} color={C.textMuted} />
-            <Text style={styles.metaText} numberOfLines={1}>{vendor.openingHours}</Text>
-          </View>
-        )}
-
-        <View style={styles.statsRow}>
-          <View style={styles.statChip}>
-            <Ionicons name="star" size={11} color={C.gold} />
-            <Text style={styles.statChipText}>{vendor.rating?.toFixed(1) || '0.0'}</Text>
-          </View>
-          {/* 🔥 NEW: a pure-service business has no product catalog, so
-              showing "0 items" reads as broken. Show a "Message to book"
-              cue instead — matches how they're actually contacted. */}
-          {isServiceOnly ? (
-            <View style={styles.statChip}>
-              <Ionicons name="chatbubble-ellipses-outline" size={11} color={C.info} />
-              <Text style={styles.statChipText}>Message to book</Text>
-            </View>
-          ) : (
-            <View style={styles.statChip}>
-              <Ionicons name="cube-outline" size={11} color={C.textOff} />
-              <Text style={styles.statChipText}>{productCount}</Text>
+      ) : shownProducts.length > 0 ? (
+        <View style={styles.thumbRow}>
+          {shownProducts.map((p, i) => (
+            <ProductThumb key={p._id || i} uri={p.images?.[0] || p.image} />
+          ))}
+          {extraCount > 0 && (
+            <View style={[styles.thumbImg, styles.thumbMore]}>
+              <Text style={styles.thumbMoreText}>+{extraCount}</Text>
             </View>
           )}
         </View>
-      </View>
+      ) : null}
     </Pressy>
   );
 };
 
-// ─── Skeleton grid (shown on first load, in place of the old spinner) ──────
-const SkeletonCard = ({ delay = 0 }) => {
+// ─── Skeleton list (shown on first load, in place of the old spinner) ─────
+const SkeletonListCard = ({ delay = 0 }) => {
   const shimmer = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const anim = Animated.loop(Animated.sequence([
@@ -309,21 +311,45 @@ const SkeletonCard = ({ delay = 0 }) => {
   }, []);
   const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.85] });
   return (
-    <View style={styles.gridCard}>
-      <Animated.View style={[styles.banner, { backgroundColor: C.skeleton, opacity }]} />
-      <View style={styles.cardBody}>
-        <Animated.View style={[skeletonStyles.line, { width: '70%', height: 13, opacity }]} />
-        <Animated.View style={[skeletonStyles.line, { width: '50%', height: 10, marginTop: 8, opacity }]} />
-        <Animated.View style={[skeletonStyles.line, { width: '35%', height: 10, marginTop: 10, opacity }]} />
+    <View style={styles.listCard}>
+      <View style={styles.listCardTop}>
+        <Animated.View style={[styles.listAvatar, { backgroundColor: C.skeleton, opacity }]} />
+        <View style={styles.listCardInfo}>
+          <Animated.View style={[skeletonStyles.line, { width: '62%', height: 13, opacity }]} />
+          <Animated.View style={[skeletonStyles.line, { width: '42%', height: 10, marginTop: 7, opacity }]} />
+          <Animated.View style={[skeletonStyles.line, { width: '55%', height: 10, marginTop: 8, opacity }]} />
+        </View>
+      </View>
+      <View style={styles.thumbRow}>
+        {[0, 1, 2].map((i) => (
+          <Animated.View key={i} style={[styles.thumbImg, { backgroundColor: C.skeleton, opacity }]} />
+        ))}
       </View>
     </View>
   );
 };
 
-const SkeletonGrid = () => (
-  <View style={styles.skeletonGrid}>
-    {[0, 100, 200, 300, 400, 500].map((delay, i) => <SkeletonCard key={i} delay={delay} />)}
+const SkeletonList = () => (
+  <View>
+    {[0, 90, 180, 270].map((delay, i) => <SkeletonListCard key={i} delay={delay} />)}
   </View>
+);
+
+// ─── Become-a-vendor CTA — closes out the list, matches the reference's
+// bottom banner. Adjust the route name to your actual vendor sign-up screen.
+const BecomeVendorCTA = ({ onPress }) => (
+  <TouchableOpacity style={styles.vendorCta} activeOpacity={0.85} onPress={onPress}>
+    <View style={styles.vendorCtaIconWrap}>
+      <Ionicons name="storefront" size={20} color={C.brand} />
+    </View>
+    <View style={styles.vendorCtaText}>
+      <Text style={styles.vendorCtaTitle}>Have a business?</Text>
+      <Text style={styles.vendorCtaSub}>Join CediMart and reach students on your campus</Text>
+    </View>
+    <View style={styles.vendorCtaBtn}>
+      <Text style={styles.vendorCtaBtnText}>Start</Text>
+    </View>
+  </TouchableOpacity>
 );
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
@@ -340,7 +366,7 @@ const DiscoverScreen = () => {
 
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [activeBusinessType, setActiveBusinessType] = useState(''); // 🔥 NEW
+  const [activeBusinessType, setActiveBusinessType] = useState('');
   const [activeCampus, setActiveCampus] = useState('');
   const [activeCategory, setActiveCategory] = useState('');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
@@ -369,7 +395,7 @@ const DiscoverScreen = () => {
           search: search || undefined,
           campus: activeCampus || undefined,
           category: activeCategory || undefined,
-          businessType: activeBusinessType || undefined, // 🔥 NEW
+          businessType: activeBusinessType || undefined,
           isVerified: verifiedOnly ? true : undefined,
           sortBy: sort.key,
           order: sort.order,
@@ -408,6 +434,10 @@ const DiscoverScreen = () => {
     Haptics.selectionAsync().catch(() => {});
     navigation.navigate('VendorDetail', { vendorId: vendor._id });
   };
+  const handleBecomeVendor = () => {
+    Haptics.selectionAsync().catch(() => {});
+    navigation.navigate('VendorSignUp'); // adjust to your actual route name
+  };
   const toggleVerified = () => {
     Haptics.selectionAsync().catch(() => {});
     setVerifiedOnly((v) => !v);
@@ -422,6 +452,7 @@ const DiscoverScreen = () => {
   const activeFilterCount =
     (activeCampus ? 1 : 0) + (activeCategory ? 1 : 0) + (verifiedOnly ? 1 : 0) + (activeBusinessType ? 1 : 0);
   const selectedCampusLabel = CAMPUSES.find((c) => c.key === activeCampus)?.label || 'Campus';
+  const sectionLabel = activeBusinessType === 'service' ? 'Services' : activeBusinessType === 'product' ? 'Shops' : 'All vendors';
 
   const renderHeader = () => (
     <View>
@@ -430,6 +461,9 @@ const DiscoverScreen = () => {
         <Text style={styles.screenTitle}>Discover</Text>
         <Text style={styles.screenSubtitle}>Shops and services across your campus</Text>
       </View>
+
+      {/* Trust hero */}
+      <DiscoverHero />
 
       {/* Live stat strip */}
       {stats && (
@@ -457,8 +491,7 @@ const DiscoverScreen = () => {
         </View>
       )}
 
-      {/* 🔥 NEW: Shops / Services segmented control — the primary way to
-          browse per the business-discovery plan */}
+      {/* Shops / Services segmented control */}
       <BusinessTypeTabs value={activeBusinessType} onChange={setActiveBusinessType} />
 
       {/* Search bar */}
@@ -479,14 +512,14 @@ const DiscoverScreen = () => {
         )}
       </View>
 
-      {/* Category chips */}
+      {/* Category quick tiles */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipRow}
+        contentContainerStyle={styles.categoryRow}
       >
         {CATEGORIES.map((item) => (
-          <CategoryChip
+          <CategoryTile
             key={item.key || 'all'}
             item={item}
             active={activeCategory === item.key}
@@ -530,6 +563,10 @@ const DiscoverScreen = () => {
           <Text style={styles.clearFiltersText}>Clear {activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''}</Text>
         </TouchableOpacity>
       )}
+
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionLabel}>{sectionLabel}</Text>
+      </View>
     </View>
   );
 
@@ -557,14 +594,16 @@ const DiscoverScreen = () => {
     );
   };
 
-  const renderFooter = () => {
-    if (!loadingMore) return null;
-    return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={C.brand} />
-      </View>
-    );
-  };
+  const renderFooter = () => (
+    <View>
+      {loadingMore && (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color={C.brand} />
+        </View>
+      )}
+      {!loading && vendors.length > 0 && <BecomeVendorCTA onPress={handleBecomeVendor} />}
+    </View>
+  );
 
   if (loading && vendors.length === 0) {
     return (
@@ -573,9 +612,8 @@ const DiscoverScreen = () => {
           key="loading-list"
           data={[]}
           renderItem={null}
-          numColumns={1}
           ListHeaderComponent={renderHeader}
-          ListFooterComponent={<SkeletonGrid />}
+          ListFooterComponent={<SkeletonList />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
@@ -585,12 +623,10 @@ const DiscoverScreen = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <FlatList
-        key="vendors-grid"
+        key="vendors-list"
         data={vendors}
         keyExtractor={(item) => item._id}
-        numColumns={2}
-        columnWrapperStyle={vendors.length > 1 ? styles.columnWrapper : undefined}
-        renderItem={({ item }) => <VendorGridCard vendor={item} onPress={handleVendorPress} />}
+        renderItem={({ item }) => <VendorListCard vendor={item} onPress={handleVendorPress} />}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
@@ -627,11 +663,29 @@ const DiscoverScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   listContent: { paddingHorizontal: 16, paddingBottom: 40 },
-  columnWrapper: { gap: GRID_GAP },
 
-  titleRow: { paddingTop: 14, marginBottom: 12 },
+  titleRow: { paddingTop: 14, marginBottom: 14 },
   screenTitle: { fontSize: 28, fontWeight: '900', color: C.text, letterSpacing: -0.6 },
   screenSubtitle: { fontSize: 13, color: C.textMuted, marginTop: 3 },
+
+  // Hero
+  hero: {
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    minHeight: 128,
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  heroBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+    marginBottom: 10,
+  },
+  heroBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  heroTitle: { color: '#fff', fontSize: 21, fontWeight: '900', lineHeight: 26, letterSpacing: -0.3, marginBottom: 6 },
+  heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, lineHeight: 18, maxWidth: '78%' },
+  heroIconDecor: { position: 'absolute', right: -12, bottom: -12 },
 
   statStrip: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
   statPill: {
@@ -641,7 +695,7 @@ const styles = StyleSheet.create({
   },
   statPillText: { fontSize: 11.5, fontWeight: '700', color: C.textOff },
 
-  // 🔥 NEW: Shops / Services segmented control
+  // Shops / Services segmented control
   businessTypeTabs: {
     flexDirection: 'row', backgroundColor: C.surface, borderRadius: 14, padding: 4,
     borderWidth: 1, borderColor: C.border, marginBottom: 14,
@@ -662,14 +716,18 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, color: C.text, height: '100%' },
 
-  chipRow: { gap: 8, paddingBottom: 14 },
-  chip: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.surface, borderRadius: 20, paddingHorizontal: 13, paddingVertical: 8,
-    borderWidth: 1, borderColor: C.border,
+  // Category tiles
+  categoryRow: { gap: 10, paddingBottom: 16 },
+  categoryTile: {
+    width: 72, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4,
+    borderRadius: 16, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
   },
-  chipText: { fontSize: 12.5, fontWeight: '600', color: C.textOff },
-  chipTextActive: { color: '#fff' },
+  categoryTileActive: { borderColor: C.brand, backgroundColor: C.brandDim },
+  categoryTileIconWrap: {
+    width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 6,
+  },
+  categoryTileLabel: { fontSize: 10.5, fontWeight: '600', color: C.textOff, textAlign: 'center' },
+  categoryTileLabelActive: { color: C.brand, fontWeight: '800' },
 
   filterRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   filterPill: {
@@ -687,92 +745,73 @@ const styles = StyleSheet.create({
   },
   sortPillText: { fontSize: 12.5, fontWeight: '700', color: C.brand },
 
-  clearFiltersBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 14, marginTop: 2 },
+  clearFiltersBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 6, marginTop: 2 },
   clearFiltersText: { fontSize: 12.5, fontWeight: '700', color: C.accent },
 
-  // ─── Vendor grid card ────────────────────────────────────────────────────
-  gridCard: {
-    width: CARD_WIDTH,
+  sectionHeaderRow: { marginTop: 16, marginBottom: 10 },
+  sectionLabel: { fontSize: 15.5, fontWeight: '800', color: C.text, letterSpacing: -0.2 },
+
+  // ─── Vendor list card ────────────────────────────────────────────────────
+  listCard: {
     backgroundColor: C.surface,
-    borderRadius: 20,
-    marginBottom: GRID_GAP,
-    overflow: 'visible',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: C.border,
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  bannerWrap: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  banner: {
-    width: '100%',
-    height: BANNER_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bannerIconDecor: { position: 'absolute', right: -14, bottom: -14 },
-  bannerScrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-  },
-  verifiedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(2,132,199,0.9)',
-    borderRadius: 10,
-    padding: 2.5,
-  },
-  categoryTag: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    maxWidth: CARD_WIDTH - 50,
-  },
-  categoryTagText: { fontSize: 9, fontWeight: '700', color: '#fff' },
-  avatarRing: {
-    position: 'absolute',
-    bottom: -20,
-    left: 12,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: C.surface,
-    padding: 3,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2,
-  },
-  avatar: { width: '100%', height: '100%', borderRadius: 21 },
-  avatarPlaceholder: {
-    width: '100%', height: '100%', borderRadius: 21,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  avatarInitial: { fontSize: 17, fontWeight: '800' },
+  listCardTop: { flexDirection: 'row', alignItems: 'flex-start' },
+  listAvatar: { width: 52, height: 52, borderRadius: 16, marginRight: 12 },
+  listAvatarPlaceholder: { justifyContent: 'center', alignItems: 'center' },
+  listAvatarInitial: { fontSize: 19, fontWeight: '800' },
 
-  cardBody: { paddingTop: 28, paddingHorizontal: 14, paddingBottom: 14 },
-  storeName: { fontSize: 14, fontWeight: '800', color: C.text },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
-  metaText: { fontSize: 11, color: C.textMuted, flexShrink: 1 },
+  listCardInfo: { flex: 1, marginRight: 8 },
+  listStoreName: { fontSize: 15, fontWeight: '800', color: C.text, marginBottom: 2 },
+  listCategoryLine: { fontSize: 11.5, color: C.textMuted, marginBottom: 5 },
+  listMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, flexWrap: 'wrap' },
+  listMetaText: { fontSize: 11.5, color: C.textOff, fontWeight: '700' },
+  listMetaMuted: { fontSize: 11.5, color: C.textMuted, fontWeight: '600' },
+  listMetaDot: { fontSize: 11, color: C.textMuted, marginHorizontal: 1 },
 
-  statsRow: { flexDirection: 'row', gap: 6, marginTop: 9, flexWrap: 'wrap' },
-  statChip: {
+  listCardRight: { alignItems: 'flex-end', minWidth: 62 },
+  verifiedPill: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: C.bg, borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3,
+    backgroundColor: C.successBg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3.5,
   },
-  statChipText: { fontSize: 10.5, color: C.textOff, fontWeight: '700' },
+  verifiedPillText: { fontSize: 10, fontWeight: '800', color: C.success },
 
-  // Skeleton grid
-  skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  serviceCue: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12,
+    backgroundColor: C.infoBg, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8,
+  },
+  serviceCueText: { fontSize: 11.5, color: C.info, fontWeight: '700', flexShrink: 1 },
+
+  thumbRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  thumbImg: { flex: 1, aspectRatio: 1, borderRadius: 10, overflow: 'hidden', backgroundColor: C.skeleton },
+  thumbPlaceholder: { justifyContent: 'center', alignItems: 'center' },
+  thumbMore: { justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg, borderWidth: 1, borderColor: C.border },
+  thumbMoreText: { fontSize: 13, fontWeight: '800', color: C.textOff },
+
+  // Become-a-vendor CTA
+  vendorCta: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.brandDim, borderRadius: 18, padding: 14, marginTop: 4, marginBottom: 8,
+    borderWidth: 1, borderColor: 'rgba(13,148,136,0.18)',
+  },
+  vendorCtaIconWrap: {
+    width: 44, height: 44, borderRadius: 13, backgroundColor: C.surface,
+    justifyContent: 'center', alignItems: 'center', marginRight: 12,
+  },
+  vendorCtaText: { flex: 1, marginRight: 10 },
+  vendorCtaTitle: { fontSize: 13.5, fontWeight: '800', color: C.text, marginBottom: 2 },
+  vendorCtaSub: { fontSize: 11.5, color: C.textOff, lineHeight: 16 },
+  vendorCtaBtn: { backgroundColor: C.brand, borderRadius: 11, paddingHorizontal: 16, paddingVertical: 10 },
+  vendorCtaBtnText: { color: '#fff', fontSize: 12.5, fontWeight: '800' },
 
   // Empty / loading
   emptyState: { alignItems: 'center', paddingVertical: 50, paddingHorizontal: 24 },

@@ -528,8 +528,16 @@ const VendorSignUpScreen = ({ navigation }) => {
       if (instagram.trim()) formData.append('instagram', instagram.trim());
       if (selectedCategories.length > 0) selectedCategories.forEach(cat => formData.append('categories[]', cat));
       if (searchTags.length > 0) searchTags.forEach(tag => formData.append('searchTags[]', tag));
-      if (profileImage) formData.append('profileImage', { uri: Platform.OS === 'ios' ? profileImage.uri.replace('file://', '') : profileImage.uri, type: profileImage.type, name: profileImage.name });
-      if (storeBanner) formData.append('storeBanner', { uri: Platform.OS === 'ios' ? storeBanner.uri.replace('file://', '') : storeBanner.uri, type: storeBanner.type, name: storeBanner.name });
+      if (profileImage) formData.append('profileImage', {
+          uri: profileImage.uri,
+          type: profileImage.type,
+          name: profileImage.name,
+        });
+        if (storeBanner) formData.append('storeBanner', {
+          uri: storeBanner.uri,
+          type: storeBanner.type,
+          name: storeBanner.name,
+        });
       const response = await createVendorProfile(formData);
       if (response?.data?.success || response?.status === 201) {
         Alert.alert('Account Created! 🎉', 'Your vendor account has been created successfully. You can now sign in.', [{ text: 'Sign In', onPress: () => navigation.navigate('VendorLogin') }]);
@@ -601,7 +609,7 @@ const VendorSignUpScreen = ({ navigation }) => {
       <View style={styles.form}>
         <BusinessTypeSelector value={businessType} onChange={setBusinessType} style={{ marginBottom: 20 }} />
 
-        <View style={styles.imageSection}>
+        {/*<View style={styles.imageSection}>
           <Text style={styles.label}>Profile Photo</Text>
           <Pressy onPress={pickProfileImage} style={styles.imagePicker} scaleTo={0.94}>
             {profileImage ? (
@@ -630,7 +638,7 @@ const VendorSignUpScreen = ({ navigation }) => {
               </View>
             )}
           </Pressy>
-        </View>
+        </View>*/}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Full Name <Text style={styles.required}>*</Text></Text>
           <View style={styles.inputContainer}><Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} /><TextInput style={styles.input} placeholder="Enter your full name" placeholderTextColor={C.t3} value={fullName} onChangeText={setFullName} editable={!loading} /></View>
@@ -782,7 +790,7 @@ const styles = StyleSheet.create({
   backLinkText: { fontSize: 14, color: C.brand, fontWeight: '600' },
   imageSection: { marginBottom: 18, alignItems: 'center' },
   imagePicker: { marginTop: 8 },
-  profileImagePreview: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: C.brandBorder },
+  profileImagePreview: { width: 250, height: 250, borderRadius: 50, borderWidth: 3, borderColor: C.brandBorder },
   imageEditBadge: {
     position: 'absolute', bottom: 2, right: 2, width: 26, height: 26, borderRadius: 13,
     backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center',

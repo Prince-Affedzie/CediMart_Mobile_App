@@ -5,9 +5,9 @@ import API from "./apiClient";
 export const createVendorProfile = async (data) => {
   try {
     // CRITICAL: For FormData with images, do NOT set Content-Type manually
-    const response = await API.post('/api/vendor', data, {
+    const response = await API.post('/api/vendor', data,{
       headers: {
-        'Content-Type': 'multipart/form-data',  
+        'Content-Type': 'multipart/form-data',   // Let Axios set this automatically
       },
     });
 
