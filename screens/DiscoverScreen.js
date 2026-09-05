@@ -22,7 +22,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { getVendors } from '../apis/vendorApi';
 
-// ─── Design Tokens (unchanged brand palette) ───────────────────────────────
+// ─── Design Tokens ───────────────────────────────────────────────────────────
 const C = {
   bg: '#F8FAFC',
   surface: '#FFFFFF',
@@ -44,9 +44,7 @@ const C = {
   skeleton: '#EEF2F6',
 };
 
-// ─── Category → { color, icon } — kept in sync with the vendor sign-up
-// form's category list, including the 6 service-oriented categories added
-// for the business-discovery push (tutoring, photography, repairs, etc).
+// ─── Category meta ───────────────────────────────────────────────────────────
 const CATEGORY_META = {
   '':                          { label: 'All',                  icon: 'grid-outline',                       color: C.brand },
   'electronics':                { label: 'Electronics',          icon: 'hardware-chip-outline',              color: '#2563EB' },
@@ -73,8 +71,6 @@ const CATEGORY_META = {
 };
 const CATEGORIES = Object.keys(CATEGORY_META).map((key) => ({ key, ...CATEGORY_META[key] }));
 
-// Primary Shops/Services split — the core navigation axis from the
-// business-discovery plan ("I need a product" vs "I need a service").
 const BUSINESS_TYPE_FILTERS = [
   { key: '', label: 'All', icon: 'apps-outline' },
   { key: 'product', label: 'Shops', icon: 'storefront-outline' },
@@ -102,11 +98,10 @@ const SORT_OPTIONS = [
 
 const PAGE_LIMIT = 16;
 const SEARCH_DEBOUNCE_MS = 400;
+const THUMB_SIZE = 64; // Fixed thumbnail size
 
 const isRealImageUrl = (val) => !!val && /^https?:\/\//i.test(val);
 
-// Darkens a #rrggbb hex by `percent` (0–100) — used to build a 2-stop
-// gradient out of a single brand color instead of a flat fill.
 const shade = (hex, percent) => {
   const num = parseInt(hex.replace('#', ''), 16);
   const amt = Math.round(2.55 * percent);
@@ -116,7 +111,7 @@ const shade = (hex, percent) => {
   return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
 };
 
-// ─── Press-scale wrapper for a tactile, premium feel on tap ────────────────
+// ─── Press-scale wrapper ────────────────────────────────────────────────────
 const Pressy = ({ onPress, style, children, scaleTo = 0.97 }) => {
   const scale = useRef(new Animated.Value(1)).current;
   const onPressIn = () => Animated.spring(scale, { toValue: scaleTo, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
@@ -128,7 +123,7 @@ const Pressy = ({ onPress, style, children, scaleTo = 0.97 }) => {
   );
 };
 
-// ─── Trust hero — sets the "verified campus marketplace" framing up top ────
+// ─── Trust hero ─────────────────────────────────────────────────────────────
 const DiscoverHero = () => (
   <LinearGradient
     colors={[C.brand, shade(C.brand, 20)]}
@@ -146,27 +141,50 @@ const DiscoverHero = () => (
   </LinearGradient>
 );
 
-// ─── Shops / Services segmented control ─────────────────────────────────────
-const BusinessTypeTabs = ({ value, onChange }) => (
-  <View style={styles.businessTypeTabs}>
-    {BUSINESS_TYPE_FILTERS.map((opt) => {
-      const active = value === opt.key;
-      return (
-        <TouchableOpacity
-          key={opt.key || 'all'}
-          style={[styles.businessTypeTab, active && styles.businessTypeTabActive]}
-          onPress={() => { Haptics.selectionAsync().catch(() => {}); onChange(opt.key); }}
-          activeOpacity={0.8}
-        >
-          <Ionicons name={opt.icon} size={14} color={active ? '#fff' : C.textOff} />
-          <Text style={[styles.businessTypeTabText, active && styles.businessTypeTabTextActive]}>{opt.label}</Text>
-        </TouchableOpacity>
-      );
-    })}
-  </View>
-);
+// ─── Business type dropdown button ─────────────────────────────────────────
+const BusinessTypeDropdown = ({ value, onChange }) => {
+  const [visible, setVisible] = useState(false);
+  const selectedLabel = BUSINESS_TYPE_FILTERS.find(f => f.key === value)?.label || 'All';
+  
+  return (
+    <>
+      <TouchableOpacity 
+        style={styles.businessTypeDropdownBtn} 
+        onPress={() => { Haptics.selectionAsync().catch(() => {}); setVisible(true); }}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.businessTypeDropdownText}>{selectedLabel}</Text>
+        <Ionicons name="chevron-down" size={14} color={C.brand} />
+      </TouchableOpacity>
+      
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <Pressable style={sheetStyles.backdrop} onPress={() => setVisible(false)}>
+          <Pressable style={sheetStyles.sheet} onPress={() => {}}>
+            <View style={sheetStyles.handle} />
+            <Text style={sheetStyles.title}>Filter by type</Text>
+            {BUSINESS_TYPE_FILTERS.map((opt) => {
+              const isSelected = value === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key || 'all'}
+                  style={[sheetStyles.option, isSelected && sheetStyles.optionSelected]}
+                  onPress={() => { Haptics.selectionAsync().catch(() => {}); onChange(opt.key); setVisible(false); }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={opt.icon} size={17} color={isSelected ? C.brand : C.textOff} style={{ marginRight: 10 }} />
+                  <Text style={[sheetStyles.optionText, isSelected && sheetStyles.optionTextSelected]}>{opt.label}</Text>
+                  {isSelected && <Ionicons name="checkmark-circle" size={18} color={C.brand} />}
+                </TouchableOpacity>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+};
 
-// ─── Category quick-filter tile (icon over label) ──────────────────────────
+// ─── Category quick-filter tile ─────────────────────────────────────────────
 const CategoryTile = ({ item, active, onPress }) => (
   <TouchableOpacity style={[styles.categoryTile, active && styles.categoryTileActive]} onPress={onPress} activeOpacity={0.8}>
     <View style={[styles.categoryTileIconWrap, { backgroundColor: active ? item.color : `${item.color}16` }]}>
@@ -178,7 +196,7 @@ const CategoryTile = ({ item, active, onPress }) => (
   </TouchableOpacity>
 );
 
-// ─── Bottom-sheet style option picker (used for Campus + Sort) ─────────────
+// ─── Bottom-sheet style option picker ───────────────────────────────────────
 const OptionSheet = ({ visible, title, options, selectedKey, onSelect, onClose }) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <Pressable style={sheetStyles.backdrop} onPress={onClose}>
@@ -207,7 +225,7 @@ const OptionSheet = ({ visible, title, options, selectedKey, onSelect, onClose }
   </Modal>
 );
 
-// ─── Product thumbnail (used in the vendor card's item strip) ─────────────
+// ─── Product thumbnail ─────────────────────────────────────────────────────
 const ProductThumb = ({ uri }) =>
   isRealImageUrl(uri) ? (
     <Image source={{ uri }} style={styles.thumbImg} />
@@ -235,6 +253,9 @@ const VendorListCard = ({ vendor, onPress }) => {
   const products = vendor.products || [];
   const shownProducts = products.slice(0, 3);
   const extraCount = Math.max(0, (vendor.productCount ?? products.length) - shownProducts.length);
+  
+  // Calculate how many slots are needed (always 3 for consistency)
+  const totalSlots = shownProducts.length + (extraCount > 0 ? 1 : 0);
 
   return (
     <Pressy onPress={() => onPress(vendor)} style={styles.listCard}>
@@ -274,8 +295,6 @@ const VendorListCard = ({ vendor, onPress }) => {
       </View>
 
       {isServiceOnly ? (
-        // A pure-service business has no product catalog, so a thumbnail
-        // strip would read as broken. Show how they're actually booked.
         <View style={styles.serviceCue}>
           <Ionicons name="chatbubble-ellipses-outline" size={13} color={C.info} />
           <Text style={styles.serviceCueText} numberOfLines={1}>
@@ -292,13 +311,17 @@ const VendorListCard = ({ vendor, onPress }) => {
               <Text style={styles.thumbMoreText}>+{extraCount}</Text>
             </View>
           )}
+          {/* Fill remaining slots with subtle placeholders for consistent layout */}
+          {totalSlots < 3 && Array.from({ length: 3 - totalSlots }).map((_, i) => (
+            <View key={`empty-${i}`} style={[styles.thumbImg, styles.thumbEmpty]} />
+          ))}
         </View>
       ) : null}
     </Pressy>
   );
 };
 
-// ─── Skeleton list (shown on first load, in place of the old spinner) ─────
+// ─── Skeleton list card ─────────────────────────────────────────────────────
 const SkeletonListCard = ({ delay = 0 }) => {
   const shimmer = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -335,8 +358,7 @@ const SkeletonList = () => (
   </View>
 );
 
-// ─── Become-a-vendor CTA — closes out the list, matches the reference's
-// bottom banner. Adjust the route name to your actual vendor sign-up screen.
+// ─── Become-a-vendor CTA ───────────────────────────────────────────────────
 const BecomeVendorCTA = ({ onPress }) => (
   <TouchableOpacity style={styles.vendorCta} activeOpacity={0.85} onPress={onPress}>
     <View style={styles.vendorCtaIconWrap}>
@@ -436,7 +458,7 @@ const DiscoverScreen = () => {
   };
   const handleBecomeVendor = () => {
     Haptics.selectionAsync().catch(() => {});
-    navigation.navigate('VendorSignUp'); // adjust to your actual route name
+    navigation.navigate('VendorSignUp');
   };
   const toggleVerified = () => {
     Haptics.selectionAsync().catch(() => {});
@@ -456,43 +478,17 @@ const DiscoverScreen = () => {
 
   const renderHeader = () => (
     <View>
-      {/* Title */}
+      {/* Title + Business type dropdown */}
       <View style={styles.titleRow}>
-        <Text style={styles.screenTitle}>Discover</Text>
-        <Text style={styles.screenSubtitle}>Shops and services across your campus</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.screenTitle}>Discover</Text>
+          <Text style={styles.screenSubtitle}>Shops and services across your campus</Text>
+        </View>
+        <BusinessTypeDropdown value={activeBusinessType} onChange={setActiveBusinessType} />
       </View>
 
       {/* Trust hero */}
       <DiscoverHero />
-
-      {/* Live stat strip */}
-      {stats && (
-        <View style={styles.statStrip}>
-          <View style={styles.statPill}>
-            <Ionicons name="apps-outline" size={13} color={C.brand} />
-            <Text style={styles.statPillText}>{stats.totalVendors} total</Text>
-          </View>
-          {stats.productBusinesses > 0 && (
-            <View style={styles.statPill}>
-              <Ionicons name="storefront-outline" size={13} color={C.accent} />
-              <Text style={styles.statPillText}>{stats.productBusinesses} shops</Text>
-            </View>
-          )}
-          {stats.serviceBusinesses > 0 && (
-            <View style={styles.statPill}>
-              <Ionicons name="construct-outline" size={13} color={C.info} />
-              <Text style={styles.statPillText}>{stats.serviceBusinesses} services</Text>
-            </View>
-          )}
-          <View style={styles.statPill}>
-            <Ionicons name="checkmark-circle-outline" size={13} color={C.success} />
-            <Text style={styles.statPillText}>{stats.verifiedVendors} verified</Text>
-          </View>
-        </View>
-      )}
-
-      {/* Shops / Services segmented control */}
-      <BusinessTypeTabs value={activeBusinessType} onChange={setActiveBusinessType} />
 
       {/* Search bar */}
       <View style={styles.searchBar}>
@@ -597,11 +593,12 @@ const DiscoverScreen = () => {
   const renderFooter = () => (
     <View>
       {loadingMore && (
-        <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color={C.brand} />
+        <View style={{ paddingBottom: 12 }}>
+          <SkeletonListCard delay={0} />
+          <SkeletonListCard delay={100} />
         </View>
       )}
-      {!loading && vendors.length > 0 && <BecomeVendorCTA onPress={handleBecomeVendor} />}
+      {!loading && vendors.length > 0 && !loadingMore && <BecomeVendorCTA onPress={handleBecomeVendor} />}
     </View>
   );
 
@@ -620,6 +617,7 @@ const DiscoverScreen = () => {
       </SafeAreaView>
     );
   }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <FlatList
@@ -664,9 +662,17 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   listContent: { paddingHorizontal: 16, paddingBottom: 40 },
 
-  titleRow: { paddingTop: 14, marginBottom: 14 },
+  titleRow: { paddingTop: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   screenTitle: { fontSize: 28, fontWeight: '900', color: C.text, letterSpacing: -0.6 },
   screenSubtitle: { fontSize: 13, color: C.textMuted, marginTop: 3 },
+
+  // Business type dropdown
+  businessTypeDropdownBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: C.brandDim, paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 20, borderWidth: 1, borderColor: 'rgba(13,148,136,0.2)',
+  },
+  businessTypeDropdownText: { fontSize: 13, fontWeight: '700', color: C.brand },
 
   // Hero
   hero: {
@@ -686,27 +692,6 @@ const styles = StyleSheet.create({
   heroTitle: { color: '#fff', fontSize: 21, fontWeight: '900', lineHeight: 26, letterSpacing: -0.3, marginBottom: 6 },
   heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, lineHeight: 18, maxWidth: '78%' },
   heroIconDecor: { position: 'absolute', right: -12, bottom: -12 },
-
-  statStrip: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
-  statPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: C.surface, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6,
-    borderWidth: 1, borderColor: C.border,
-  },
-  statPillText: { fontSize: 11.5, fontWeight: '700', color: C.textOff },
-
-  // Shops / Services segmented control
-  businessTypeTabs: {
-    flexDirection: 'row', backgroundColor: C.surface, borderRadius: 14, padding: 4,
-    borderWidth: 1, borderColor: C.border, marginBottom: 14,
-  },
-  businessTypeTab: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingVertical: 10, borderRadius: 11,
-  },
-  businessTypeTabActive: { backgroundColor: C.brand },
-  businessTypeTabText: { fontSize: 12.5, fontWeight: '700', color: C.textOff },
-  businessTypeTabTextActive: { color: '#fff' },
 
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -792,9 +777,25 @@ const styles = StyleSheet.create({
   serviceCueText: { fontSize: 11.5, color: C.info, fontWeight: '700', flexShrink: 1 },
 
   thumbRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  thumbImg: { flex: 1, aspectRatio: 1, borderRadius: 10, overflow: 'hidden', backgroundColor: C.skeleton },
+  thumbImg: { 
+    width: THUMB_SIZE, 
+    height: THUMB_SIZE, 
+    borderRadius: 10, 
+    overflow: 'hidden', 
+    backgroundColor: C.skeleton,
+  },
   thumbPlaceholder: { justifyContent: 'center', alignItems: 'center' },
-  thumbMore: { justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg, borderWidth: 1, borderColor: C.border },
+  thumbEmpty: { 
+    backgroundColor: C.skeleton,
+    opacity: 0.3,
+  },
+  thumbMore: { 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: C.bg, 
+    borderWidth: 1, 
+    borderColor: C.border,
+  },
   thumbMoreText: { fontSize: 13, fontWeight: '800', color: C.textOff },
 
   // Become-a-vendor CTA
@@ -838,7 +839,7 @@ const sheetStyles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 28,
+    paddingBottom: 48,
     maxHeight: '70%',
   },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: 'center', marginBottom: 14 },

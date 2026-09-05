@@ -5,6 +5,9 @@ import API from './apiClient';
 export const getFeed = (params = {}) => 
   API.get('/api/feed', { params });
 
+export const searchFeed =(params)=>
+  API.get('/api/feed/search',{params})
+
 export const getMyFeedPosts = (params = {}) => 
   API.get('/api/me/feed/my-posts', { params });
 

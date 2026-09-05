@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuthService from '../services/authService';
 import API from '../apis/apiClient'; 
 import { updateProfile, deleteProfile, logout, loginByGoogle, signUpByGoogle, apple_signUp, vendorLogin } from '../apis/userApi';
+import { useFollowStore } from '../stores/useFollowStore';
 
 const AuthContext = createContext();
 
@@ -82,16 +83,18 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-
-
-useEffect(() => {
-  API.registerSessionExpiredHandler(() => {
-    setToken(null);
-    setUser(null);
-    setRole(null);
-    setIsAuthenticated(false);
-  });
-}, []);
+  useEffect(() => {
+    API.registerSessionExpiredHandler(() => {
+      // Reset auth state
+      setToken(null);
+      setUser(null);
+      setRole(null);
+      setIsAuthenticated(false);
+      
+      // Reset follow store
+      useFollowStore.getState().reset();
+    });
+  }, []);
 
   // ── Check stored auth on app start ────────────────────────────────────────
 
@@ -102,10 +105,14 @@ useEffect(() => {
       const storedRole = await getWithExpiry('@cedimart_role');
 
       if (storedToken && storedUser) {
+        const parsedUser = typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser;
         setToken(storedToken);
-        setUser(typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser);
+        setUser(parsedUser);
         setRole(storedRole || null);
         setIsAuthenticated(true);
+        
+        // Hydrate follow store after successful auth restore
+        useFollowStore.getState().hydrate();
       } else {
         // Clean up any remaining partial data
         await removeMultiple([
@@ -117,6 +124,9 @@ useEffect(() => {
         setUser(null);
         setRole(null);
         setIsAuthenticated(false);
+        
+        // Reset follow store when not authenticated
+        useFollowStore.getState().reset();
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
@@ -124,12 +134,15 @@ useEffect(() => {
       setUser(null);
       setRole(null);
       setIsAuthenticated(false);
+      
+      // Reset follow store on error
+      useFollowStore.getState().reset();
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Helper: Store auth data after successful login/signup ─────────────────
+  // ─── Helper: Store auth data after successful login/signup ─────────────────
   const storeAuthData = async (tokenData, userData, roleData) => {
     await setWithExpiry('@cedimart_token', tokenData, TOKEN_EXPIRY_HOURS);
     await setWithExpiry('@cedimart_user', typeof userData === 'string' ? userData : JSON.stringify(userData), USER_EXPIRY_HOURS);
@@ -138,9 +151,12 @@ useEffect(() => {
     setUser(userData);
     setRole(roleData || null);
     setIsAuthenticated(true);
+    
+    // Hydrate follow store after successful login/signup
+    useFollowStore.getState().hydrate();
   };
 
-  // ── Apple Sign-In ──────────────────────────────────────────────────────────
+  // ─── Apple Sign-In ──────────────────────────────────────────────────────────
 
   const signUpByApple = async (data) => {
     try {
@@ -308,6 +324,9 @@ useEffect(() => {
         setUser(null);
         setRole(null);
         setIsAuthenticated(false);
+        
+        // Reset follow store on logout
+        useFollowStore.getState().reset();
       }
       return response;
     } catch (error) {
@@ -322,6 +341,9 @@ useEffect(() => {
       setUser(null);
       setRole(null);
       setIsAuthenticated(false);
+      
+      // Reset follow store on logout error
+      useFollowStore.getState().reset();
     }
   };
 
@@ -354,6 +376,9 @@ useEffect(() => {
         setUser(null);
         setRole(null);
         setIsAuthenticated(false);
+        
+        // Reset follow store on account deletion
+        useFollowStore.getState().reset();
       }
 
       return res;

@@ -15,13 +15,15 @@ import {
   Alert,
   RefreshControl,
   AppState,
+  TextInput,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { getFeed, toggleLike, toggleSave, incrementView } from '../../apis/feedApi';
+import { getFeed, searchFeed, toggleLike, toggleSave, incrementView } from '../../apis/feedApi';
 import {followUser} from '../../apis/userApi'
 import { useAuth } from '../../context/AuthContext';
 import CommentsSheet from '../../components/feed/CommentsSheet';
@@ -91,6 +93,18 @@ const CampusFeedScreen = () => {
   const [appState, setAppState] = useState(AppState.currentState);
   const flatListRef = useRef(null);
 
+  // Search state
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchHasMore, setSearchHasMore] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false); // NEW: drives the focus ring below
+  const searchInputRef = useRef(null);
+  const searchTimerRef = useRef(null);
+
   const itemHeight = SCREEN_H;
 
   const fetchFeed = useCallback(async (pageNum = 1, shouldRefresh = false) => {
@@ -130,10 +144,10 @@ const CampusFeedScreen = () => {
   }, [posts]);
 
   useEffect(() => {
-    if (posts.length > 0 && activeIndex >= 0) {
+    if (posts.length > 0 && activeIndex >= 0 && !isSearchMode) {
       feedPrefetchService.prefetchNext(activeIndex, posts);
     }
-  }, [activeIndex, posts]);
+  }, [activeIndex, posts, isSearchMode]);
 
   useEffect(() => {
     if (!isFocused) {
@@ -145,12 +159,9 @@ const CampusFeedScreen = () => {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (appState === 'active' && nextAppState !== 'active') {
-        // App is going to background - pause all videos
         feedPrefetchService.pauseAll();
-        // Force re-render to pause active video
         setAppState(nextAppState);
       } else if (nextAppState === 'active') {
-        // App is coming back to foreground
         setAppState(nextAppState);
       }
     });
@@ -160,8 +171,97 @@ const CampusFeedScreen = () => {
     };
   }, [appState]);
 
+  // ── Search handling with debounce ─────────────────────────────────────
+  const handleSearchChange = (text) => {
+    setSearchQuery(text);
+    
+    // Clear previous timer
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+
+    if (!text.trim()) {
+      setIsSearchMode(false);
+      setSearchResults([]);
+      setSearchHasMore(false);
+      setSearchPage(1);
+      return;
+    }
+
+    // Debounce search
+    searchTimerRef.current = setTimeout(() => {
+      performSearch(text.trim(), 1);
+    }, 500);
+  };
+
+  const performSearch = async (query, pageNum = 1, append = false) => {
+    try {
+      if (pageNum === 1) {
+        setSearchLoading(true);
+        setIsSearchMode(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const res = await searchFeed({ 
+        query, 
+        page: pageNum, 
+        limit: 5,
+        type: activeType || undefined,
+      });
+      
+      const newPosts = res.data?.data?.posts || [];
+      const pagination = res.data?.data?.pagination || {};
+
+      if (append) {
+        setSearchResults(prev => [...prev, ...newPosts]);
+      } else {
+        setSearchResults(newPosts);
+      }
+      
+      setSearchHasMore(pageNum < pagination.totalPages);
+      setSearchPage(pageNum);
+    } catch (err) {
+      console.error('Search error:', err?.response?.data?.message || err.message);
+    } finally {
+      setSearchLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleSearchLoadMore = () => {
+    if (searchHasMore && !loadingMore && !searchLoading && searchQuery.trim()) {
+      performSearch(searchQuery.trim(), searchPage + 1, true);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setIsSearchMode(false);
+    setSearchHasMore(false);
+    setSearchPage(1);
+    setShowSearch(false);
+    Keyboard.dismiss();
+    setActiveIndex(0);
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  };
+
+  const closeSearch = () => {
+    Keyboard.dismiss();
+    setShowSearch(false);
+    if (!searchQuery.trim()) {
+      setIsSearchMode(false);
+      setSearchResults([]);
+    }
+  };
+
   const handleLoadMore = () => {
-    if (hasMore && !loadingMore && !loading) fetchFeed(page + 1);
+    if (isSearchMode) {
+      handleSearchLoadMore();
+    } else if (hasMore && !loadingMore && !loading) {
+      fetchFeed(page + 1);
+    }
   };
 
   const handleFollow = async (authorId) => {
@@ -249,15 +349,6 @@ const CampusFeedScreen = () => {
     setReportPost(null);
   };
 
-  // 🔥 distanceFromActive lets FeedPostItem decide whether to actually
-  // load a real video player for this row. Only rows within 1 of the
-  // active index get one — everyone else stays on their thumbnail. This
-  // caps how many concurrent video decoders exist at once, which is what
-  // was causing the intermittent black-screen-with-audio bug: mobile
-  // devices only support a handful of concurrent hardware decoder
-  // sessions, and a *paused* player still holds its decoder rather than
-  // releasing it, so several mounted-but-off-screen rows were quietly
-  // exhausting that pool.
   const renderItem = ({ item, index }) => (
     <FeedPostItem
       post={item}
@@ -278,7 +369,24 @@ const CampusFeedScreen = () => {
   );
 
   const renderEmpty = () => {
-    if (loading) return null;
+    if (loading || searchLoading) return null;
+    
+    if (isSearchMode) {
+      return (
+        <View style={[styles.emptyContainer, { height: itemHeight }]}>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="search-outline" size={40} color={C.faint} />
+          </View>
+          <Text style={styles.emptyTitle}>No results found</Text>
+          <Text style={styles.emptySubtitle}>No posts match "{searchQuery}"</Text>
+          <TouchableOpacity style={styles.createFirstBtn} onPress={clearSearch} activeOpacity={0.85}>
+            <Ionicons name="close-circle-outline" size={16} color="#0F172A" />
+            <Text style={styles.createFirstBtnText}>Clear Search</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    
     return (
       <View style={[styles.emptyContainer, { height: itemHeight }]}>
         <View style={styles.emptyIconWrap}>
@@ -296,13 +404,17 @@ const CampusFeedScreen = () => {
     );
   };
 
+  // Determine which data to show
+  const displayPosts = isSearchMode ? searchResults : posts;
+  const isInitialLoading = (loading && posts.length === 0) || (searchLoading && searchResults.length === 0 && isSearchMode);
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       <FlatList
         ref={flatListRef}
-        data={posts}
+        data={displayPosts}
         renderItem={renderItem}
         keyExtractor={(item) => item._id}
         pagingEnabled
@@ -334,13 +446,63 @@ const CampusFeedScreen = () => {
 
       {/* Floating header */}
       <SafeAreaView style={styles.floatingHeader} edges={['top']} pointerEvents="box-none">
-        <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>Feed</Text>
-          <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Notification')}>
-            <Ionicons name="notifications-outline" size={20} color={C.white} />
-          </TouchableOpacity>
-        </View>
-        <TypeFilter types={FEED_TYPES} activeType={activeType} onSelect={setActiveType} />
+        {showSearch ? (
+          // FIX: these four were pointing at `styles.*` (the shared campusfeed
+          // stylesheet), which has no color set on its input — that's why the
+          // text rendered in the system default (black) over the dark overlay.
+          // `searchStyles` below already had the correct white/branded look
+          // defined, it just wasn't wired up. Switched these to searchStyles,
+          // and added a focus ring + matching dark keyboard/cursor.
+          <View style={searchStyles.searchHeaderRow}>
+            <TouchableOpacity style={searchStyles.searchBackBtn} onPress={closeSearch}>
+              <Ionicons name="arrow-back" size={20} color={C.white} />
+            </TouchableOpacity>
+            <View style={[searchStyles.searchInputWrap, searchFocused && searchStyles.searchInputWrapFocused]}>
+              <Ionicons name="search-outline" size={16} color={searchFocused ? C.brand : C.faint} />
+              <TextInput
+                ref={searchInputRef}
+                style={searchStyles.searchInput}
+                placeholder="Search posts..."
+                placeholderTextColor={C.faint}
+                value={searchQuery}
+                onChangeText={handleSearchChange}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                autoFocus
+                autoCorrect={false}
+                autoCapitalize="none"
+                keyboardAppearance="dark"
+                cursorColor={C.brand}
+                selectionColor={C.brand}
+                returnKeyType="search"
+                onSubmitEditing={() => {
+                  if (searchQuery.trim()) {
+                    performSearch(searchQuery.trim(), 1);
+                  }
+                }}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={16} color={C.faint} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        ) : (
+          <View style={styles.headerRow}>
+            <Text style={styles.headerTitle}>Feed</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity style={styles.headerIconBtn} onPress={() => { setShowSearch(true); setTimeout(() => searchInputRef.current?.focus(), 300); }}>
+                <Ionicons name="search-outline" size={20} color={C.white} />
+              </TouchableOpacity>
+              
+            </View>
+          </View>
+        )}
+        
+        {!showSearch && (
+          <TypeFilter types={FEED_TYPES} activeType={activeType} onSelect={setActiveType} />
+        )}
       </SafeAreaView>
 
       <CommentsSheet
@@ -355,21 +517,67 @@ const CampusFeedScreen = () => {
         contentId={reportPost?._id}
       />
 
-      {/* Create Post FAB - Dynamic bottom position using safe area insets */}
-      <TouchableOpacity 
-        style={[
-          styles.fab, 
-          { bottom: insets.bottom + 18 }
-        ]} 
-        onPress={handleCreatePost} 
-        activeOpacity={0.85}
-      >
-        <Ionicons name="add" size={24} color="#0F172A" />
-      </TouchableOpacity>
+      {/* Create Post FAB - Hidden during search 
+      {!isSearchMode && (
+        <TouchableOpacity 
+          style={[
+            styles.fab, 
+            { bottom: insets.bottom + 18 }
+          ]} 
+          onPress={handleCreatePost} 
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={24} color="#0F172A" />
+        </TouchableOpacity>
+      )} */}
 
-      {loading && posts.length === 0 && <ReelSkeleton />}
+      {isInitialLoading && <ReelSkeleton />}
     </View>
   );
 };
+
+// Additional styles for search
+const searchStyles = StyleSheet.create({
+  searchHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+  },
+  searchBackBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchInputWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    height: 40,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  // NEW: subtle brand-colored focus ring so the field feels responsive
+  // and premium instead of a flat static box.
+  searchInputWrapFocused: {
+    borderColor: C.brand,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: C.white,
+    height: '100%',
+  },
+});
 
 export default CampusFeedScreen;

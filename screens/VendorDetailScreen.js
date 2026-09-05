@@ -13,9 +13,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { getVendorById } from '../apis/vendorApi';
 import { getFeed } from '../apis/feedApi';
-import { followUser } from '../apis/userApi';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useFollowStore } from '../stores/useFollowStore';
 import ChatFAB from '../components/ChatFAB';
 import { shareVendorProfile } from '../utils/shareUtils';
 
@@ -208,6 +208,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
   const { vendorId } = route.params;
   const { addToCart, cartItems } = useCart();
   const { isAuthenticated, user } = useAuth();
+  const { isFollowing: checkIsFollowing, follow, unfollow } = useFollowStore();
 
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -218,18 +219,21 @@ const VendorDetailScreen = ({ route, navigation }) => {
   const [addedProductName, setAddedProductName] = useState('');
   const [sharing, setSharing] = useState(false);
   const [showFullBio, setShowFullBio] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   // Tabs
-  const [activeTab, setActiveTab] = useState('products'); // 'products' | 'posts' | 'about'
+  const [activeTab, setActiveTab] = useState('products');
 
-  // Feed & Follow
+  // Feed
   const [feedPosts, setFeedPosts] = useState([]);
   const [feedLoading, setFeedLoading] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followLoading, setFollowLoading] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
 
   const modalScale = useRef(new Animated.Value(0.85)).current;
+
+  // Get vendor user ID for follow check
+  const vendorUserId = vendor?.user?._id || vendor?.user;
+  const isFollowingVendor = vendorUserId ? checkIsFollowing(vendorUserId) : false;
 
   const fetchVendor = async () => {
     try {
@@ -274,18 +278,21 @@ const VendorDetailScreen = ({ route, navigation }) => {
       ]);
       return;
     }
-    const vendorUserId = vendor?.user?._id || vendor?.user;
     if (!vendorUserId) return;
+    
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setFollowLoading(true);
     try {
-      const res = await followUser(vendorUserId);
-      if (res.data?.success) {
-        setIsFollowing(res.data.data.isFollowing);
-        setFollowerCount(prev => res.data.data.isFollowing ? prev + 1 : Math.max(0, prev - 1));
+      if (isFollowingVendor) {
+        await unfollow(vendorUserId);
+        setFollowerCount(prev => Math.max(0, prev - 1));
+      } else {
+        await follow(vendorUserId);
+        setFollowerCount(prev => prev + 1);
       }
     } catch (err) {
       console.error('Follow error:', err);
+      Alert.alert('Error', 'Failed to update follow status. Please try again.');
     } finally {
       setFollowLoading(false);
     }
@@ -500,14 +507,14 @@ const VendorDetailScreen = ({ route, navigation }) => {
                   </View>
                 </View>
 
-                <Pressy onPress={handleFollow} style={[s.followBtn, isFollowing && s.followBtnActive]} disabled={followLoading} scaleTo={0.95}>
+                <Pressy onPress={handleFollow} style={[s.followBtn, isFollowingVendor && s.followBtnActive]} disabled={followLoading} scaleTo={0.95}>
                   {followLoading ? (
-                    <ActivityIndicator size="small" color={isFollowing ? C.brand : '#fff'} />
+                    <ActivityIndicator size="small" color={isFollowingVendor ? C.brand : '#fff'} />
                   ) : (
                     <>
-                      <Ionicons name={isFollowing ? 'checkmark' : 'person-add-outline'} size={13} color={isFollowing ? C.brand : '#fff'} style={{ marginRight: 5 }} />
-                      <Text style={[s.followBtnText, isFollowing && s.followBtnTextActive]}>
-                        {isFollowing ? 'Following' : 'Follow'}
+                      <Ionicons name={isFollowingVendor ? 'checkmark' : 'person-add-outline'} size={13} color={isFollowingVendor ? C.brand : '#fff'} style={{ marginRight: 5 }} />
+                      <Text style={[s.followBtnText, isFollowingVendor && s.followBtnTextActive]}>
+                        {isFollowingVendor ? 'Following' : 'Follow'}
                       </Text>
                     </>
                   )}
