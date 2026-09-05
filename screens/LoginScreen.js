@@ -273,7 +273,7 @@ const LoginScreen = ({ navigation }) => {
               {loading ? (
                 <View style={styles.buttonLoadingContent}><ActivityIndicator size="small" color="#FFFFFF" /><Text style={[styles.loginButtonText, { marginLeft: 8 }]}>Signing In...</Text></View>
               ) : (
-                <><Text style={styles.loginButtonText}>Sign In as Buyer</Text><Ionicons name="arrow-forward" size={20} color="#FFFFFF" /></>
+                <><Text style={styles.loginButtonText}>Sign In as Shopper</Text><Ionicons name="arrow-forward" size={20} color="#FFFFFF" /></>
               )}
             </TouchableOpacity>
 

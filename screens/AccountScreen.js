@@ -234,10 +234,12 @@ const AccountScreen = ({ navigation }) => {
         <View style={styles.section}>
           {renderSectionTitle('Community')}
           <View style={styles.menuCard}>
-            {renderMenuItem('My Feed Posts', 'newspaper-outline', () => navigation.navigate('MyFeedPosts'), C.purple)}
+            {/*{renderMenuItem('My Feed Posts', 'newspaper-outline', () => navigation.navigate('MyFeedPosts'), C.purple)}
+             {renderMenuItem('My Followers', 'people-outline', () => navigation.navigate('Followers'), C.success)}
+            */}
             {renderMenuItem('Saved Posts', 'bookmark-outline', () => navigation.navigate('SavedPosts'), C.gold)}
-            {renderMenuItem('People I Follow', 'people-outline', () => navigation.navigate('Following'), C.info)}
-            {renderMenuItem('My Followers', 'people-outline', () => navigation.navigate('Followers'), C.success)}
+            {renderMenuItem('Brands I Follow', 'people-outline', () => navigation.navigate('Following'), C.info)}
+            
           </View>
         </View>
 

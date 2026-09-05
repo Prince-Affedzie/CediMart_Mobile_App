@@ -33,6 +33,30 @@ const BANNER_HEIGHT = 180;
 const AVATAR_SIZE = 90;
 const AVATAR_OFFSET = AVATAR_SIZE / 2;
 
+// ─── Brand Colors ───────────────────────────────────────────────────────────
+const C = {
+  bg: '#F8FAFC',
+  surface: '#FFFFFF',
+  border: '#F1F5F9',
+  brand: '#0D9488',
+  brandD: '#0F766E',
+  brandBg: '#F0FDFA',
+  brandBorder: '#99F6E4',
+  accent: '#F97316',
+  accentBg: '#FFF7ED',
+  accentBorder: '#FED7AA',
+  text: '#0F172A',
+  textOff: '#475569',
+  textMuted: '#94A3B8',
+  success: '#059669',
+  successBg: '#ECFDF5',
+  info: '#0284C7',
+  infoBg: '#F0F9FF',
+  danger: '#DC2626',
+  dangerBg: '#FEF2F2',
+  skeleton: '#EEF2F6',
+};
+
 const CAMPUS_LABELS = {
   UG: 'University of Ghana', KNUST: 'KNUST', UCC: 'University of Cape Coast',
   UEW: 'University of Education, Winneba', UPSA: 'UPSA', GIMPA: 'GIMPA',
@@ -69,7 +93,7 @@ const SettingsRow = ({ iconName, iconBg, iconColor, label, value, onPress, isLas
       <Text style={styles.rowLabel}>{label}</Text>
       {value ? <Text style={styles.rowValue}>{value}</Text> : null}
     </View>
-    {onPress && <Ionicons name="chevron-forward" size={16} color="#BDBDBD" />}
+    {onPress && <Ionicons name="chevron-forward" size={16} color={C.textMuted} />}
   </TouchableOpacity>
 );
 
@@ -88,7 +112,7 @@ const Field = ({ label, value, onChangeText, placeholder, keyboardType, editable
       value={value}
       onChangeText={onChangeText}
       placeholder={placeholder}
-      placeholderTextColor="#BDBDBD"
+      placeholderTextColor={C.textMuted}
       keyboardType={keyboardType || 'default'}
       editable={editable}
       multiline={multiline}
@@ -99,9 +123,8 @@ const Field = ({ label, value, onChangeText, placeholder, keyboardType, editable
 
 const VendorAccountScreen = () => {
   const navigation = useNavigation();
-  const { logoutUser } = useAuth();
+  const { logoutUser, user } = useAuth();
 
-  // ✅ Use context for profile data
   const {
     profile,
     loading: contextLoading,
@@ -114,7 +137,7 @@ const VendorAccountScreen = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [sharing, setSharing] = useState(false);
 
-  // Local form state (initialized from context profile)
+  // Local form state
   const [name, setName] = useState('');
   const [storeName, setStoreName] = useState('');
   const [phone, setPhone] = useState('');
@@ -138,7 +161,7 @@ const VendorAccountScreen = () => {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // ✅ Initialize local state from context profile
+  // Initialize local state from context profile
   useEffect(() => {
     if (profile) {
       setName(profile.name || '');
@@ -161,7 +184,6 @@ const VendorAccountScreen = () => {
     }
   }, [profile]);
 
-  // ✅ Pull-to-refresh uses context
   const onRefresh = () => refreshVendorData();
 
   const handleShareProfile = async () => {
@@ -289,7 +311,6 @@ const VendorAccountScreen = () => {
         setIsEditing(false);
         setNewBanner(null); setNewProfile(null);
         setRemoveBanner(false); setRemoveProfile(false);
-        // ✅ Refetch from context after save
         refetchProfile();
       }
     } catch (err) {
@@ -301,7 +322,6 @@ const VendorAccountScreen = () => {
   };
 
   const handleCancelEdit = () => {
-    // Reset to profile values from context
     if (profile) {
       setName(profile.name || '');
       setStoreName(profile.storeName || '');
@@ -338,30 +358,32 @@ const VendorAccountScreen = () => {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
+            <Ionicons name="arrow-back" size={20} color={C.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Account</Text>
           <View style={{ width: 36 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2E7D32" />
+          <ActivityIndicator size="large" color={C.brand} />
         </View>
       </SafeAreaView>
     );
   }
 
   const isVerified = profile?.isVerified;
-  const productCount = profile?.products?.length || 0;
   const rating = profile?.rating || 0;
-  const totalSales = profile?.totalSales || 0;
   const categories = profile?.categories || [];
+  
+  // Use user from AuthContext for followers/following
+  const followersCount = user?.followers?.length || user?.followersCount || 0;
+  const followingCount = user?.following?.length || user?.followingCount || 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
-            <Ionicons name="arrow-back" size={20} color="#1A1A1A" />
+            <Ionicons name="arrow-back" size={20} color={C.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Account</Text>
           {isEditing ? (
@@ -384,7 +406,7 @@ const VendorAccountScreen = () => {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={contextRefreshing} onRefresh={onRefresh} tintColor="#2E7D32" colors={['#2E7D32']} />}
+          refreshControl={<RefreshControl refreshing={contextRefreshing} onRefresh={onRefresh} tintColor={C.brand} colors={[C.brand]} />}
         >
           <Animated.View style={{ opacity: fadeAnim }}>
             {/* Profile Hero */}
@@ -417,7 +439,7 @@ const VendorAccountScreen = () => {
                     disabled={!isEditing}
                   >
                     <View style={styles.bannerEmptyIconWrap}>
-                      <Ionicons name="image-outline" size={26} color="#2E7D32" />
+                      <Ionicons name="image-outline" size={26} color={C.brand} />
                     </View>
                     {isEditing && <Text style={styles.bannerEmptyText}>Add store banner</Text>}
                   </TouchableOpacity>
@@ -443,9 +465,9 @@ const VendorAccountScreen = () => {
                 </View>
                 {!isEditing && (
                   <TouchableOpacity style={styles.shareProfileBtn} onPress={handleShareProfile} disabled={sharing} activeOpacity={0.8}>
-                    {sharing ? <ActivityIndicator size="small" color="#2E7D32" /> : (
+                    {sharing ? <ActivityIndicator size="small" color={C.brand} /> : (
                       <>
-                        <Ionicons name="share-social-outline" size={16} color="#2E7D32" />
+                        <Ionicons name="share-social-outline" size={16} color={C.brand} />
                         <Text style={styles.shareProfileBtnText}>Share Profile</Text>
                       </>
                     )}
@@ -464,22 +486,42 @@ const VendorAccountScreen = () => {
                   {campus ? CAMPUS_LABELS[campus] || campus : ''}
                   {campusArea ? ` · ${campusArea}` : ''}
                 </Text>
-                <View style={styles.statsRow}>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{productCount}</Text>
-                    <Text style={styles.statLabel}>Listings</Text>
-                  </View>
-                  <View style={styles.statDivider} />
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{rating.toFixed(1)}</Text>
-                    <Text style={styles.statLabel}>Rating</Text>
-                  </View>
-                  <View style={styles.statDivider} />
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{totalSales}</Text>
-                    <Text style={styles.statLabel}>Sales</Text>
+
+                {/* Followers & Following - Circular icon cards */}
+                <View style={styles.followStatsRow}>
+                  <TouchableOpacity 
+                    style={styles.followStatCard} 
+                    onPress={() => navigation.navigate('Followers')}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.followStatIcon, { backgroundColor: C.infoBg }]}>
+                      <Ionicons name="people-outline" size={20} color={C.info} />
+                    </View>
+                    <Text style={styles.followStatValue}>{followersCount}</Text>
+                    <Text style={styles.followStatLabel}>Followers</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.followStatCard} 
+                    onPress={() => navigation.navigate('Following')}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.followStatIcon, { backgroundColor: C.successBg }]}>
+                      <Ionicons name="person-add-outline" size={20} color={C.success} />
+                    </View>
+                    <Text style={styles.followStatValue}>{followingCount}</Text>
+                    <Text style={styles.followStatLabel}>Following</Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.followStatCard}>
+                    <View style={[styles.followStatIcon, { backgroundColor: C.accentBg }]}>
+                      <Ionicons name="star" size={20} color={C.accent} />
+                    </View>
+                    <Text style={styles.followStatValue}>{rating.toFixed(1)}</Text>
+                    <Text style={styles.followStatLabel}>Rating</Text>
                   </View>
                 </View>
+
                 <View style={[styles.verifiedChip, !isVerified && styles.pendingChip]}>
                   <View style={[styles.chipDot, !isVerified && styles.chipDotPending]} />
                   <Text style={[styles.chipText, !isVerified && styles.chipTextPending]}>
@@ -533,42 +575,41 @@ const VendorAccountScreen = () => {
               </Section>
 
               <Section label="Community">
-              <SettingsRow 
-                iconName="newspaper-outline" 
-                iconBg="#F5F3FF" 
-                iconColor="#7C3AED" 
-                label="My Posts" 
-                value={`${profile?.feedPostsCount || 0} posts`}
-                onPress={() => navigation.navigate('MyFeedPosts')} 
-              />
-              <SettingsRow 
-                iconName="bookmark-outline" 
-                iconBg="#FFFBEB" 
-                iconColor="#F59E0B" 
-                label="Saved Posts" 
-                value="View your saved items"
-                onPress={() => navigation.navigate('SavedPosts')} 
-              />
-              <SettingsRow 
-                iconName="people-outline" 
-                iconBg="#F0F9FF" 
-                iconColor="#0284C7" 
-                label="Followers" 
-                value={`${profile?.followersCount || 0} followers`}
-                onPress={() => navigation.navigate('Followers')} 
-              />
-              <SettingsRow 
-                iconName="people-outline" 
-                iconBg="#ECFDF5" 
-                iconColor="#059669" 
-                label="Following" 
-                value={`${profile?.followingCount || 0} people`}
-                onPress={() => navigation.navigate('Following')}
-                isLast 
-              />
-            </Section>
+                <SettingsRow 
+                  iconName="newspaper-outline" 
+                  iconBg="#F5F3FF" 
+                  iconColor="#7C3AED" 
+                  label="My Posts" 
+                  //value={`${profile?.feedPostsCount || 0} posts`}
+                  onPress={() => navigation.navigate('MyFeedPosts')} 
+                />
+                <SettingsRow 
+                  iconName="bookmark-outline" 
+                  iconBg="#FFFBEB" 
+                  iconColor="#F59E0B" 
+                  label="Saved Posts" 
+                  value="View your saved items"
+                  onPress={() => navigation.navigate('SavedPosts')} 
+                />
+                <SettingsRow 
+                  iconName="people-outline" 
+                  iconBg="#F0F9FF" 
+                  iconColor="#0284C7" 
+                  label="Followers" 
+                  value={`${followersCount} followers`}
+                  onPress={() => navigation.navigate('Followers')} 
+                />
+                <SettingsRow 
+                  iconName="person-add-outline" 
+                  iconBg="#ECFDF5" 
+                  iconColor="#059669" 
+                  label="Following" 
+                  value={`${followingCount} people`}
+                  onPress={() => navigation.navigate('Following')}
+                  isLast 
+                />
+              </Section>
 
-              
               <Section label="Referrals">
                 <SettingsRow 
                   iconName="people-outline" 
@@ -602,76 +643,106 @@ const VendorAccountScreen = () => {
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F0F2EE' },
-  header: { backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  headerIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A1A' },
+  container: { flex: 1, backgroundColor: C.bg },
+  header: { backgroundColor: C.surface, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: C.border },
+  headerIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.bg, justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: C.text },
   headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  editIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#2E7D32', justifyContent: 'center', alignItems: 'center' },
-  cancelBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0E0E0' },
-  cancelBtnText: { fontSize: 13, fontWeight: '600', color: '#1A1A1A' },
-  saveBtn: { backgroundColor: '#2E7D32', paddingHorizontal: 18, paddingVertical: 7, borderRadius: 20, minWidth: 68, alignItems: 'center' },
+  editIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center' },
+  cancelBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: C.border },
+  cancelBtnText: { fontSize: 13, fontWeight: '600', color: C.text },
+  saveBtn: { backgroundColor: C.brand, paddingHorizontal: 18, paddingVertical: 7, borderRadius: 20, minWidth: 68, alignItems: 'center' },
   saveBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
   scrollContent: { paddingBottom: 20 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F2EE' },
-  profileHeroBlock: { backgroundColor: '#fff', marginBottom: 16 },
-  bannerContainer: { width: '100%', height: BANNER_HEIGHT, backgroundColor: '#C8E6C9', position: 'relative', overflow: 'hidden' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg },
+  profileHeroBlock: { backgroundColor: C.surface, marginBottom: 16 },
+  bannerContainer: { width: '100%', height: BANNER_HEIGHT, backgroundColor: C.brandBg, position: 'relative', overflow: 'hidden' },
   bannerImage: { width: '100%', height: '100%', position: 'absolute' },
   bannerControls: { position: 'absolute', bottom: 12, right: 12, flexDirection: 'row', gap: 8 },
   bannerCtrlBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
   bannerCtrlBtnRed: { backgroundColor: 'rgba(198,40,40,0.8)', paddingHorizontal: 10 },
   bannerCtrlText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  bannerEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 6, borderBottomWidth: 1.5, borderStyle: 'dashed', borderColor: '#A5D6A7' },
-  bannerEmptyIconWrap: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' },
-  bannerEmptyText: { fontSize: 13, fontWeight: '600', color: '#2E7D32' },
+  bannerEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 6, borderBottomWidth: 1.5, borderStyle: 'dashed', borderColor: C.brandBorder },
+  bannerEmptyIconWrap: { width: 54, height: 54, borderRadius: 27, backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center' },
+  bannerEmptyText: { fontSize: 13, fontWeight: '600', color: C.brand },
   avatarRow: { paddingHorizontal: 20, marginTop: -AVATAR_OFFSET, flexDirection: 'row', alignItems: 'flex-end' },
   avatarPosWrap: { position: 'relative', marginBottom: 4 },
   avatarRing: { width: AVATAR_SIZE + 6, height: AVATAR_SIZE + 6, borderRadius: (AVATAR_SIZE + 6) / 2, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5 },
   avatarImage: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2 },
-  avatarPlaceholder: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, backgroundColor: '#C8E6C9', justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 34, fontWeight: '800', color: '#1B5E20' },
-  avatarCameraBtn: { position: 'absolute', bottom: 4, right: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: '#2E7D32', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
+  avatarPlaceholder: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center' },
+  avatarInitial: { fontSize: 34, fontWeight: '800', color: C.brandD },
+  avatarCameraBtn: { position: 'absolute', bottom: 4, right: 0, width: 26, height: 26, borderRadius: 13, backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
   profileMeta: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 18, alignItems: 'flex-start' },
   profileNameRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' },
-  profileName: { fontSize: 20, fontWeight: '800', color: '#1B2714', letterSpacing: -0.3 },
-  profileStoreName: { fontSize: 14, color: '#757575', fontWeight: '500', marginTop: 2 },
-  profileLocation: { fontSize: 13, color: '#757575', marginTop: 2, marginBottom: 12 },
-  statsRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAF8', borderRadius: 12, padding: 14, marginBottom: 12, width: '100%' },
-  statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 18, fontWeight: '800', color: '#1B5E20' },
-  statLabel: { fontSize: 10, color: '#9E9E9E', fontWeight: '500', marginTop: 2 },
-  statDivider: { width: 1, height: 30, backgroundColor: '#E8E8E8' },
-  verifiedChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E8F5E9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  pendingChip: { backgroundColor: '#FFF3E0' },
-  chipDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#2E7D32' },
-  chipDotPending: { backgroundColor: '#E65100' },
-  chipText: { fontSize: 12, fontWeight: '600', color: '#1B5E20' },
-  chipTextPending: { color: '#E65100' },
+  profileName: { fontSize: 20, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
+  profileStoreName: { fontSize: 14, color: C.textOff, fontWeight: '500', marginTop: 2 },
+  profileLocation: { fontSize: 13, color: C.textMuted, marginTop: 2, marginBottom: 14 },
+
+  // Followers/Following circular cards
+  followStatsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+    width: '100%',
+  },
+  followStatCard: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: C.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  followStatIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  followStatValue: { fontSize: 16, fontWeight: '800', color: C.text },
+  followStatLabel: { fontSize: 10, color: C.textMuted, fontWeight: '500' },
+
+  verifiedChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.successBg, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  pendingChip: { backgroundColor: C.accentBg },
+  chipDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.success },
+  chipDotPending: { backgroundColor: C.accent },
+  chipText: { fontSize: 12, fontWeight: '600', color: C.success },
+  chipTextPending: { color: C.accent },
   shareBannerBtn: { position: 'absolute', top: 12, right: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
-  shareProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E8F5E9', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#C8E6C9', marginLeft: 'auto', marginBottom: 4 },
-  shareProfileBtnText: { fontSize: 13, fontWeight: '700', color: '#2E7D32' },
+  shareProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.brandBg, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: C.brandBorder, marginLeft: 'auto', marginBottom: 4 },
+  shareProfileBtnText: { fontSize: 13, fontWeight: '700', color: C.brand },
   body: { paddingHorizontal: 16 },
   section: { marginBottom: 22 },
-  sectionLabel: { fontSize: 11, fontWeight: '700', color: '#9E9E9E', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8, paddingLeft: 4 },
-  sectionCard: { backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden' },
-  settingsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, borderBottomWidth: 0.5, borderBottomColor: '#F0F0F0' },
+  sectionLabel: { fontSize: 11, fontWeight: '700', color: C.textMuted, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8, paddingLeft: 4 },
+  sectionCard: { backgroundColor: C.surface, borderRadius: 16, overflow: 'hidden' },
+  settingsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, borderBottomWidth: 0.5, borderBottomColor: C.border },
   settingsRowLast: { borderBottomWidth: 0 },
-  rowIcon: { width: 36, height: 36, borderRadius: 11, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
+  rowIcon: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   rowBody: { flex: 1 },
-  rowLabel: { fontSize: 14, fontWeight: '600', color: '#1B2714' },
-  rowValue: { fontSize: 11, color: '#AAAAAA', marginTop: 1 },
+  rowLabel: { fontSize: 14, fontWeight: '600', color: C.text },
+  rowValue: { fontSize: 11, color: C.textMuted, marginTop: 1 },
   fieldsContainer: { padding: 16, gap: 14 },
   fieldGroup: {},
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#424242', marginBottom: 7 },
-  fieldInput: { backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#E8E8E8', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: '#1B2714' },
-  fieldInputDisabled: { backgroundColor: '#F5F5F5', color: '#424242' },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: C.textOff, marginBottom: 7 },
+  fieldInput: { backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: C.text },
+  fieldInputDisabled: { backgroundColor: C.bg, color: C.textOff },
   fieldInputMultiline: { height: 80, textAlignVertical: 'top', paddingTop: 12 },
   categoriesContainer: { padding: 16 },
   categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  categoryChip: { backgroundColor: '#E8F5E9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#C8E6C9' },
-  categoryChipText: { fontSize: 12, fontWeight: '600', color: '#2E7D32' },
-  noDataText: { fontSize: 13, color: '#BDBDBD', fontStyle: 'italic' },
-  versionText: { textAlign: 'center', fontSize: 12, color: '#BDBDBD', marginTop: 8 },
+  categoryChip: { backgroundColor: C.brandBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.brandBorder },
+  categoryChipText: { fontSize: 12, fontWeight: '600', color: C.brand },
+  noDataText: { fontSize: 13, color: C.textMuted, fontStyle: 'italic' },
+  versionText: { textAlign: 'center', fontSize: 12, color: C.textMuted, marginTop: 8 },
 });
 
 export default VendorAccountScreen;

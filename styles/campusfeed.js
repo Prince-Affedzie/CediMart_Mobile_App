@@ -107,10 +107,10 @@ export const styles = StyleSheet.create({
   productChipPrice: { color: C.brand, fontSize: 12.5, fontWeight: '800' },
 
   // Action rail
-  rail: { alignItems: 'center', gap: 8, paddingBottom: 4, marginBottom: 90 },
+  rail: { alignItems: 'center', gap: 8, paddingBottom: 4, marginBottom: 50 },
   railAvatarWrap: { alignItems: 'center', marginBottom: 8 },
   railAvatar: {
-    width: 46, height: 46, borderRadius: 23, borderWidth: 2, borderColor: C.white,
+    width: 54, height: 54, borderRadius: 26, borderWidth: 2, borderColor: C.white,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
   },
@@ -118,7 +118,7 @@ export const styles = StyleSheet.create({
   railAvatarText: { color: C.white, fontSize: 17, fontWeight: '800' },
   railAvatarPlus: {
     position: 'absolute', bottom: -8, alignSelf: 'center',
-    width: 18, height: 18, borderRadius: 9, backgroundColor: C.brand,
+    width: 22, height: 22, borderRadius: 10, backgroundColor: C.brand,
     justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#000',
   },
   railBtn: { alignItems: 'center', gap: 3 },

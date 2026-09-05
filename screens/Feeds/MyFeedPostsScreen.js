@@ -13,23 +13,26 @@ import {
   Dimensions,
   Platform,
   Modal,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { getMyFeedPosts, deleteFeedPost } from '../../apis/feedApi';
 
 const { width } = Dimensions.get('window');
-const GRID_GAP = 2;
 const GRID_COLS = 2;
-const GRID_ITEM_SIZE = (width - GRID_GAP * (GRID_COLS + 1)) / GRID_COLS;
+const GRID_GAP = 4;
+const GRID_HORIZONTAL_PADDING = 16;
+const GRID_ITEM_SIZE = (width - GRID_GAP * (GRID_COLS - 1) - GRID_HORIZONTAL_PADDING) / GRID_COLS;
 
 // ─── Design Tokens ─────────────────────────────────────────────────────────
 const C = {
-  bg: '#F8FAFC',
+  bg: '#FAFAFA',
   surface: '#FFFFFF',
-  border: '#F1F5F9',
+  border: '#EFEFEF',
   brand: '#0D9488',
   brandL: '#14B8A6',
   brandD: '#0F766E',
@@ -43,6 +46,7 @@ const C = {
   purple: '#7C3AED',
   info: '#0284C7',
   gold: '#F59E0B',
+  heart: '#FF3B5C',
 };
 
 const FEED_TYPE_CONFIG = {
@@ -58,32 +62,33 @@ const FEED_TYPE_CONFIG = {
 // ─── Helpers ──────────────────────────────────────────────────────────────
 const formatCount = (count) => {
   if (!count && count !== 0) return '0';
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
   if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
   return count.toString();
 };
 
-// ─── Stats Header ──────────────────────────────────────────────────────────
-const STAT_ITEMS = [
-  { key: 'totalPosts', label: 'Posts', icon: 'grid-outline', color: '#0D9488' },
-  { key: 'totalLikes', label: 'Likes', icon: 'heart', color: '#FF3B5C' },
-  { key: 'totalComments', label: 'Comments', icon: 'chatbubble', color: '#0284C7' },
-  { key: 'totalViews', label: 'Views', icon: 'eye', color: '#7C3AED' },
-];
-
-const StatsHeader = ({ stats }) => {
+// ─── Profile Stats Header ─────────────────────────────────────────────────
+const ProfileStatsHeader = ({ stats }) => {
   if (!stats) return null;
+  
+  const statItems = [
+    { key: 'totalPosts', label: 'Posts', icon: 'grid-outline', color: C.brand },
+    { key: 'totalLikes', label: 'Likes', icon: 'heart', color: C.heart },
+    { key: 'totalComments', label: 'Comments', icon: 'chatbubble', color: C.info },
+    { key: 'totalViews', label: 'Views', icon: 'eye', color: C.purple },
+  ];
+
   return (
-    <View style={styles.statsCard}>
-      {STAT_ITEMS.map((item, i) => (
+    <View style={styles.statsContainer}>
+      {statItems.map((item, i) => (
         <React.Fragment key={item.key}>
           <View style={styles.statItem}>
-            <View style={[styles.statIconWrap, { backgroundColor: item.color + '16' }]}>
-              <Ionicons name={item.icon} size={14} color={item.color} />
-            </View>
-            <Text style={styles.statValue}>{formatCount(stats[item.key] || 0)}</Text>
+            <Text style={[styles.statValue, { color: item.color }]}>
+              {formatCount(stats[item.key] || 0)}
+            </Text>
             <Text style={styles.statLabel}>{item.label}</Text>
           </View>
-          {i < STAT_ITEMS.length - 1 && <View style={styles.statDivider} />}
+          {i < statItems.length - 1 && <View style={styles.statDivider} />}
         </React.Fragment>
       ))}
     </View>
@@ -91,13 +96,22 @@ const StatsHeader = ({ stats }) => {
 };
 
 // ─── Grid Item ─────────────────────────────────────────────────────────────
-// Replace the GridItem component:
-
 const GridItem = ({ post, onPress, onMenu }) => {
   const typeCfg = FEED_TYPE_CONFIG[post.type] || FEED_TYPE_CONFIG.product_reel;
   const media = post.media?.[0];
   const isVideo = media?.type === 'video' || media?.url?.includes('playlist.m3u8');
   const isImage = media?.url && !isVideo;
+  const likeCount = post.likes?.length || 0;
+  const commentCount = post.commentCount || 0;
+  
+  // Use a stable player per item
+  const player = useVideoPlayer(
+    isVideo && media?.url ? media.url : null,
+    (p) => {
+      p.loop = true;
+      p.muted = true;
+    }
+  );
 
   return (
     <TouchableOpacity style={styles.gridItem} onPress={onPress} activeOpacity={0.85}>
@@ -106,86 +120,90 @@ const GridItem = ({ post, onPress, onMenu }) => {
         <View style={styles.gridMediaWrap}>
           <VideoView
             style={styles.gridMedia}
-            player={useVideoPlayer(media.url, p => { p.loop = true; p.muted = true; })}
+            player={player}
             contentFit="cover"
             nativeControls={false}
             pointerEvents="none"
           />
-          {/* 🔥 Centered play icon */}
           <View style={styles.playIconCenter}>
-            <Ionicons name="play-circle" size={36} color="rgba(255,255,255,0.85)" />
+            <Ionicons name="play" size={22} color="rgba(255,255,255,0.9)" />
           </View>
         </View>
       ) : isImage ? (
         <Image source={{ uri: media.thumbnailUrl || media.url }} style={styles.gridMedia} resizeMode="cover" />
       ) : (
-        <View style={[styles.gridMedia, styles.gridPlaceholder, { backgroundColor: typeCfg.color + '1c' }]}>
-          <Ionicons name={typeCfg.icon} size={22} color={typeCfg.color} />
+        <View style={[styles.gridMedia, styles.gridPlaceholder, { backgroundColor: typeCfg.color + '15' }]}>
+          <Ionicons name={typeCfg.icon} size={28} color={typeCfg.color} />
         </View>
       )}
 
-      {/* Top overlay: menu */}
-      <View style={styles.gridTopRow} pointerEvents="box-none">
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity
-          style={styles.gridMenuBtn}
-          onPress={() => onMenu(post)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="ellipsis-horizontal" size={13} color="#fff" />
-        </TouchableOpacity>
+      {/* Type badge */}
+      <View style={[styles.typeBadge, { backgroundColor: typeCfg.color + 'E6' }]}>
+        <Text style={styles.typeBadgeText}>{typeCfg.label}</Text>
       </View>
 
-      {/* Bottom overlay: stats */}
-      <View style={styles.gridBottomOverlay} pointerEvents="none">
-        <View style={styles.gridStatItem}>
-          <Ionicons name="heart" size={10} color="#fff" />
-          <Text style={styles.gridStatsText}>{formatCount(post.likes?.length || 0)}</Text>
+      {/* Menu button */}
+      <TouchableOpacity
+        style={styles.menuBtn}
+        onPress={onMenu}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name="ellipsis-horizontal" size={14} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Hover overlay with stats */}
+      <View style={styles.overlayStats} pointerEvents="none">
+        <View style={styles.overlayStat}>
+          <Ionicons name="heart" size={13} color="#fff" />
+          <Text style={styles.overlayStatText}>{formatCount(likeCount)}</Text>
         </View>
-        <View style={styles.gridStatItem}>
-          <Ionicons name="eye" size={11} color="#fff" />
-          <Text style={styles.gridStatsText}>{formatCount(post.views || 0)}</Text>
+        <View style={styles.overlayStat}>
+          <Ionicons name="chatbubble" size={12} color="#fff" />
+          <Text style={styles.overlayStatText}>{formatCount(commentCount)}</Text>
         </View>
-        <View style={{ flex: 1 }} />
-        {post.media?.length > 1 && (
-          <View style={styles.gridStatItem}>
-            <Ionicons name="copy-outline" size={10} color="#fff" />
-            <Text style={styles.gridStatsText}>{post.media.length}</Text>
-          </View>
-        )}
       </View>
+
+      {/* Multiple media indicator */}
+      {post.media?.length > 1 && (
+        <View style={styles.multiMediaBadge}>
+          <Ionicons name="copy-outline" size={12} color="#fff" />
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
+
 // ─── Action Sheet ─────────────────────────────────────────────────────────
 const PostActionSheet = ({ visible, post, onClose, onEdit, onShare, onDelete }) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose}>
       <View style={styles.sheetCard}>
         <View style={styles.sheetHandle} />
-        {post && (
-          <Text style={styles.sheetTitle} numberOfLines={1}>{post.title}</Text>
-        )}
+        <Text style={styles.sheetTitle} numberOfLines={1}>
+          {post?.title || 'Post Actions'}
+        </Text>
 
         <TouchableOpacity style={styles.sheetItem} onPress={onEdit} activeOpacity={0.7}>
           <View style={[styles.sheetIconWrap, { backgroundColor: C.brandDim }]}>
-            <Ionicons name="create-outline" size={17} color={C.brand} />
+            <Ionicons name="create-outline" size={18} color={C.brand} />
           </View>
           <Text style={styles.sheetItemText}>Edit post</Text>
+          <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.sheetItem} onPress={onShare} activeOpacity={0.7}>
           <View style={[styles.sheetIconWrap, { backgroundColor: '#F0F9FF' }]}>
-            <Ionicons name="share-outline" size={17} color="#0284C7" />
+            <Ionicons name="share-outline" size={18} color={C.info} />
           </View>
           <Text style={styles.sheetItemText}>Share</Text>
+          <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
         </TouchableOpacity>
 
         <View style={styles.sheetDivider} />
 
         <TouchableOpacity style={styles.sheetItem} onPress={onDelete} activeOpacity={0.7}>
           <View style={[styles.sheetIconWrap, { backgroundColor: C.dangerBg }]}>
-            <Ionicons name="trash-outline" size={17} color={C.danger} />
+            <Ionicons name="trash-outline" size={18} color={C.danger} />
           </View>
           <Text style={[styles.sheetItemText, { color: C.danger }]}>Delete post</Text>
         </TouchableOpacity>
@@ -219,7 +237,7 @@ const MyFeedPostsScreen = () => {
       else if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
 
-      const res = await getMyFeedPosts({ page: pageNum, limit: 21 });
+      const res = await getMyFeedPosts({ page: pageNum, limit: 18 });
       if (res.status === 200 || res.success) {
         const data = res.data?.data;
         const newPosts = data?.posts || [];
@@ -297,28 +315,24 @@ const MyFeedPostsScreen = () => {
   };
 
   const renderGridItem = ({ item }) => (
-    <GridItem post={item} onPress={() => handlePostPress(item)} onMenu={setActionPost} />
+    <GridItem post={item} onPress={() => handlePostPress(item)} onMenu={() => setActionPost(item)} />
   );
 
   const renderHeader = () => (
     <View>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color={C.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Posts</Text>
         <TouchableOpacity style={styles.createBtn} onPress={() => navigation.navigate('CreateFeedPost')}>
-          <Ionicons name="add-circle" size={28} color={C.brand} />
+          <Ionicons name="add-circle" size={30} color={C.brand} />
         </TouchableOpacity>
       </View>
 
-      {stats && <StatsHeader stats={stats} />}
-
-      {posts.length > 0 && (
-        <Text style={styles.toolbarCount}>
-          {stats?.totalPosts ?? posts.length} post{posts.length !== 1 ? 's' : ''}
-        </Text>
-      )}
+      {/* Stats */}
+      {stats && <ProfileStatsHeader stats={stats} />}
     </View>
   );
 
@@ -345,32 +359,38 @@ const MyFeedPostsScreen = () => {
 
   const renderFooter = () => {
     if (!loadingMore) return null;
-    return <View style={styles.footerLoader}><ActivityIndicator size="small" color={C.brand} /></View>;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={C.brand} />
+      </View>
+    );
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <FlatList
-        data={posts}
-        renderItem={renderGridItem}
-        keyExtractor={item => item._id}
-        numColumns={GRID_COLS}
-        columnWrapperStyle={{ gap: GRID_GAP }}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        ListFooterComponent={renderFooter}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.4}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.brand} colors={[C.brand]} />
-        }
-        contentContainerStyle={[styles.listContent, posts.length === 0 && styles.listContentEmpty]}
-        showsVerticalScrollIndicator={false}
-      />
+  key={`posts-grid-${posts.length === 0 ? 'empty' : 'grid'}`} // Force fresh render
+  data={posts}
+  renderItem={renderGridItem}
+  keyExtractor={item => item._id}
+  numColumns={GRID_COLS}
+  columnWrapperStyle={{ gap: GRID_GAP }}
+  ListHeaderComponent={renderHeader}
+  ListEmptyComponent={renderEmpty}
+  ListFooterComponent={renderFooter}
+  onEndReached={handleLoadMore}
+  onEndReachedThreshold={0.4}
+  refreshControl={
+    <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.brand} colors={[C.brand]} />
+  }
+  contentContainerStyle={[styles.listContent, posts.length === 0 && styles.listContentEmpty]}
+  showsVerticalScrollIndicator={false}
+/>
 
       {loading && posts.length === 0 && (
         <View style={styles.initialLoader}>
           <ActivityIndicator size="large" color={C.brand} />
+          <Text style={styles.initialLoaderText}>Loading your posts...</Text>
         </View>
       )}
 
@@ -395,91 +415,128 @@ const MyFeedPostsScreen = () => {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  listContent: { paddingBottom: 40 },
+  listContent: { 
+  paddingBottom: 40, 
+  paddingHorizontal: 8, // 8px each side = 16px total
+},
   listContentEmpty: { flex: 1 },
 
+  // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 12, paddingVertical: 12, backgroundColor: C.surface,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+    paddingVertical: 12, backgroundColor: C.bg,
   },
   backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
   createBtn: { padding: 4 },
 
-  statsCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.surface, marginHorizontal: 12, marginTop: 12,
-    borderRadius: 16, borderWidth: 1, borderColor: C.border,
-    paddingVertical: 16, paddingHorizontal: 6,
-    shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 6, elevation: 1,
+  // Stats - Instagram-style
+  statsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginBottom: 4,
   },
-  statItem: { flex: 1, alignItems: 'center', gap: 4 },
-  statIconWrap: { width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center', marginBottom: 2 },
-  statValue: { fontSize: 16, fontWeight: '800', color: C.text },
-  statLabel: { fontSize: 10.5, color: C.textMuted, fontWeight: '600' },
-  statDivider: { width: 1, height: 32, backgroundColor: C.border },
-
-  toolbarCount: { fontSize: 12, color: C.textMuted, fontWeight: '600', paddingHorizontal: 14, paddingTop: 14 },
+  statItem: { flex: 1, alignItems: 'center', gap: 2 },
+  statValue: { fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+  statLabel: { fontSize: 11, color: C.textMuted, fontWeight: '500' },
+  statDivider: { width: 1, height: 28, backgroundColor: C.border },
 
   // Grid
   gridItem: {
-  width: GRID_ITEM_SIZE, 
-  height: GRID_ITEM_SIZE, 
-  marginBottom: GRID_GAP,
-  backgroundColor: '#F1F5F9', 
-  position: 'relative', 
-  overflow: 'hidden',
-},
-listContent: { 
-  paddingBottom: 40, 
-  paddingHorizontal: GRID_GAP,
-},
+    width: GRID_ITEM_SIZE,
+    height: GRID_ITEM_SIZE,
+    marginBottom: GRID_GAP,
+    backgroundColor: '#F1F5F9',
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius:14
+  },
   gridMediaWrap: { width: '100%', height: '100%' },
   gridMedia: { width: '100%', height: '100%' },
   gridPlaceholder: { justifyContent: 'center', alignItems: 'center' },
-  gridTopRow: {
-    position: 'absolute', top: 6, left: 6, right: 6,
-    flexDirection: 'row', alignItems: 'center',
+  
+  // Play icon for videos
+  playIconCenter: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  // In the styles object, add:
-playIconCenter: {
-  position: 'absolute',
-  top: 0, left: 0, right: 0, bottom: 0,
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-gridStatItem: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 3,
-},
-  gridMenuBtn: {
-    width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center', alignItems: 'center',
+
+  // Type badge
+  typeBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  gridBottomOverlay: {
-    position: 'absolute', bottom: 6, left: 6, right: 6,
-    flexDirection: 'row', alignItems: 'center',
+  typeBadgeText: { fontSize: 8, fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
+
+  // Menu button
+  menuBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  gridStatsText: { color: '#fff', fontSize: 10, fontWeight: '700', marginLeft: 3 },
+
+  // Overlay stats at bottom
+  overlayStats: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  overlayStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  overlayStatText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+
+  // Multiple media badge
+  multiMediaBadge: {
+    position: 'absolute',
+    bottom: 26,
+    right: 6,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 8,
+    padding: 3,
+  },
 
   // Action sheet
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' },
   sheetCard: {
-    backgroundColor: C.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22,
-    paddingHorizontal: 18, paddingTop: 10, paddingBottom: Platform.OS === 'ios' ? 32 : 22,
+    backgroundColor: C.surface,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 22,
   },
   sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: 'center', marginBottom: 14 },
   sheetTitle: { fontSize: 13, fontWeight: '700', color: C.textMuted, marginBottom: 12, textAlign: 'center' },
-  sheetItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  sheetIconWrap: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
-  sheetItemText: { fontSize: 15, fontWeight: '600', color: C.text },
+  sheetItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  sheetIconWrap: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  sheetItemText: { fontSize: 15, fontWeight: '600', color: C.text, flex: 1 },
   sheetDivider: { height: 1, backgroundColor: C.border, marginVertical: 4 },
   sheetCancel: { marginTop: 10, backgroundColor: C.bg, borderRadius: 14, paddingVertical: 13, alignItems: 'center' },
   sheetCancelText: { fontSize: 14.5, fontWeight: '700', color: C.text },
 
-  // Empty
+  // Empty state
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, paddingHorizontal: 30 },
   emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
   emptyTitle: { fontSize: 17, fontWeight: '700', color: C.text, marginBottom: 6 },
@@ -492,7 +549,9 @@ gridStatItem: {
   },
   createFirstBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 
+  // Loading states
   initialLoader: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg, gap: 12 },
+  initialLoaderText: { fontSize: 14, color: C.textMuted, fontWeight: '500' },
   footerLoader: { paddingVertical: 20, alignItems: 'center' },
   deletingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.85)', justifyContent: 'center', alignItems: 'center' },
 });

@@ -54,8 +54,13 @@ import FollowingScreen from '../screens/Feeds/FollowingScreen'
 import SavedPostsScreen from '../screens/Feeds/SavedPostsScreen'
 import FeedPostDetailScreen from '../screens/Feeds/FeedPostDetailScreen'
 
+// Stories Screen
+import CreateStoryScreen from '../screens/Stories/CreateStoryScreen'
+
 // Opportunities
 import DiscoverScreen from '../screens/DiscoverScreen'
+
+
 
 // ── Vendor screens ──
 import VendorSignUpScreen from '../vendorscreens/VendorSignUp'
@@ -315,6 +320,7 @@ function MainStackNavigator() {
           <Stack.Screen name="SavedPosts" component={SavedPostsScreen} options={{ headerShown: false }} />
           <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CreateStory" component={CreateStoryScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
           
         </>

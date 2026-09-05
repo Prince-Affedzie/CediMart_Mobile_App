@@ -34,6 +34,7 @@ import {TypeFilter} from '../../components/feed/TypeFilter'
 import {styles} from '../../styles/campusfeed'
 import feedPrefetchService from '../../services/feedPrefetchService'
 import ReelSkeleton from '../../components/feed/ReelSkeleton';
+import StoriesBar from '../../components/story/StoriesBar'
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -489,20 +490,28 @@ const CampusFeedScreen = () => {
             </View>
           </View>
         ) : (
-          <View style={styles.headerRow}>
-            <Text style={styles.headerTitle}>Feed</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity style={styles.headerIconBtn} onPress={() => { setShowSearch(true); setTimeout(() => searchInputRef.current?.focus(), 300); }}>
-                <Ionicons name="search-outline" size={20} color={C.white} />
-              </TouchableOpacity>
-              
+          <>
+            <View style={styles.headerRow}>
+              <Text style={styles.headerTitle}>Feed</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity style={styles.headerIconBtn} onPress={() => { setShowSearch(true); setTimeout(() => searchInputRef.current?.focus(), 300); }}>
+                  <Ionicons name="search-outline" size={20} color={C.white} />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+            {!showSearch && (
+              <TypeFilter types={FEED_TYPES} activeType={activeType} onSelect={setActiveType} />
+            )}
+
+            {/* Story rail — a normal flex child between the title row and the
+                type filter, so it sits at a consistent spot on every device
+                instead of a hardcoded `top` offset guessing where the title
+                row ends (which breaks across different safe-area heights). */}
+            <StoriesBar onAddStoryPress={() => navigation.navigate('CreateStory')} />
+          </>
         )}
         
-        {!showSearch && (
-          <TypeFilter types={FEED_TYPES} activeType={activeType} onSelect={setActiveType} />
-        )}
+        
       </SafeAreaView>
 
       <CommentsSheet
@@ -517,7 +526,7 @@ const CampusFeedScreen = () => {
         contentId={reportPost?._id}
       />
 
-      {/* Create Post FAB - Hidden during search 
+      {/* Create Post FAB - Hidden during search
       {!isSearchMode && (
         <TouchableOpacity 
           style={[

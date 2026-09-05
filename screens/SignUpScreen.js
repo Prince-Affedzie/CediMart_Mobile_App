@@ -328,7 +328,7 @@ const SignUpScreen = ({ navigation }) => {
             <TouchableOpacity ref={buttonRef} style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]} onPress={handleSignUp} disabled={isLoading} activeOpacity={0.8}>
               {loading ? (
                 <View style={styles.buttonLoadingContent}><Animated.View style={{ transform: [{ rotate: spin }], marginRight: 8 }}><Ionicons name="refresh" size={20} color="#FFFFFF" /></Animated.View><Text style={styles.signUpButtonText}>Creating Account...</Text></View>
-              ) : (<><Text style={styles.signUpButtonText}>Create Buyer Account</Text><Ionicons name="arrow-forward" size={20} color="#FFFFFF" /></>)}
+              ) : (<><Text style={styles.signUpButtonText}>Create Shopper Account</Text><Ionicons name="arrow-forward" size={20} color="#FFFFFF" /></>)}
             </TouchableOpacity>
 
             <View style={styles.loginLinkContainer}>

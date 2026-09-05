@@ -133,7 +133,7 @@ export const ActionRail = ({
       </TouchableOpacity>
       
       <TouchableOpacity style={styles.railBtn} onPress={onReport} activeOpacity={0.7}>
-        <Ionicons name="flag" size={22} color={C.white} />
+        <Ionicons name="flag" size={30} color={C.white} />
       </TouchableOpacity>
     </View>
   );
