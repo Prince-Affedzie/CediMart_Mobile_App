@@ -35,6 +35,10 @@ const { width } = Dimensions.get('window');
 
 const AUTO_SCROLL_INTERVAL = 4200;
 
+// How close to the bottom of the currently-rendered content (in px) before
+// the next lazy section starts fetching — matches HomeScreen's threshold.
+const LAZY_LOAD_THRESHOLD = 700;
+
 // ─── Category sections to display ─────────────────────────────────────────────
 const FEATURED_CATEGORIES = [
   { key: 'fashion', label: 'Fashion', icon: '👗', color: '#E91E63' },
@@ -395,6 +399,77 @@ const GuestHomeScreen = () => {
   // Category products state
   const [categoryProducts, setCategoryProducts] = useState({});
   const [categoryLoading, setCategoryLoading] = useState({});
+  // Loading flags for the lazy tag sections (Featured loads eagerly, so it's
+  // not part of this — see loadInitialProducts).
+  const [tagLoading, setTagLoading] = useState({
+    urgentSales: true,
+    popularProducts: true,
+    newArrivals: true,
+    studentFavorites: true,
+  });
+
+  // ── Lazy section queue ────────────────────────────────────────────────
+  // Same approach as the signed-in HomeScreen: instead of firing 8 requests
+  // in parallel on mount, everything below the fold loads one section at a
+  // time, in the order it appears on screen, as the guest actually scrolls
+  // toward it.
+  const lazySections = useRef([
+    { id: 'cat-fashion', type: 'category', key: 'fashion' },
+    { id: 'cat-computers', type: 'category', key: 'computers and laptops' },
+    { id: 'tag-urgent', type: 'tag', tag: 'urgent-sale', loadingKey: 'urgentSales', setter: setUrgentSales },
+    { id: 'cat-phones', type: 'category', key: 'phones and tablets' },
+    { id: 'tag-popular', type: 'tag', tag: 'popular', loadingKey: 'popularProducts', setter: setPopularProducts },
+    { id: 'cat-beauty', type: 'category', key: 'beauty and grooming' },
+    { id: 'tag-new', type: 'tag', tag: 'new-arrival', loadingKey: 'newArrivals', setter: setNewArrivals },
+    { id: 'tag-fav', type: 'tag', tag: 'student-favorite', loadingKey: 'studentFavorites', setter: setStudentFavorites },
+  ]).current;
+  const nextSectionIndexRef = useRef(0);
+  const isLoadingSectionRef = useRef(false);
+
+  const loadSection = useCallback(async (section) => {
+    if (section.type === 'category') {
+      try {
+        const res = await productService.getProductsByCategory(section.key, { limit: 6, sort: 'newest' });
+        const products = res?.data?.data || res?.data?.products || res?.data || [];
+        setCategoryProducts(prev => ({ ...prev, [section.key]: products }));
+      } catch (err) {
+        console.error(`Failed to load ${section.key}:`, err);
+        setCategoryProducts(prev => ({ ...prev, [section.key]: [] }));
+      } finally {
+        setCategoryLoading(prev => ({ ...prev, [section.key]: false }));
+      }
+    } else {
+      try {
+        const res = await productService.getProductByTag(section.tag);
+        section.setter(res?.data?.data || []);
+      } catch (err) {
+        section.setter([]);
+      } finally {
+        setTagLoading(prev => ({ ...prev, [section.loadingKey]: false }));
+      }
+    }
+  }, []);
+
+  const triggerNextSection = useCallback(() => {
+    if (isLoadingSectionRef.current) return;
+    const idx = nextSectionIndexRef.current;
+    if (idx >= lazySections.length) return; // queue exhausted
+    const section = lazySections[idx];
+    nextSectionIndexRef.current = idx + 1;
+    isLoadingSectionRef.current = true;
+    loadSection(section).finally(() => { isLoadingSectionRef.current = false; });
+  }, [lazySections, loadSection]);
+
+  // Manual onEndReached-equivalent for a plain ScrollView — once the guest
+  // scrolls within LAZY_LOAD_THRESHOLD px of the current bottom, load the
+  // next queued section.
+  const handleScroll = useCallback(({ nativeEvent }) => {
+    const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
+    const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    if (distanceFromBottom < LAZY_LOAD_THRESHOLD) {
+      triggerNextSection();
+    }
+  }, [triggerNextSection]);
 
   useEffect(() => { loadHomeData(); }, []);
 
@@ -404,52 +479,44 @@ const GuestHomeScreen = () => {
   }, [searchQuery]);
 
   const loadHomeData = async () => {
-    try { setLoading(true); await Promise.all([loadProductData(), loadStatsData(), loadCategoryProducts()]); }
+    try {
+      setLoading(true);
+      await Promise.all([loadInitialProducts(), loadStatsData()]);
+
+      // Reset the lazy queue (also covers pull-to-refresh) and put every
+      // remaining section back into its "pending" skeleton state.
+      nextSectionIndexRef.current = 0;
+      isLoadingSectionRef.current = false;
+      setCategoryLoading({
+        fashion: true,
+        'computers and laptops': true,
+        'phones and tablets': true,
+        'beauty and grooming': true,
+      });
+      setTagLoading({
+        urgentSales: true,
+        popularProducts: true,
+        newArrivals: true,
+        studentFavorites: true,
+      });
+
+      // Kick off just the first section (Fashion, right below the fold) so
+      // there's no empty gap the instant the guest scrolls past the hero —
+      // everything after that is purely scroll-triggered.
+      triggerNextSection();
+    }
     catch (err) { console.error('GuestHome load error:', err); }
     finally { setLoading(false); setRefreshing(false); }
   };
 
-  const loadProductData = async () => {
+  // Only what's needed above the fold: the hero carousel and Featured
+  // Listings both read from featuredProducts, so it loads eagerly. Every
+  // other tag/category is queued — see lazySections above.
+  const loadInitialProducts = async () => {
     try {
-      const [featuredRes, urgentRes, popularRes, newRes, favRes] = await Promise.all([
-        productService.getProductByTag('featured'),
-        productService.getProductByTag('urgent-sale'),
-        productService.getProductByTag('popular'),
-        productService.getProductByTag('new-arrival'),
-        productService.getProductByTag('student-favorite'),
-      ]);
+      const featuredRes = await productService.getProductByTag('featured');
       if (featuredRes?.data?.data) setFeaturedProducts(featuredRes.data.data);
-      if (urgentRes?.data?.data) setUrgentSales(urgentRes.data.data);
-      if (popularRes?.data?.data) setPopularProducts(popularRes.data.data);
-      if (newRes?.data?.data) setNewArrivals(newRes.data.data);
-      if (favRes?.data?.data) setStudentFavorites(favRes.data.data);
-    } catch (err) { console.error('Product data error:', err); }
-  };
-
-  const loadCategoryProducts = async () => {
-    const initialLoading = {};
-    FEATURED_CATEGORIES.forEach(cat => { initialLoading[cat.key] = true; });
-    setCategoryLoading(initialLoading);
-
-    const categoryPromises = FEATURED_CATEGORIES.map(async (cat) => {
-      try {
-        const res = await productService.getProductsByCategory(cat.key, { limit: 6, sort: 'newest' });
-        return { key: cat.key, products: res?.data?.data || res?.data?.products || res?.data || [] };
-      } catch (err) {
-        console.error(`Failed to load ${cat.key}:`, err);
-        return { key: cat.key, products: [] };
-      }
-    });
-
-    const results = await Promise.all(categoryPromises);
-    const productsMap = {};
-    const loadingMap = {};
-    results.forEach(({ key, products }) => {
-      productsMap[key] = products;
-      loadingMap[key] = false;
-    });
-    setCategoryProducts(productsMap);
-    setCategoryLoading(loadingMap);
+    } catch (err) { console.error('Featured products error:', err); }
   };
 
   const loadStatsData = async () => {
@@ -506,7 +573,8 @@ const GuestHomeScreen = () => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         onScrollBeginDrag={() => setShowSearchResults(false)}
-        scrollEventThrottle={16}
+        onScroll={handleScroll}
+        scrollEventThrottle={150}
       >
         {/* HEADER */}
         <View style={styles.header}>
@@ -619,8 +687,8 @@ const GuestHomeScreen = () => {
      <ProductHeroCarousel products={[]} onProductPress={handleProductPress} />
       )}
 
-        {/* STATS BANNER */}
-        {platformStats && <StatsBanner stats={platformStats} />}
+        {/* STATS BANNER 
+        {platformStats && <StatsBanner stats={platformStats} />}*/}
 
         {/* CATEGORIES */}
         <View style={styles.section}>
@@ -638,7 +706,7 @@ const GuestHomeScreen = () => {
           </ScrollView>
         </View>
 
-        {/*  FASHION CATEGORY */}
+        {/*  FASHION CATEGORY — first lazy section, kicked off right after initial load */}
         <CategoryProductSection
           category="fashion"
           products={categoryProducts['fashion']}
@@ -647,7 +715,7 @@ const GuestHomeScreen = () => {
           onSeeAll={handleCategorySeeAll}
         />
 
-        {/* FEATURED PRODUCTS */}
+        {/* FEATURED PRODUCTS — loaded eagerly (feeds the hero carousel too) */}
         {featuredProducts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -668,7 +736,9 @@ const GuestHomeScreen = () => {
         />
 
         {/* URGENT SALES */}
-        {urgentSales.length > 0 && (
+        {tagLoading.urgentSales ? (
+          <SkeletonCategorySection isHorizontal />
+        ) : urgentSales.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}><View style={styles.urgentDot} /><View><Text style={styles.sectionTitle}>Urgent Sales</Text><Text style={styles.sectionSubtitle}>Grab them before they're gone</Text></View></View>
@@ -688,7 +758,9 @@ const GuestHomeScreen = () => {
         />
 
         {/* POPULAR ON CAMPUS */}
-        {popularProducts.length > 0 && (
+        {tagLoading.popularProducts ? (
+          <SkeletonCategorySection isHorizontal={false} />
+        ) : popularProducts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View><Text style={styles.sectionTitle}>Popular on Campus</Text><Text style={styles.sectionSubtitle}>Most viewed this week</Text></View>
@@ -708,7 +780,9 @@ const GuestHomeScreen = () => {
         />
 
         {/* NEW ARRIVALS */}
-        {newArrivals.length > 0 && (
+        {tagLoading.newArrivals ? (
+          <SkeletonCategorySection isHorizontal />
+        ) : newArrivals.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View><Text style={styles.sectionTitle}>New Arrivals</Text><Text style={styles.sectionSubtitle}>Just listed by students</Text></View>
@@ -719,7 +793,9 @@ const GuestHomeScreen = () => {
         )}
 
         {/* STUDENT FAVORITES */}
-        {studentFavorites.length > 0 && (
+        {tagLoading.studentFavorites ? (
+          <SkeletonCategorySection isHorizontal={false} />
+        ) : studentFavorites.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View><Text style={styles.sectionTitle}>Student Favorites</Text><Text style={styles.sectionSubtitle}>Loved by campus shoppers</Text></View>
