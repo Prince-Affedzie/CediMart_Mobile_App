@@ -104,7 +104,7 @@ const OrderScreen = ({ route }) => {
   const navigation = useNavigation();
   const { cartItems, cartTotal, clearCart, refreshCart, loading: cartLoading } = useCart();
   const { user, token } = useAuth();
-  const { package: packageInfo } = route.params || {};
+ 
   const { popup } = usePaystack();
 
   const [placingOrder, setPlacingOrder] = useState(false);

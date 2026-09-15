@@ -440,6 +440,7 @@ const ProductsScreen = ({ navigation, route }) => {
   // Search
   const [searchQuery, setSearchQuery]         = useState('');
   const [showSearch, setShowSearch]           = useState(false);
+  const [searchFocused, setSearchFocused]     = useState(false);
   const [liveSearchResults, setLiveSearchResults] = useState([]);
   const [liveSearching, setLiveSearching]     = useState(false);
   const [showLiveDropdown, setShowLiveDropdown] = useState(false);
@@ -850,179 +851,177 @@ const ProductsScreen = ({ navigation, route }) => {
         keyboardShouldPersistTaps="handled"
         onScrollEndDrag={() => { if (pagination.hasNextPage) handleLoadMore(); }}
       >
-        {/* ── TOP BAR ── */}
-        <View style={styles.topBar}>
-          <View style={styles.topBarTitleWrap}>
-            <Text style={styles.topBarTitle}>
-              {activeCatConfig.id === 'all' ? 'All Listings' : activeCatConfig.label}
-            </Text>
-            {!loading && (
-              <Text style={styles.topBarCount}>{totalProducts.toLocaleString()} item{totalProducts !== 1 ? 's' : ''}</Text>
-            )}
-          </View>
-          <TouchableOpacity
-            style={styles.topBarCartBtn}
-            onPress={() => navigation.navigate('Cart')}
-          >
-            <Ionicons name={cartCount > 0 ? 'cart' : 'cart-outline'} size={22} color="#0D9488" />
-            {cartCount > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* ── SEARCH BAR ── */}
-        <View style={styles.searchBarWrap}>
-          <View style={styles.searchBarActive}>
-            <Ionicons name="search-outline" size={17} color="#0D9488" style={{ marginLeft: 13 }} />
-            <TextInput
-              ref={searchInputRef}
-              style={styles.searchBarInput}
-              placeholder="Search listings…"
-              placeholderTextColor="#9E9E9E"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearchSubmit}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity style={{ padding: 10 }} onPress={clearSearch}>
-                <Ionicons name="close-circle" size={17} color="#BDBDBD" />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Live search dropdown */}
-          {showLiveDropdown && (
-            <View style={styles.liveDropdown}>
-              {liveSearching ? (
-                <View style={{ padding: 16, alignItems: 'center' }}>
-                  <ActivityIndicator size="small" color="#0D9488" />
-                </View>
-              ) : liveSearchResults.length > 0 ? (
-                <>
-                  {liveSearchResults.map(p => {
-                    const catCfg = CATEGORIES.find(c => c.id === p.category) || CATEGORIES[CATEGORIES.length - 1];
-                    return (
-                      <TouchableOpacity
-                        key={p._id}
-                        style={styles.liveRow}
-                        onPress={() => {
-                          setShowLiveDropdown(false);
-                          navigation.navigate('ProductDetail', { productId: p._id, product: p });
-                        }}
-                      >
-                        {p.images?.[0] ? (
-                          <Image source={{ uri: p.images[0] }} style={styles.liveThumb} />
-                        ) : (
-                          <View style={[styles.liveThumb, { backgroundColor: catCfg.color, justifyContent: 'center', alignItems: 'center' }]}>
-                            <Ionicons name={catCfg.icon} size={16} color={catCfg.accent} />
-                          </View>
-                        )}
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.liveRowName} numberOfLines={1}>{p.name}</Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                            <Text style={styles.liveRowPrice}>GH₵ {p.price?.toFixed(2)}</Text>
-                            {p.campus && <Text style={styles.liveRowCampus}>{p.campus}</Text>}
-                          </View>
-                        </View>
-                        {p.condition && <ConditionBadge condition={p.condition} />}
-                      </TouchableOpacity>
-                    );
-                  })}
-                  <TouchableOpacity style={styles.liveViewAll} onPress={handleSearchSubmit}>
-                    <Text style={styles.liveViewAllText}>See all results for "{searchQuery}"</Text>
-                    <Ionicons name="arrow-forward" size={13} color="#0D9488" />
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <View style={{ padding: 20, alignItems: 'center' }}>
-                  <Ionicons name="search-outline" size={28} color="#C8E6C9" />
-                  <Text style={{ fontSize: 13, color: '#9E9E9E', marginTop: 8 }}>No results found</Text>
-                </View>
+        {/* ════════════════════════════════════════════════════════════════
+            HEADER CARD — title, search, category tabs and subcategory row
+            unified into one elevated white surface instead of four blocks
+            each sitting on a different background.
+            ════════════════════════════════════════════════════════════════ */}
+        <View style={styles.headerCardWrap}>
+          {/* ── TOP BAR ── */}
+          <View style={styles.topBar}>
+            <View style={styles.topBarTitleWrap}>
+              <Text style={styles.topBarTitle}>
+                {activeCatConfig.id === 'all' ? 'Shop' : activeCatConfig.label}
+              </Text>
+              {totalProducts > 0 && (
+                <Text style={styles.topBarCount}>{totalProducts} items</Text>
               )}
             </View>
-          )}
-        </View>
+            <TouchableOpacity
+              style={styles.topBarCartBtn}
+              onPress={() => navigation.navigate('Cart')}
+            >
+              <Ionicons name={cartCount > 0 ? 'cart' : 'cart-outline'} size={22} color="#0D9488" />
+              {cartCount > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
 
-        {/* ════════════════════════════════
-            CATEGORY TABS (Larger Icons)
-            ════════════════════════════════ */}
-        <View style={styles.catStrip}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catStripInner}>
-            {CATEGORIES.map(cat => {
-              const isActive = selectedCategory === cat.id;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[styles.catTab, isActive && styles.catTabActive, isActive && { backgroundColor: cat.accent }]}
-                  onPress={() => setSelectedCategory(cat.id)}
-                  activeOpacity={0.75}
-                  disabled={loading}
-                >
-                  <View style={[styles.catIconWrap, isActive && styles.catIconWrapActive]}>
-                    <Ionicons 
-                      name={cat.icon} 
-                      size={18} 
-                      color={isActive ? '#fff' : cat.accent} 
-                    />
-                  </View>
-                  <Text style={[styles.catTabText, isActive && styles.catTabTextActive]}>
-                    {cat.label}
-                  </Text>
+          {/* ── SEARCH BAR ── */}
+          <View style={styles.searchBarWrap}>
+            <View style={[styles.searchBarActive, searchFocused && styles.searchBarActiveFocused]}>
+              <Ionicons name="search-outline" size={17} color="#0D9488" style={{ marginLeft: 13 }} />
+              <TextInput
+                ref={searchInputRef}
+                style={styles.searchBarInput}
+                placeholder="Search listings…"
+                placeholderTextColor="#9E9E9E"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={handleSearchSubmit}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity style={{ padding: 10 }} onPress={clearSearch}>
+                  <Ionicons name="close-circle" size={17} color="#BDBDBD" />
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+              )}
+            </View>
 
-        {/* ════════════════════════════════
-            SUBCATEGORY ROW
-            ════════════════════════════════ */}
-        {subcatsForCat.length > 0 && (
-          <View style={styles.subCatStrip}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subCatStripInner}>
-              <TouchableOpacity
-                style={[styles.subCatPill, selectedSubcategory === '' && styles.subCatPillActive]}
-                onPress={() => setSelectedSubcategory('')}
-              >
-                <Text style={[styles.subCatPillText, selectedSubcategory === '' && styles.subCatPillTextActive]}>
-                  All
-                </Text>
-              </TouchableOpacity>
-              {subcatsForCat.map(sub => {
-                const isActive = selectedSubcategory === sub.id;
+            {/* Live search dropdown */}
+            {showLiveDropdown && (
+              <View style={styles.liveDropdown}>
+                {liveSearching ? (
+                  <View style={{ padding: 16, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color="#0D9488" />
+                  </View>
+                ) : liveSearchResults.length > 0 ? (
+                  <>
+                    {liveSearchResults.map(p => {
+                      const catCfg = CATEGORIES.find(c => c.id === p.category) || CATEGORIES[CATEGORIES.length - 1];
+                      return (
+                        <TouchableOpacity
+                          key={p._id}
+                          style={styles.liveRow}
+                          onPress={() => {
+                            setShowLiveDropdown(false);
+                            navigation.navigate('ProductDetail', { productId: p._id, product: p });
+                          }}
+                        >
+                          {p.images?.[0] ? (
+                            <Image source={{ uri: p.images[0] }} style={styles.liveThumb} />
+                          ) : (
+                            <View style={[styles.liveThumb, { backgroundColor: catCfg.color, justifyContent: 'center', alignItems: 'center' }]}>
+                              <Ionicons name={catCfg.icon} size={16} color={catCfg.accent} />
+                            </View>
+                          )}
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.liveRowName} numberOfLines={1}>{p.name}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                              <Text style={styles.liveRowPrice}>GH₵ {p.price?.toFixed(2)}</Text>
+                              {p.campus && <Text style={styles.liveRowCampus}>{p.campus}</Text>}
+                            </View>
+                          </View>
+                          {p.condition && <ConditionBadge condition={p.condition} />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                    <TouchableOpacity style={styles.liveViewAll} onPress={handleSearchSubmit}>
+                      <Text style={styles.liveViewAllText}>See all results for "{searchQuery}"</Text>
+                      <Ionicons name="arrow-forward" size={13} color="#0D9488" />
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <View style={{ padding: 20, alignItems: 'center' }}>
+                    <Ionicons name="search-outline" size={28} color="#C8E6C9" />
+                    <Text style={{ fontSize: 13, color: '#9E9E9E', marginTop: 8 }}>No results found</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* ── CATEGORY TABS ── */}
+          <View style={styles.catStrip}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catStripInner}>
+              {CATEGORIES.map(cat => {
+                const isActive = selectedCategory === cat.id;
                 return (
                   <TouchableOpacity
-                    key={sub.id}
-                    style={[styles.subCatPill, isActive && styles.subCatPillActive]}
-                    onPress={() => setSelectedSubcategory(isActive ? '' : sub.id)}
+                    key={cat.id}
+                    style={[styles.catTab, isActive && styles.catTabActive]}
+                    onPress={() => setSelectedCategory(cat.id)}
                     activeOpacity={0.75}
+                    disabled={loading}
                   >
-                    <Text style={[styles.subCatPillText, isActive && styles.subCatPillTextActive]}>
-                      {sub.label}
+                    <View style={[styles.catIconWrap, isActive && styles.catIconWrapActive]}>
+                      <Ionicons 
+                        name={cat.icon} 
+                        size={24} 
+                        color={isActive ? '#fff' : cat.accent} 
+                      />
+                    </View>
+                    <Text style={[styles.catTabText, isActive && styles.catTabTextActive]}>
+                      {cat.label}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
           </View>
-        )}
+
+          {/* ── SUBCATEGORY ROW ── */}
+          {subcatsForCat.length > 0 && (
+            <View style={styles.subCatStrip}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subCatStripInner}>
+                <TouchableOpacity
+                  style={[styles.subCatPill, selectedSubcategory === '' && styles.subCatPillActive]}
+                  onPress={() => setSelectedSubcategory('')}
+                >
+                  <Text style={[styles.subCatPillText, selectedSubcategory === '' && styles.subCatPillTextActive]}>
+                    All
+                  </Text>
+                </TouchableOpacity>
+                {subcatsForCat.map(sub => {
+                  const isActive = selectedSubcategory === sub.id;
+                  return (
+                    <TouchableOpacity
+                      key={sub.id}
+                      style={[styles.subCatPill, isActive && styles.subCatPillActive]}
+                      onPress={() => setSelectedSubcategory(isActive ? '' : sub.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.subCatPillText, isActive && styles.subCatPillTextActive]}>
+                        {sub.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </View>
 
         {/* ════════════════════════════════
             TOOLBAR
             ════════════════════════════════ */}
         <View style={styles.toolbar}>
           <View style={styles.toolbarLeft}>
-            {loading ? (
-              <ActivityIndicator size="small" color="#0D9488" />
-            ) : (
-              <Text style={styles.toolbarCount}>
-                <Text style={styles.toolbarCountBold}>{totalProducts}</Text> listings
-              </Text>
-            )}
             {searchQuery ? (
               <View style={styles.searchActiveTag}>
                 <Text style={styles.searchActiveTagText} numberOfLines={1}>"{searchQuery}"</Text>

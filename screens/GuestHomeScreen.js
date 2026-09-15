@@ -34,10 +34,9 @@ import ShopFAB from '../components/ShopFAB'
 const { width } = Dimensions.get('window');
 
 const AUTO_SCROLL_INTERVAL = 4200;
-
-// How close to the bottom of the currently-rendered content (in px) before
-// the next lazy section starts fetching — matches HomeScreen's threshold.
 const LAZY_LOAD_THRESHOLD = 700;
+const BATCH_SIZE = 2;
+const SECTION_STAGGER_MS = 400;
 
 // ─── Category sections to display ─────────────────────────────────────────────
 const FEATURED_CATEGORIES = [
@@ -108,14 +107,18 @@ const SkeletonDealCard = () => {
   );
 };
 
+const SkeletonSectionHeader = ({ titleWidth = 140 }) => (
+  <View style={styles.sectionHeader}>
+    <View>
+      <View style={{ height: 16, backgroundColor: '#E0E0E0', borderRadius: 4, width: titleWidth, marginBottom: 4 }} />
+      <View style={{ height: 11, backgroundColor: '#E0E0E0', borderRadius: 3, width: 80 }} />
+    </View>
+  </View>
+);
+
 const SkeletonCategorySection = ({ isHorizontal = false }) => (
   <View style={styles.section}>
-    <View style={styles.sectionHeader}>
-      <View>
-        <Animated.View style={{ width: 140, height: 16, backgroundColor: '#E0E0E0', borderRadius: 4, marginBottom: 4, opacity: 0.6 }} />
-        <Animated.View style={{ width: 80, height: 11, backgroundColor: '#E0E0E0', borderRadius: 3, opacity: 0.4 }} />
-      </View>
-    </View>
+    <SkeletonSectionHeader />
     {isHorizontal ? (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
         {[1, 2, 3, 4].map(i => <SkeletonDealCard key={i} />)}
@@ -399,8 +402,7 @@ const GuestHomeScreen = () => {
   // Category products state
   const [categoryProducts, setCategoryProducts] = useState({});
   const [categoryLoading, setCategoryLoading] = useState({});
-  // Loading flags for the lazy tag sections (Featured loads eagerly, so it's
-  // not part of this — see loadInitialProducts).
+  // Loading flags for the lazy tag sections
   const [tagLoading, setTagLoading] = useState({
     urgentSales: true,
     popularProducts: true,
@@ -408,11 +410,7 @@ const GuestHomeScreen = () => {
     studentFavorites: true,
   });
 
-  // ── Lazy section queue ────────────────────────────────────────────────
-  // Same approach as the signed-in HomeScreen: instead of firing 8 requests
-  // in parallel on mount, everything below the fold loads one section at a
-  // time, in the order it appears on screen, as the guest actually scrolls
-  // toward it.
+  // ── Lazy section queue with background chain ────────────────────────────
   const lazySections = useRef([
     { id: 'cat-fashion', type: 'category', key: 'fashion' },
     { id: 'cat-computers', type: 'category', key: 'computers and laptops' },
@@ -425,53 +423,73 @@ const GuestHomeScreen = () => {
   ]).current;
   const nextSectionIndexRef = useRef(0);
   const isLoadingSectionRef = useRef(false);
+  const backgroundTimerRef = useRef(null);
+  const isMountedRef = useRef(true);
 
   const loadSection = useCallback(async (section) => {
     if (section.type === 'category') {
       try {
         const res = await productService.getProductsByCategory(section.key, { limit: 6, sort: 'newest' });
         const products = res?.data?.data || res?.data?.products || res?.data || [];
-        setCategoryProducts(prev => ({ ...prev, [section.key]: products }));
+        if (isMountedRef.current) setCategoryProducts(prev => ({ ...prev, [section.key]: products }));
       } catch (err) {
-        console.error(`Failed to load ${section.key}:`, err);
-        setCategoryProducts(prev => ({ ...prev, [section.key]: [] }));
+        if (isMountedRef.current) setCategoryProducts(prev => ({ ...prev, [section.key]: [] }));
       } finally {
-        setCategoryLoading(prev => ({ ...prev, [section.key]: false }));
+        if (isMountedRef.current) setCategoryLoading(prev => ({ ...prev, [section.key]: false }));
       }
     } else {
       try {
         const res = await productService.getProductByTag(section.tag);
-        section.setter(res?.data?.data || []);
+        if (isMountedRef.current) section.setter(res?.data?.data || []);
       } catch (err) {
-        section.setter([]);
+        if (isMountedRef.current) section.setter([]);
       } finally {
-        setTagLoading(prev => ({ ...prev, [section.loadingKey]: false }));
+        if (isMountedRef.current) setTagLoading(prev => ({ ...prev, [section.loadingKey]: false }));
       }
     }
   }, []);
 
-  const triggerNextSection = useCallback(() => {
+  // 🔥 Same background chain as HomeScreen: loads BATCH_SIZE sections
+  // together, then auto-schedules the next batch after a short stagger —
+  // no scrolling required for content to keep loading progressively.
+  const triggerNextBatch = useCallback(() => {
     if (isLoadingSectionRef.current) return;
-    const idx = nextSectionIndexRef.current;
-    if (idx >= lazySections.length) return; // queue exhausted
-    const section = lazySections[idx];
-    nextSectionIndexRef.current = idx + 1;
+    clearTimeout(backgroundTimerRef.current);
+
+    const startIdx = nextSectionIndexRef.current;
+    if (startIdx >= lazySections.length) return;
+
+    const batch = lazySections.slice(startIdx, startIdx + BATCH_SIZE);
+    nextSectionIndexRef.current = startIdx + batch.length;
     isLoadingSectionRef.current = true;
-    loadSection(section).finally(() => { isLoadingSectionRef.current = false; });
+
+    Promise.all(batch.map(loadSection)).finally(() => {
+      isLoadingSectionRef.current = false;
+      if (!isMountedRef.current) return;
+      if (nextSectionIndexRef.current < lazySections.length) {
+        backgroundTimerRef.current = setTimeout(triggerNextBatch, SECTION_STAGGER_MS);
+      }
+    });
   }, [lazySections, loadSection]);
 
-  // Manual onEndReached-equivalent for a plain ScrollView — once the guest
-  // scrolls within LAZY_LOAD_THRESHOLD px of the current bottom, load the
-  // next queued section.
+  // Scroll fast-forward — if the guest scrolls near the bottom of what's
+  // rendered before the background chain gets there, jump the queue ahead.
   const handleScroll = useCallback(({ nativeEvent }) => {
     const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
     const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
     if (distanceFromBottom < LAZY_LOAD_THRESHOLD) {
-      triggerNextSection();
+      triggerNextBatch();
     }
-  }, [triggerNextSection]);
+  }, [triggerNextBatch]);
 
-  useEffect(() => { loadHomeData(); }, []);
+  useEffect(() => {
+    isMountedRef.current = true;
+    loadHomeData();
+    return () => {
+      isMountedRef.current = false;
+      clearTimeout(backgroundTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => { if (searchQuery.trim().length > 1) performSearch(); else clearSearchResults(); }, 400);
@@ -483,8 +501,8 @@ const GuestHomeScreen = () => {
       setLoading(true);
       await Promise.all([loadInitialProducts(), loadStatsData()]);
 
-      // Reset the lazy queue (also covers pull-to-refresh) and put every
-      // remaining section back into its "pending" skeleton state.
+      // Reset the lazy queue
+      clearTimeout(backgroundTimerRef.current);
       nextSectionIndexRef.current = 0;
       isLoadingSectionRef.current = false;
       setCategoryLoading({
@@ -500,18 +518,13 @@ const GuestHomeScreen = () => {
         studentFavorites: true,
       });
 
-      // Kick off just the first section (Fashion, right below the fold) so
-      // there's no empty gap the instant the guest scrolls past the hero —
-      // everything after that is purely scroll-triggered.
-      triggerNextSection();
+      // Kick off the first batch right away
+      triggerNextBatch();
     }
     catch (err) { console.error('GuestHome load error:', err); }
     finally { setLoading(false); setRefreshing(false); }
   };
 
-  // Only what's needed above the fold: the hero carousel and Featured
-  // Listings both read from featuredProducts, so it loads eagerly. Every
-  // other tag/category is queued — see lazySections above.
   const loadInitialProducts = async () => {
     try {
       const featuredRes = await productService.getProductByTag('featured');
@@ -677,18 +690,15 @@ const GuestHomeScreen = () => {
 
         {/* HERO CAROUSEL */}
         {featuredProducts.length > 0 ? (
-         <View style={styles.carouselSection}>
-        <ProductHeroCarousel 
-         products={featuredProducts.slice(0, 6)} 
-         onProductPress={handleProductPress} 
-       />
-      </View>
-     ) : (
-     <ProductHeroCarousel products={[]} onProductPress={handleProductPress} />
-      )}
-
-        {/* STATS BANNER 
-        {platformStats && <StatsBanner stats={platformStats} />}*/}
+          <View style={styles.carouselSection}>
+            <ProductHeroCarousel 
+              products={featuredProducts.slice(0, 6)} 
+              onProductPress={handleProductPress} 
+            />
+          </View>
+        ) : (
+          <ProductHeroCarousel products={[]} onProductPress={handleProductPress} />
+        )}
 
         {/* CATEGORIES */}
         <View style={styles.section}>
@@ -698,15 +708,16 @@ const GuestHomeScreen = () => {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
             {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
               <TouchableOpacity key={key} style={styles.categoryPill} onPress={() => handleCategoryPress(key)} activeOpacity={0.8}>
-                
-                <View style={[styles.categoryIconCircle, { backgroundColor: cfg.color, borderColor: cfg.color }]}><Ionicons style={styles.categoryEmoji} name ={cfg.icon}  size={14}/></View>
+                <View style={[styles.categoryIconCircle, { backgroundColor: cfg.color, borderColor: cfg.color }]}>
+                  <Ionicons style={styles.categoryEmoji} name={cfg.icon} size={14} />
+                </View>
                 <Text style={styles.categoryName} numberOfLines={1}>{cfg.label}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
 
-        {/*  FASHION CATEGORY — first lazy section, kicked off right after initial load */}
+        {/* FASHION CATEGORY */}
         <CategoryProductSection
           category="fashion"
           products={categoryProducts['fashion']}
@@ -715,7 +726,7 @@ const GuestHomeScreen = () => {
           onSeeAll={handleCategorySeeAll}
         />
 
-        {/* FEATURED PRODUCTS — loaded eagerly (feeds the hero carousel too) */}
+        {/* FEATURED PRODUCTS */}
         {featuredProducts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -726,7 +737,7 @@ const GuestHomeScreen = () => {
           </View>
         )}
 
-        {/*  COMPUTERS & LAPTOPS CATEGORY */}
+        {/* COMPUTERS & LAPTOPS */}
         <CategoryProductSection
           category="computers and laptops"
           products={categoryProducts['computers and laptops']}
@@ -748,7 +759,7 @@ const GuestHomeScreen = () => {
           </View>
         )}
 
-        {/* PHONES & TABLETS CATEGORY */}
+        {/* PHONES & TABLETS */}
         <CategoryProductSection
           category="phones and tablets"
           products={categoryProducts['phones and tablets']}
@@ -770,7 +781,7 @@ const GuestHomeScreen = () => {
           </View>
         )}
 
-        {/* BEAUTY & GROOMING CATEGORY */}
+        {/* BEAUTY & GROOMING */}
         <CategoryProductSection
           category="beauty and grooming"
           products={categoryProducts['beauty and grooming']}
@@ -807,7 +818,7 @@ const GuestHomeScreen = () => {
 
         {/* SELL YOUR STUFF BANNER */}
         <View style={styles.bannerSection}>
-          <TouchableOpacity style={styles.sellBanner} activeOpacity={0.9} onPress={()=>navigation.navigate("VendorSignUp")}>
+          <TouchableOpacity style={styles.sellBanner} activeOpacity={0.9} onPress={() => navigation.navigate("VendorSignUp")}>
             <View style={styles.sellBannerContent}>
               <View style={styles.sellBannerTag}><Ionicons name="storefront-outline" size={11} color="#fff" /><Text style={styles.sellBannerTagText}>FOR SELLERS</Text></View>
               <Text style={styles.sellBannerTitle}>Got something{'\n'}to sell?</Text>
@@ -826,7 +837,6 @@ const GuestHomeScreen = () => {
         bottomOffset={40}  
       />
       <AIFAB style={{ position: 'absolute', bottom: 34, right: 16 }} />
-      
     </SafeAreaView>
   );
 };

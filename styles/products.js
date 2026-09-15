@@ -66,7 +66,7 @@ const C = {
 // STYLES
 // ─────────────────────────────────────────────────────────────────────────────
 export const styles = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: C.bg },
+  container:   { flex: 1, backgroundColor: C.bg, },
   scrollContent: { paddingBottom: 20 },
 
   // ── Hero ──────────────────────────────────────────────────────────────────
@@ -93,14 +93,6 @@ export const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
   },
   heroCount: { fontSize: 11, color: 'rgba(255,255,255,0.72)', marginTop: 2, fontWeight: '500' },
-  cartBadge: {
-    position: 'absolute', top: 0, right: 0,
-    backgroundColor: C.danger, borderRadius: 9,
-    minWidth: 16, height: 16,
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.2)',
-  },
-  cartBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800', paddingHorizontal: 2 },
 
   // Hero search
   heroSearchWrap: { position: 'absolute', bottom: 16, left: 16, right: 16, zIndex: 10 },
@@ -155,26 +147,13 @@ export const styles = StyleSheet.create({
   },
   liveViewAllText: { fontSize: 13, fontWeight: '600', color: C.brand },
 
-  // ── Category strip ──────────────────────────────────────────────────────────
-  catStrip: {
-    backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
-    shadowColor: C.black, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04, shadowRadius: 4, elevation: 3,
-  },
-  catStripInner: { paddingHorizontal: 12, paddingVertical: 10, gap: 8, flexDirection: 'row' },
-  catTab: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#F5F5F5', borderWidth: 1, borderColor: 'transparent',
-  },
-  catTabActive: { borderColor: 'transparent' },
-  catTabEmoji: { fontSize: 14 },
-  catTabText: { fontSize: 12, fontWeight: '600', color: C.t1 },
-  catTabTextActive: { color: '#fff' },
-
   // ── Subcategory strip ───────────────────────────────────────────────────────
+  // Lives inside headerCardWrap now (see below) — a hairline top border reads
+  // as a section break within the same white surface, instead of its own
+  // separate grey-tinted box that broke continuity with the rest of the header.
   subCatStrip: {
-    backgroundColor: '#FAFAFA', borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
+    borderTopWidth: 1, borderTopColor: C.elev,
+    paddingTop: 4,
   },
   subCatStripInner: { paddingHorizontal: 14, paddingVertical: 8, gap: 7, flexDirection: 'row' },
   subCatPill: {
@@ -189,7 +168,7 @@ export const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
+     borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
     marginBottom: 8,
   },
   toolbarLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
@@ -582,133 +561,156 @@ export const styles = StyleSheet.create({
     fontWeight: '800',
     color: C.danger,
   },
-  // Add these to your existing styles in products.js
 
-// ─── Top Bar ──────────────────────────────────────────────
-topBar: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  paddingHorizontal: 16,
-  paddingTop: 12,
-  paddingBottom: 8,
-  backgroundColor: '#FFFFFF',
-},
-topBarTitleWrap: {
-  flex: 1,
-  flexDirection: 'row',
-  alignItems: 'baseline',
-  gap: 8,
-},
-topBarTitle: {
-  fontSize: 22,
-  fontWeight: '800',
-  color: '#1A1A1A',
-  letterSpacing: -0.3,
-},
-topBarCount: {
-  fontSize: 13,
-  color: '#9E9E9E',
-  fontWeight: '500',
-},
-topBarCartBtn: {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  backgroundColor: '#E8F5E9',
-  justifyContent: 'center',
-  alignItems: 'center',
-  position: 'relative',
-},
-cartBadge: {
-  position: 'absolute',
-  top: -2,
-  right: -2,
-  backgroundColor: '#F97316',
-  borderRadius: 10,
-  minWidth: 18,
-  height: 18,
-  justifyContent: 'center',
-  alignItems: 'center',
-  paddingHorizontal: 4,
-  borderWidth: 2,
-  borderColor: '#FFFFFF',
-},
-cartBadgeText: {
-  color: '#FFFFFF',
-  fontSize: 10,
-  fontWeight: '800',
-},
+  // ── Header card ─────────────────────────────────────────────────────────────
+  // Wraps the title row, search bar, category tabs and subcategory row into
+  // one elevated white surface, instead of four sibling blocks each on a
+  // slightly different background (page bg → white → white → grey) that
+  // read as disconnected pieces rather than a single header.
+  headerCardWrap: {
+    backgroundColor: C.white,
+    marginBottom: 10,
+    shadowColor: C.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 4,
+  },
 
-// ─── Search Bar ──────────────────────────────────────────
-searchBarWrap: {
-  paddingHorizontal: 16,
-  paddingBottom: 12,
-  backgroundColor: '#FFFFFF',
-},
-searchBarActive: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#F5F5F5',
-  borderRadius: 12,
-  height: 44,
-  borderWidth: 1,
-  borderColor: '#E0E0E0',
-},
-searchBarInput: {
-  flex: 1,
-  fontSize: 14,
-  color: '#1A1A1A',
-  paddingHorizontal: 10,
-  height: '100%',
-},
+  // ─── Top Bar ──────────────────────────────────────────────
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  topBarTitleWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  topBarTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1A1A1A',
+    letterSpacing: -0.3,
+  },
+  topBarCount: {
+    fontSize: 13,
+    color: '#9E9E9E',
+    fontWeight: '500',
+  },
+  topBarCartBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: C.brandBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#F97316',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  cartBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+  },
 
-// ─── Category Tabs (Updated with icon container) ────────
-catStrip: {
-  backgroundColor: '#FFFFFF',
-  paddingBottom: 12,
-},
-catStripInner: {
-  paddingHorizontal: 12,
-  gap: 10,
-  alignItems: 'flex-start',
-},
-catTab: {
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingHorizontal: 12,
-  paddingVertical: 10,
-  borderRadius: 16,
-  minWidth: 72,
-  gap: 6,
-},
-catTabActive: {
-  backgroundColor: '#0D9488',
-  borderRadius: 26,
-},
-catIconWrap: {
-  width: 42,
-  height: 42,
-  borderRadius: 26,
-  backgroundColor: '#F5F5F5',
-  justifyContent: 'center',
-  alignItems: 'center',
-  marginBottom: 2,
-},
-catIconWrapActive: {
-  backgroundColor: 'rgba(255,255,255,0.2)',
-},
-catTabEmoji: {
-  fontSize: 18,
-},
-catTabText: {
-  fontSize: 11,
-  fontWeight: '600',
-  color: '#616161',
-  textAlign: 'center',
-},
-catTabTextActive: {
-  color: '#FFFFFF',
-  fontWeight: '700',
-},
+  // ─── Search Bar ──────────────────────────────────────────
+  // Elevated recessed field on the header card's white surface (instead of a
+  // flat grey box with a hard border), with a brand-teal focus ring — same
+  // search-bar language used elsewhere in the app.
+  searchBarWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  searchBarActive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.elev,
+    borderRadius: 14,
+    height: 46,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  searchBarActiveFocused: {
+    backgroundColor: C.brandBg,
+    borderColor: C.brand,
+  },
+  searchBarInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1A1A1A',
+    paddingHorizontal: 10,
+    height: '100%',
+  },
+
+  // ─── Category Tabs ────────────────────────────────────────
+  // Sits on the same white header-card surface as the search bar above it —
+  // no separate background needed. Active state uses a single consistent
+  // brand teal (not each category's own accent) so the selected tab always
+  // reads the same way as you switch categories, while inactive icons still
+  // keep their individual category colour for a bit of visual variety.
+  catStrip: {
+    paddingBottom: 12,
+  },
+  catStripInner: {
+    paddingHorizontal: 12,
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  catTab: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 16,
+    minWidth: 72,
+    gap: 6,
+  },
+  catTabActive: {
+    backgroundColor: '#0D9488',
+    borderRadius: 32,
+  },
+  catIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 26,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  catIconWrapActive: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  catTabEmoji: {
+    fontSize: 18,
+  },
+  catTabText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#616161',
+    textAlign: 'center',
+  },
+  catTabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
 });

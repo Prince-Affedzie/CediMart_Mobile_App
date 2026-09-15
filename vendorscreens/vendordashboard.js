@@ -182,7 +182,6 @@ const CreateSpeedDial = ({ onNewPost, onNewStory }) => {
 
       <View style={styles.dialStack} pointerEvents="box-none">
         <Animated.View style={[styles.dialItem, itemStyle(postAnim, 136)]} pointerEvents={open ? 'auto' : 'none'}>
-          <Text style={styles.dialItemLabel}>New post</Text>
           <TouchableOpacity
             style={[styles.dialItemBtn, { backgroundColor: C.info }]}
             onPress={() => handleOption(onNewPost)}
@@ -190,10 +189,11 @@ const CreateSpeedDial = ({ onNewPost, onNewStory }) => {
           >
             <Ionicons name="newspaper-outline" size={19} color="#fff" />
           </TouchableOpacity>
+          <Text style={styles.dialItemLabel}>New post</Text>
         </Animated.View>
 
         <Animated.View style={[styles.dialItem, itemStyle(storyAnim, 72)]} pointerEvents={open ? 'auto' : 'none'}>
-          <Text style={styles.dialItemLabel}>New story</Text>
+          
           <TouchableOpacity
             style={[styles.dialItemBtn, { backgroundColor: C.accent }]}
             onPress={() => handleOption(onNewStory)}
@@ -201,6 +201,7 @@ const CreateSpeedDial = ({ onNewPost, onNewStory }) => {
           >
             <Ionicons name="camera-outline" size={19} color="#fff" />
           </TouchableOpacity>
+          <Text style={styles.dialItemLabel}>New story</Text>
         </Animated.View>
 
         <TouchableOpacity style={styles.dialMainBtn} onPress={toggle} activeOpacity={0.9}>

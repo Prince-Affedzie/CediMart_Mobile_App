@@ -44,10 +44,19 @@ const FEATURED_CATEGORIES = [
 ];
 
 // How close to the bottom of the currently-rendered content (in px) before
-// the next lazy section starts fetching. Generous on purpose — a network
-// request takes a moment, so we want it to already be in flight before the
-// user actually scrolls into the skeleton, not after.
+// a scroll-triggered fast-forward kicks in. The background batch chain
+// (see triggerNextBatch below) is what actually drives most loading now —
+// this threshold only matters for the case where the user scrolls faster
+// than that chain keeps up.
 const LAZY_LOAD_THRESHOLD = 700;
+
+// 🔥 NEW: how many queued sections load together per batch, and how long
+// to wait after a batch finishes before automatically starting the next
+// one. This is what makes sections keep loading in the background even if
+// the user never scrolls — previously nothing past the first section ever
+// fired until a scroll event crossed the threshold.
+const BATCH_SIZE = 2;
+const SECTION_STAGGER_MS = 400;
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 const SkeletonProductCard = () => (
@@ -349,10 +358,12 @@ const HomeScreen = () => {
   const unreadCount = notifications?.filter(n => !n.read).length ?? 0;
 
   // ── Lazy section queue ────────────────────────────────────────────────
-  // Everything below the hero/featured fold loads one section at a time,
-  // in the same order the sections appear on screen, instead of all 8
-  // requests firing in parallel on mount. Each entry's setter/keys are
-  // captured once here since useState setters are stable across renders.
+  // Everything below the hero/featured fold loads in the same order the
+  // sections appear on screen, in batches of BATCH_SIZE, instead of all 8
+  // requests firing in parallel on mount. Unlike before, this queue now
+  // drives itself in the background (see triggerNextBatch) — it doesn't
+  // wait for the user to scroll near the next section. Scrolling can still
+  // fast-forward it if the user gets there before the background chain does.
   const lazySections = useRef([
     { id: 'cat-fashion', type: 'category', key: 'fashion' },
     { id: 'cat-computers', type: 'category', key: 'computers and laptops' },
@@ -365,54 +376,84 @@ const HomeScreen = () => {
   ]).current;
   const nextSectionIndexRef = useRef(0);
   const isLoadingSectionRef = useRef(false);
+  // 🔥 NEW: handle for the pending "start next batch" timer, so a
+  // scroll-triggered fast-forward can cancel it (no point firing twice)
+  // and so it can be cleared on refresh/unmount.
+  const backgroundTimerRef = useRef(null);
+  const isMountedRef = useRef(true);
 
   const loadSection = useCallback(async (section) => {
     if (section.type === 'category') {
       try {
         const res = await productService.getProductsByCategory(section.key, { limit: 6, sort: 'newest' });
         const products = res?.data?.data || res?.data?.products || res?.data || [];
-        setCategoryProducts(prev => ({ ...prev, [section.key]: products }));
+        if (isMountedRef.current) setCategoryProducts(prev => ({ ...prev, [section.key]: products }));
       } catch (err) {
-        setCategoryProducts(prev => ({ ...prev, [section.key]: [] }));
+        if (isMountedRef.current) setCategoryProducts(prev => ({ ...prev, [section.key]: [] }));
       } finally {
-        setCategoryLoading(prev => ({ ...prev, [section.key]: false }));
+        if (isMountedRef.current) setCategoryLoading(prev => ({ ...prev, [section.key]: false }));
       }
     } else {
       try {
         const res = await productService.getProductByTag(section.tag);
-        section.setter(res?.data?.data || []);
+        if (isMountedRef.current) section.setter(res?.data?.data || []);
       } catch (err) {
-        section.setter([]);
+        if (isMountedRef.current) section.setter([]);
       } finally {
-        setTagLoading(prev => ({ ...prev, [section.loadingKey]: false }));
+        if (isMountedRef.current) setTagLoading(prev => ({ ...prev, [section.loadingKey]: false }));
       }
     }
   }, []);
 
-  const triggerNextSection = useCallback(() => {
+  // 🔥 NEW: loads the next BATCH_SIZE queued sections together, and once
+  // they've all resolved, automatically schedules the batch after that —
+  // this is the actual background chain. onEndReached-style scroll calls
+  // this same function; if a batch is already in flight or a stagger timer
+  // is already pending, it's a no-op (guarded below), so calling it from
+  // both scroll and the auto-chain is always safe.
+  const triggerNextBatch = useCallback(() => {
     if (isLoadingSectionRef.current) return;
-    const idx = nextSectionIndexRef.current;
-    if (idx >= lazySections.length) return; // queue exhausted
-    const section = lazySections[idx];
-    nextSectionIndexRef.current = idx + 1;
+    clearTimeout(backgroundTimerRef.current);
+
+    const startIdx = nextSectionIndexRef.current;
+    if (startIdx >= lazySections.length) return; // queue exhausted
+
+    const batch = lazySections.slice(startIdx, startIdx + BATCH_SIZE);
+    nextSectionIndexRef.current = startIdx + batch.length;
     isLoadingSectionRef.current = true;
-    loadSection(section).finally(() => { isLoadingSectionRef.current = false; });
+
+    Promise.all(batch.map(loadSection)).finally(() => {
+      isLoadingSectionRef.current = false;
+      if (!isMountedRef.current) return;
+      if (nextSectionIndexRef.current < lazySections.length) {
+        // Stagger before the next batch rather than firing immediately —
+        // keeps this from reading as "load everything at once" while still
+        // requiring zero scrolling to make progress.
+        backgroundTimerRef.current = setTimeout(triggerNextBatch, SECTION_STAGGER_MS);
+      }
+    });
   }, [lazySections, loadSection]);
 
-  // Fires as the main ScrollView scrolls — once the user is within
-  // LAZY_LOAD_THRESHOLD px of the bottom of what's currently rendered,
-  // kick off the next queued section (which, once it renders, pushes the
-  // "bottom" further down — so the next threshold-cross loads the one
-  // after that, same shape as onEndReached on a FlatList).
+  // Fires as the main ScrollView scrolls — if the user reaches the bottom
+  // of what's currently rendered before the background chain has caught up
+  // (e.g. they scroll fast, or right after opening the app), this jumps
+  // the queue forward immediately instead of waiting out the stagger delay.
   const handleScroll = useCallback(({ nativeEvent }) => {
     const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
     const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
     if (distanceFromBottom < LAZY_LOAD_THRESHOLD) {
-      triggerNextSection();
+      triggerNextBatch();
     }
-  }, [triggerNextSection]);
+  }, [triggerNextBatch]);
 
-  useEffect(() => { loadHomeData(); }, []);
+  useEffect(() => {
+    isMountedRef.current = true;
+    loadHomeData();
+    return () => {
+      isMountedRef.current = false;
+      clearTimeout(backgroundTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => { if (searchQuery.trim().length > 1) performSearch(); else clearSearchResults(); }, 400);
@@ -426,6 +467,7 @@ const HomeScreen = () => {
 
       // Reset the lazy queue (also covers pull-to-refresh re-runs) and
       // seed every section back to its "pending" skeleton state.
+      clearTimeout(backgroundTimerRef.current);
       nextSectionIndexRef.current = 0;
       isLoadingSectionRef.current = false;
       setCategoryLoading({
@@ -441,10 +483,10 @@ const HomeScreen = () => {
         studentFavorites: true,
       });
 
-      // Kick off just the first section (Fashion — it sits right below the
-      // fold) so there's no empty gap the instant the user finishes the
-      // hero carousel. Everything after that is purely scroll-triggered.
-      triggerNextSection();
+      // Kick off the first batch (Fashion + the Urgent Sales tag section)
+      // right away — from here the chain keeps itself going in the
+      // background regardless of whether the user ever scrolls.
+      triggerNextBatch();
     }
     catch (err) { console.error('HomeScreen load error:', err); }
     finally { setLoading(false); setRefreshing(false); }
@@ -602,8 +644,7 @@ const HomeScreen = () => {
           />
         </View>
 
-        {/* STATS BANNER 
-        {platformStats && <StatsBanner stats={platformStats} />} */}
+        
 
         {/* CATEGORIES */}
         <View style={styles.section}>
