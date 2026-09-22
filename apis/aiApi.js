@@ -8,3 +8,10 @@ export const aiProductDetailsGenerator =(formData)=>
         'Content-Type': 'multipart/form-data',   // Let Axios set this automatically
       },
     })
+    
+export const aiVisualSearch =(formData)=>
+  API.post("/api/ai/visual-search",formData,{
+      headers: {
+        'Content-Type': 'multipart/form-data',   // Let Axios set this automatically
+      },
+    })

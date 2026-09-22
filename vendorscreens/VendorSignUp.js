@@ -428,8 +428,8 @@ const VendorSignUpScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
   const [storeName, setStoreName] = useState('');
   const [campus, setCampus] = useState('');
-  const [campusArea, setCampusArea] = useState('');
-  const [hostel, setHostel] = useState('');
+  const [city, setCity] = useState('');
+  const [area, setArea] = useState('');
   const [businessType, setBusinessType] = useState('product');
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [categorySheetVisible, setCategorySheetVisible] = useState(false);
@@ -520,8 +520,8 @@ const VendorSignUpScreen = ({ navigation }) => {
       formData.append('businessType', businessType);
       if (storeName.trim()) formData.append('storeName', storeName.trim());
       if (campus) formData.append('campus', campus);
-      if (campusArea.trim()) formData.append('campusArea', campusArea.trim());
-      if (hostel.trim()) formData.append('hostel', hostel.trim());
+      if (city.trim()) formData.append('city', city.trim());
+      if (area.trim()) formData.append('area', area.trim());
       if (openingHours.trim()) formData.append('openingHours', openingHours.trim());
       if (bio.trim()) formData.append('bio', bio.trim());
       if (whatsapp.trim()) formData.append('whatsapp', whatsapp.trim());
@@ -609,36 +609,7 @@ const VendorSignUpScreen = ({ navigation }) => {
       <View style={styles.form}>
         <BusinessTypeSelector value={businessType} onChange={setBusinessType} style={{ marginBottom: 20 }} />
 
-        {/*<View style={styles.imageSection}>
-          <Text style={styles.label}>Profile Photo</Text>
-          <Pressy onPress={pickProfileImage} style={styles.imagePicker} scaleTo={0.94}>
-            {profileImage ? (
-              <View>
-                <Image source={{ uri: profileImage.uri }} style={styles.profileImagePreview} />
-                <View style={styles.imageEditBadge}><Ionicons name="pencil" size={12} color="#fff" /></View>
-              </View>
-            ) : (
-              <View style={styles.imagePlaceholder}><Ionicons name="camera-outline" size={28} color={C.brandBorder} /><Text style={styles.imagePlaceholderText}>Add Photo</Text></View>
-            )}
-          </Pressy>
-        </View>
-        <View style={styles.imageSection}>
-          <Text style={styles.label}>Store Banner <Text style={styles.optional}>(optional)</Text></Text>
-          <Pressy onPress={pickStoreBanner} style={styles.bannerPicker} scaleTo={0.97}>
-            {storeBanner ? (
-              <View>
-                <Image source={{ uri: storeBanner.uri }} style={styles.bannerImagePreview} resizeMode="cover" />
-                <View style={styles.imageEditBadge}><Ionicons name="pencil" size={12} color="#fff" /></View>
-              </View>
-            ) : (
-              <View style={styles.bannerPlaceholder}>
-                <Ionicons name="image-outline" size={32} color={C.brandBorder} />
-                <Text style={styles.imagePlaceholderText}>Add Banner</Text>
-                <Text style={styles.bannerPlaceholderHint}>Recommended: 1200 x 600</Text>
-              </View>
-            )}
-          </Pressy>
-        </View>*/}
+        
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Full Name <Text style={styles.required}>*</Text></Text>
           <View style={styles.inputContainer}><Ionicons name="person-outline" size={20} color="#666" style={styles.inputIcon} /><TextInput style={styles.input} placeholder="Enter your full name" placeholderTextColor={C.t3} value={fullName} onChangeText={setFullName} editable={!loading} /></View>
@@ -649,12 +620,12 @@ const VendorSignUpScreen = ({ navigation }) => {
         </View>
         <DropdownSelector label="Campus" placeholder="Select your campus" items={CAMPUS_OPTIONS} selectedValue={campus} onSelect={setCampus} style={{ marginBottom: 20 }} />
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Campus Area</Text>
-          <View style={styles.inputContainer}><Ionicons name="location-outline" size={20} color="#666" style={styles.inputIcon} /><TextInput style={styles.input} placeholder="e.g. Main Campus, North Campus" placeholderTextColor={C.t3} value={campusArea} onChangeText={setCampusArea} editable={!loading} /></View>
+          <Text style={styles.label}>City</Text>
+          <View style={styles.inputContainer}><Ionicons name="location-outline" size={20} color="#666" style={styles.inputIcon} /><TextInput style={styles.input} placeholder="e.g. Accra, Kumasi" placeholderTextColor={C.t3} value={city} onChangeText={setCity} editable={!loading} /></View>
         </View>
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Hostel / Hall <Text style={styles.optional}>(optional)</Text></Text>
-          <View style={styles.inputContainer}><Ionicons name="home-outline" size={20} color="#666" style={styles.inputIcon} /><TextInput style={styles.input} placeholder="e.g. Mensah Sarbah Hall, Pentagon" placeholderTextColor={C.t3} value={hostel} onChangeText={setHostel} editable={!loading} /></View>
+          <Text style={styles.label}>Area/Suburb <Text style={styles.optional}>(optional)</Text></Text>
+          <View style={styles.inputContainer}><Ionicons name="home-outline" size={20} color="#666" style={styles.inputIcon} /><TextInput style={styles.input} placeholder="e.g. Madina, Adum" placeholderTextColor={C.t3} value={area} onChangeText={setArea} editable={!loading} /></View>
         </View>
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Opening Hours <Text style={styles.optional}>(optional)</Text></Text>

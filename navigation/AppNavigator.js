@@ -43,6 +43,7 @@ import TagProductsScreen from '../screens/TagProductsScreen'
 import ChatScreen from '../screens/ChatScreen'
 import InboxScreen from '../screens/InboxScreen'
 import AIShoppingScreen from '../screens/AIShoppingScreen'
+import VisualSearchScreen from '../screens/VisualSearchScreen'
 import EarningsScreen from '../screens/EarningsScreen'
 
 // Feed
@@ -139,9 +140,9 @@ function GuestTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="GuestFeed"     component={CampusFeedScreen} options={{ title: 'Feed' }} />
-      <Tab.Screen name="GuestDiscover" component={DiscoverScreen} options={{ title: 'Discover' }} />
       <Tab.Screen name="GuestShop"     component={GuestHomeScreen} options={{ title: 'Shop' }} />
+      <Tab.Screen name="GuestDiscover" component={DiscoverScreen} options={{ title: 'Discover' }} />
+      <Tab.Screen name="GuestFeed"     component={CampusFeedScreen} options={{ title: 'Feed' }} />
       <Tab.Screen name="Inbox"      component={InboxScreen} options={{ title: 'Inbox'}} />
       <Tab.Screen name="GuestProfile"  component={AccountScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
@@ -185,9 +186,9 @@ function MainTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="CampusFeed" component={CampusFeedScreen} options={{ title: 'Feed' }} />
-      <Tab.Screen name="Discover"   component={DiscoverScreen} options={{ title: 'Discover' }} />
       <Tab.Screen name="Shopping"   component={HomeScreen} options={{ title: 'Shop' }} />
+      <Tab.Screen name="Discover"   component={DiscoverScreen} options={{ title: 'Discover' }} />
+      <Tab.Screen name="CampusFeed" component={CampusFeedScreen} options={{ title: 'Feed' }} />
       <Tab.Screen name="Inbox"      component={InboxScreen} options={{ title: 'Inbox', tabBarBadge: totalUnread > 0 ? totalUnread : null, tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 } }} />
       <Tab.Screen name="Profile"    component={AccountScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
@@ -250,6 +251,7 @@ function MainStackNavigator() {
         <>
           {/*  Guests get tabs */}
           <Stack.Screen name="GuestTabs" component={GuestTabNavigator} />
+          <Stack.Screen name="VisualSearch" component={VisualSearchScreen} />
           <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="GuestProductDetail" component={GuestProductDetailScreen} />
           <Stack.Screen name="Products" component={ProductsScreen} />
@@ -312,7 +314,9 @@ function MainStackNavigator() {
             </>
           )}
           {/* Shared screens for both roles */}
+
           <Stack.Screen name="Products" component={ProductsScreen} />
+          <Stack.Screen name="VisualSearch" component={VisualSearchScreen} />
           <Stack.Screen name="ChatScreen" component={ChatScreen} />
           <Stack.Screen name="MyFeedPosts" component={MyFeedPostsScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Followers" component={FollowersScreen} options={{ headerShown: false }} />

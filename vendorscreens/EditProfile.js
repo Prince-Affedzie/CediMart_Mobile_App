@@ -142,8 +142,8 @@ const VendorAccountScreen = () => {
   const [storeName, setStoreName] = useState('');
   const [phone, setPhone] = useState('');
   const [campus, setCampus] = useState('');
-  const [campusArea, setCampusArea] = useState('');
-  const [hostel, setHostel] = useState('');
+  const [city, setCity] = useState('');
+  const [area, setArea] = useState('');
   const [bio, setBio] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [openingHours, setOpeningHours] = useState('');
@@ -168,8 +168,8 @@ const VendorAccountScreen = () => {
       setStoreName(profile.storeName || '');
       setPhone(profile.phone || '');
       setCampus(profile.campus || '');
-      setCampusArea(profile.location?.campusArea || '');
-      setHostel(profile.location?.hostel || '');
+      setCity(profile.location?.city || '');
+      setArea(profile.location?.area || '');
       setBio(profile.bio || '');
       setBusinessType(profile.businessType || '');
       setOpeningHours(profile.openingHours || '');
@@ -292,8 +292,8 @@ const VendorAccountScreen = () => {
       if (storeName.trim()) formData.append('storeName', storeName.trim());
       if (phone.trim()) formData.append('phone', phone.trim());
       if (campus) formData.append('campus', campus);
-      if (campusArea.trim()) formData.append('campusArea', campusArea.trim());
-      if (hostel.trim()) formData.append('hostel', hostel.trim());
+      if (city.trim()) formData.append('city', city.trim());
+      if (area.trim()) formData.append('area', area.trim());
       if (bio.trim()) formData.append('bio', bio.trim());
       if (businessType) formData.append('businessType', businessType);
       if (openingHours.trim()) formData.append('openingHours', openingHours.trim());
@@ -327,8 +327,8 @@ const VendorAccountScreen = () => {
       setStoreName(profile.storeName || '');
       setPhone(profile.phone || '');
       setCampus(profile.campus || '');
-      setCampusArea(profile.location?.campusArea || '');
-      setHostel(profile.location?.hostel || '');
+      setCity(profile.location?.city || '');
+      setArea(profile.location?.area || '');
       setBio(profile.bio || '');
       setBusinessType(profile.businessType || '');
       setOpeningHours(profile.openingHours || '');
@@ -484,7 +484,7 @@ const VendorAccountScreen = () => {
                 </View>
                 <Text style={styles.profileLocation}>
                   {campus ? CAMPUS_LABELS[campus] || campus : ''}
-                  {campusArea ? ` · ${campusArea}` : ''}
+                  {city ? ` · ${city}` : ''}
                 </Text>
 
                 {/* Followers & Following - Circular icon cards */}
@@ -539,8 +539,8 @@ const VendorAccountScreen = () => {
                   <Field label="Phone" value={phone} onChangeText={setPhone} placeholder="02X XXX XXXX" keyboardType="phone-pad" editable={isEditing} />
                   <Field label="Business Type" value={businessType ? BUSINESS_TYPE_LABELS[businessType] || businessType : ''} onChangeText={setBusinessType} placeholder="Not set" editable={false} />
                   <Field label="Campus" value={campus ? CAMPUS_LABELS[campus] || campus : ''} editable={false} placeholder="Not set" />
-                  <Field label="Campus Area" value={campusArea} onChangeText={setCampusArea} placeholder="e.g. Main Campus" editable={isEditing} />
-                  <Field label="Hostel / Hall" value={hostel} onChangeText={setHostel} placeholder="e.g. Mensah Sarbah Hall" editable={isEditing} />
+                  <Field label="City" value={city} onChangeText={setCity} placeholder="e.g. Accra" editable={isEditing} />
+                  <Field label="Area / Address" value={area} onChangeText={setArea} placeholder="e.g. Rawlings Circle, Madina" editable={isEditing} />
                   <Field label="Opening Hours" value={openingHours} onChangeText={setOpeningHours} placeholder="e.g. Mon-Fri, 9am-6pm" editable={isEditing} />
                 </View>
               </Section>
@@ -631,7 +631,7 @@ const VendorAccountScreen = () => {
                 <SettingsRow iconName="log-out-outline" iconBg="#FFEBEE" iconColor="#D32F2F" label="Log out" onPress={handleLogout} isLast />
               </Section>
 
-              <Text style={styles.versionText}>CediMart Vendor · v1.0.0</Text>
+              <Text style={styles.versionText}>CediMart Vendor · v5.1.0</Text>
               <View style={{ height: 60 }} />
             </View>
           </Animated.View>

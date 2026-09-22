@@ -30,6 +30,7 @@ import RecommendEarnBanner from '../components/RecommendEarnNotice'
 import ProductHeroCarousel from '../components/ProductHeroCarousel';
 import {ProductGridSkeleton} from '../components/SkeletonLoader'
 import ShopFAB from '../components/ShopFAB'
+import VisualSearchFab from '../components/VisualSearchFab';
 
 const { width } = Dimensions.get('window');
 
@@ -589,6 +590,7 @@ const GuestHomeScreen = () => {
         onScroll={handleScroll}
         scrollEventThrottle={150}
       >
+       
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
@@ -832,10 +834,11 @@ const GuestHomeScreen = () => {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      <ShopFAB
+      {/*<ShopFAB
         onPress={() => navigation.navigate('Products')} 
-        bottomOffset={40}  
-      />
+        bottomOffset={60}  
+      />*/}
+      <VisualSearchFab navigation={navigation} bottom={128} right={20} />
       <AIFAB style={{ position: 'absolute', bottom: 34, right: 16 }} />
     </SafeAreaView>
   );

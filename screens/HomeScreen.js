@@ -32,6 +32,7 @@ import ProductHeroCarousel from '../components/ProductHeroCarousel';
 import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES} from '../data/General'
 import RecommendEarnBanner from '../components/RecommendEarnNotice'
 import {ProductGridSkeleton} from '../components/SkeletonLoader'
+import VisualSearchFab from '../components/VisualSearchFab';
 
 const { width } = Dimensions.get('window');
 
@@ -787,11 +788,11 @@ const HomeScreen = () => {
 
         <View style={{ height: 100 }} />
       </ScrollView>
-       <ShopFAB 
+       {/*<ShopFAB 
         onPress={() => navigation.navigate('Products')} 
         bottomOffset={30} // Push up if there's another FAB
-      />
-
+      />*/}
+      <VisualSearchFab navigation={navigation} bottom={118} right={20} />
       <AIFAB style={{ position: 'absolute', bottom: 24, right: 16 }} />
     </SafeAreaView>
   );

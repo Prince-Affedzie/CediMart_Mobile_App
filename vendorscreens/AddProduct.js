@@ -159,7 +159,6 @@ const DropdownSelector = ({
     (item) => (typeof item === 'string' ? item : item.key) === selectedValue,
   );
 
-  // FIXED: Only show label text without icon name
   const triggerLabel = selectedItem
     ? typeof selectedItem === 'string'
       ? selectedItem
@@ -226,7 +225,6 @@ const DropdownSelector = ({
                   ) : (
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        {/* FIXED: Render Ionicons component instead of text */}
                         {item.icon && (
                           <Ionicons 
                             name={item.icon} 
@@ -340,8 +338,8 @@ const AddProductScreen = ({ navigation }) => {
   const [condition,      setCondition]      = useState('good');
   const [description,    setDescription]    = useState('');
   const [campus,         setCampus]         = useState('');
-  const [campusArea,     setCampusArea]     = useState('');
-  const [hostel,         setHostel]         = useState('');
+  const [city,           setCity]           = useState('');
+  const [area,           setArea]           = useState('');
   const [selectedTags,   setSelectedTags]   = useState([]);
   const [countInStock,   setCountInStock]   = useState('1');
   const [images,         setImages]         = useState([]);
@@ -531,9 +529,18 @@ const AddProductScreen = ({ navigation }) => {
     return next;
   };
 
+  //  Location is now fully optional. Campus and city/area are all skippable
+  //  so off-campus sellers (market traders, online resellers, etc.) can list
+  //  without pretending to be on a campus. We only sanity-check the free
+  //  text fields if the user actually typed something.
   const validateLocation = () => {
     const next = {};
-    if (!campus) next.campus = "Select the campus where you'll meet buyers.";
+    if (city.trim() && /^\d+$/.test(city.trim())) {
+      next.city = 'Enter a city name, not just numbers.';
+    }
+    if (area.trim() && /^\d+$/.test(area.trim())) {
+      next.area = 'Enter an area or address, not just numbers.';
+    }
     return next;
   };
 
@@ -550,7 +557,11 @@ const AddProductScreen = ({ navigation }) => {
   const photosComplete   = images.length > 0;
   const detailsComplete  = !!name.trim() && !!category && !!condition;
   const pricingComplete  = !!price && !isNaN(parseFloat(price)) && parseFloat(price) >= 0;
-  const locationComplete = !!campus;
+  //  Location counts as complete once the seller has given us ANY hint of
+  //  where they are — a campus, a city, or an area. All three are optional,
+  //  so a seller who skips this whole section still lands at 75% and can
+  //  still publish — the badge is a nudge, not a gate.
+  const locationComplete = !!campus || !!city.trim() || !!area.trim();
 
   const completedCount = [photosComplete, detailsComplete, pricingComplete, locationComplete].filter(Boolean).length;
   const completionPct = Math.round((completedCount / 4) * 100);
@@ -581,9 +592,12 @@ const AddProductScreen = ({ navigation }) => {
       formData.append('negotiable', negotiable.toString());
       formData.append('condition', condition);
       formData.append('description', description.trim() || '');
-      formData.append('campus', campus);
-      if (campusArea.trim()) formData.append('location[campusArea]', campusArea.trim());
-      if (hostel.trim()) formData.append('location[hostel]', hostel.trim());
+      //  Campus is optional now — send an empty string when it's unset so
+      //  the backend stores `null`/`''` consistently (and the schema's
+      //  `default: null` kicks in cleanly).
+      formData.append('campus', campus || '');
+      if (city.trim()) formData.append('location[city]', city.trim());
+      if (area.trim()) formData.append('location[area]', area.trim());
       formData.append('countInStock', parseInt(countInStock) || 1);
       selectedTags.forEach(tag => formData.append('tags[]', tag));
 
@@ -636,7 +650,7 @@ const AddProductScreen = ({ navigation }) => {
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>List Item</Text>
-            <Text style={styles.headerSub}>Sell to students on your campus</Text>
+            <Text style={styles.headerSub}>Sell to buyers on and off campus</Text>
           </View>
           <View style={[styles.headerCompletionBadge, completionPct === 100 && styles.headerCompletionBadgeDone]}>
             <Text style={[styles.headerCompletionText, completionPct === 100 && styles.headerCompletionTextDone]}>
@@ -645,12 +659,13 @@ const AddProductScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <CommissionNotice vendorId={profile._id}/>
+        {/* Null-guard: profile may not be loaded yet on first render */}
+        {profile?._id && <CommissionNotice vendorId={profile._id} />}
 
         <ScrollView
           ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
           showsVerticalScrollIndicator={false}
         >
           {/* ── Product Photos ── */}
@@ -813,23 +828,40 @@ const AddProductScreen = ({ navigation }) => {
           </SectionCard>
 
           {/* ── Campus & Location ── */}
-          <SectionCard title="Campus & Location" accent={C.brandL} subtitle="Just your campus is required — the rest helps buyers plan a meet-up, but you can skip it.">
+          <SectionCard
+            title="Campus & Location"
+            accent={C.brandL}
+            subtitle="All optional — add whatever helps buyers find you or plan a meet-up."
+          >
             <DropdownSelector
-              label="Campus" placeholder="Select your campus" items={CAMPUS_OPTIONS}
+              label="Campus (optional)"
+              placeholder="Select your campus"
+              items={CAMPUS_OPTIONS}
               selectedValue={campus}
               onSelect={(v) => { setCampus(v); setErrors(prev => ({ ...prev, campus: null })); }}
-              required style={{ marginBottom: 14 }}
-              error={errors.campus}
             />
             <FloatingInput
-              label="Campus Area (optional)" icon="location-outline"
-              placeholder="e.g. Main Campus, North Campus"
-              value={campusArea}
-              onChangeText={setCampusArea}
+              label="City" icon="location-outline"
+              placeholder="e.g. Accra, Kumasi"
+              value={city}
+              onChangeText={(v) => {
+                setCity(v);
+                if (errors.city) setErrors(p => ({ ...p, city: null }));
+              }}
+              error={errors.city}
             />
-            <FloatingInput label="Hostel / Hall (optional)" icon="home-outline" placeholder="e.g. Mensah Sarbah Hall, Pentagon" value={hostel} onChangeText={setHostel} />
+            <FloatingInput
+              label="Area / Address" icon="home-outline"
+              placeholder="e.g. Rawlings circle, Madina"
+              value={area}
+              onChangeText={(v) => {
+                setArea(v);
+                if (errors.area) setErrors(p => ({ ...p, area: null }));
+              }}
+              error={errors.area}
+            />
             <HelperText icon="shield-checkmark-outline">
-              Buyers will use this to arrange a safe meet-up. You won't share your exact address, and you can always confirm details in chat.
+              Where the product is selling from. Skip it if you'd rather not say.
             </HelperText>
           </SectionCard>
 
@@ -851,7 +883,6 @@ const AddProductScreen = ({ navigation }) => {
                 const active = selectedTags.includes(key);
                 return (
                   <TouchableOpacity key={key} style={[styles.tagChip, active && styles.tagChipActive]} onPress={() => toggleTag(key)} activeOpacity={0.75}>
-                    {/* FIXED: Render Ionicons component instead of text emoji */}
                     <Ionicons 
                       name={icon} 
                       size={16} 

@@ -586,12 +586,12 @@ const VendorDetailScreen = ({ route, navigation }) => {
               )}
 
               {/* Location Details */}
-              {vendor.location?.campusArea && (
+              {vendor.location?.city && (
                 <View style={s.locationRow}>
                   <Ionicons name="location-outline" size={13} color={C.t3} />
                   <Text style={s.locationText}>
-                    {vendor.location.campusArea}
-                    {vendor.location.hostel ? ` · ${vendor.location.hostel}` : ''}
+                    {vendor.location.city}
+                    {vendor.location.area ? ` · ${vendor.location.area}` : ''}
                   </Text>
                 </View>
               )}
@@ -661,6 +661,7 @@ const VendorDetailScreen = ({ route, navigation }) => {
                   <Image source={{ uri: item.images?.[0] || 'https://via.placeholder.com/300/F5F5F5/BDBDBD?text=No+Image' }} style={s.productImg} />
                   {!isAvailable && <View style={s.outOfStockOverlay}><Text style={s.outOfStockText}>Sold Out</Text></View>}
                 </View>
+                
                 <View style={s.productBody}>
                   <Text style={s.productName} numberOfLines={2}>{item.name}</Text>
                   <View style={s.productFooter}>

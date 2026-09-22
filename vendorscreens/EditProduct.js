@@ -41,6 +41,24 @@ const C = {
 const formatDisplayName = (str) =>
   str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ').replace(/-/g, ' ');
 
+//  Safe, non-mutating compare for tag arrays used in `hasChanges` and the
+//  `changed` badge props. `.sort()` on state arrays mutates them in place,
+//  so we always clone first.
+const tagsEqual = (a = [], b = []) =>
+  JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+
+//  Same idea for specifications: order shouldn't matter, only the
+//  key/value pairs. Sort by key so reordering the rows in the UI doesn't
+//  falsely flag the section as "edited".
+const specsEqual = (a = [], b = []) => {
+  const norm = (arr) =>
+    [...arr]
+      .filter((s) => s.key?.trim() || s.value?.trim())
+      .map((s) => ({ key: s.key.trim(), value: String(s.value).trim() }))
+      .sort((x, y) => x.key.localeCompare(y.key));
+  return JSON.stringify(norm(a)) === JSON.stringify(norm(b));
+};
+
 // ─── DropdownSelector ───────────────────────────────────────────────────────
 const DropdownSelector = ({
   label, placeholder, items, selectedValue, onSelect, required, renderItem, style, disabled,
@@ -71,10 +89,9 @@ const DropdownSelector = ({
 
   const selectedItem = items.find((item) => (typeof item === 'string' ? item : item.key) === selectedValue);
 
-  // FIXED: Only show label text without icon name
   const triggerLabel = selectedItem
-    ? typeof selectedItem === 'string' 
-      ? selectedItem 
+    ? typeof selectedItem === 'string'
+      ? selectedItem
       : (selectedItem.label || formatDisplayName(selectedItem.key))
     : placeholder;
 
@@ -108,7 +125,6 @@ const DropdownSelector = ({
                 <TouchableOpacity style={[bsStyles.item, isSelected && bsStyles.itemActive]} onPress={() => handleSelect(key)} activeOpacity={0.75}>
                   {renderItem ? renderItem({ item, isSelected }) : (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                      {/* FIXED: Render Ionicons component instead of text */}
                       {item.icon && (
                         <Ionicons 
                           name={item.icon} 
@@ -190,8 +206,8 @@ const UpdateProductScreen = ({ route, navigation }) => {
   const [condition, setCondition] = useState('good');
   const [description, setDescription] = useState('');
   const [campus, setCampus] = useState('');
-  const [campusArea, setCampusArea] = useState('');
-  const [hostel, setHostel] = useState('');
+  const [city, setCity] = useState('');
+  const [area, setArea] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [countInStock, setCountInStock] = useState('1');
   const [isAvailable, setIsAvailable] = useState(true);
@@ -230,8 +246,8 @@ const UpdateProductScreen = ({ route, navigation }) => {
       setCondition(product.condition || 'good');
       setDescription(product.description || '');
       setCampus(product.campus || '');
-      setCampusArea(product.location?.campusArea || '');
-      setHostel(product.location?.hostel || '');
+      setCity(product.location?.city || '');
+      setArea(product.location?.area || '');
       setSelectedTags(product.tags || []);
       setCountInStock(product.countInStock?.toString() || '1');
       setIsAvailable(product.isAvailable !== undefined ? product.isAvailable : true);
@@ -274,14 +290,17 @@ const UpdateProductScreen = ({ route, navigation }) => {
     return [];
   };
 
+  //  `hasChanges` now uses non-mutating equality helpers for tags and specs.
+  //  Campus and location fields remain compared as before, but city is no
+  //  longer treated as a required edit.
   const hasChanges = originalProduct && (
     name !== (originalProduct.name || '') || category !== (originalProduct.category || '') ||
     subcategory !== (originalProduct.subcategory || '') || brand !== (originalProduct.brand || '') ||
     price !== (originalProduct.price?.toString() || '') || negotiable !== (originalProduct.negotiable || false) ||
     condition !== (originalProduct.condition || 'good') || description !== (originalProduct.description || '') ||
-    campus !== (originalProduct.campus || '') || campusArea !== (originalProduct.location?.campusArea || '') ||
-    hostel !== (originalProduct.location?.hostel || '') ||
-    JSON.stringify(selectedTags.sort()) !== JSON.stringify((originalProduct.tags || []).sort()) ||
+    campus !== (originalProduct.campus || '') || city !== (originalProduct.location?.city || '') ||
+    area !== (originalProduct.location?.area || '') ||
+    !tagsEqual(selectedTags, originalProduct.tags || []) ||
     countInStock !== (originalProduct.countInStock?.toString() || '1') ||
     isAvailable !== (originalProduct.isAvailable !== undefined ? originalProduct.isAvailable : true) ||
     newImages.length > 0 || removedImageUrls.length > 0 ||
@@ -290,7 +309,7 @@ const UpdateProductScreen = ({ route, navigation }) => {
     discountStartDate !== (originalProduct.discountInfo?.discountStartDate?.slice(0, 10) || '') ||
     discountEndDate !== (originalProduct.discountInfo?.discountEndDate?.slice(0, 10) || '') ||
     hasDiscount !== (originalProduct.discountInfo?.isOnSale || !!originalProduct.discountInfo?.originalPrice || !!originalProduct.discountInfo?.discountPercentage) ||
-    JSON.stringify(specifications.filter(s => s.key.trim() || s.value.trim())) !== JSON.stringify(getOriginalSpecsArray())
+    !specsEqual(specifications, getOriginalSpecsArray())
   );
 
   const pickNewImages = () => {
@@ -316,8 +335,9 @@ const UpdateProductScreen = ({ route, navigation }) => {
     if (!name.trim()) return Alert.alert('Missing Info', 'Product name is required');
     if (!category) return Alert.alert('Missing Info', 'Please select a category');
     if (!price || isNaN(parseFloat(price)) || parseFloat(price) < 0) return Alert.alert('Missing Info', 'Please enter a valid price');
-    if (!campus) return Alert.alert('Missing Info', 'Please select your campus');
-    if (!campusArea.trim()) return Alert.alert('Missing Info', 'Campus area is required');
+    //  Campus and location (city / area) are now both fully optional — no
+    //  gating. Off-campus sellers can update a listing without pretending
+    //  to be on a campus, and campus sellers can leave city blank.
     const totalImages = existingImages.length + newImages.length;
     if (totalImages === 0) return Alert.alert('Missing Info', 'At least one product image is required');
 
@@ -337,9 +357,11 @@ const UpdateProductScreen = ({ route, navigation }) => {
       formData.append('negotiable', negotiable.toString());
       formData.append('condition', condition);
       formData.append('description', description.trim() || '');
-      formData.append('campus', campus);
-      formData.append('location[campusArea]', campusArea.trim());
-      if (hostel.trim()) formData.append('location[hostel]', hostel.trim());
+      //  Send empty string when campus is unset so the backend stores null
+      //  cleanly (matches the schema's `default: null`).
+      formData.append('campus', campus || '');
+      if (city.trim()) formData.append('location[city]', city.trim());
+      if (area.trim()) formData.append('location[area]', area.trim());
       formData.append('countInStock', parseInt(countInStock) || 1);
       formData.append('isAvailable', isAvailable.toString());
       selectedTags.forEach(tag => formData.append('tags[]', tag));
@@ -408,7 +430,7 @@ const UpdateProductScreen = ({ route, navigation }) => {
           <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}><Ionicons name="trash-outline" size={20} color={C.danger} /></TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false}>
           <SectionCard title="Product Photos" accent={C.brandD} changed={newImages.length > 0 || removedImageUrls.length > 0}>
             <Text style={styles.sectionHint}>{existingImages.length + newImages.length}/10 photos · First image is the cover</Text>
             <View style={styles.imageGrid}>
@@ -495,7 +517,7 @@ const UpdateProductScreen = ({ route, navigation }) => {
             </View>
           </SectionCard>
 
-          <SectionCard title="Specifications (Optional)" accent="#8E24AA" changed={JSON.stringify(specifications.filter(s => s.key.trim() || s.value.trim())) !== JSON.stringify(getOriginalSpecsArray())}>
+          <SectionCard title="Specifications (Optional)" accent="#8E24AA" changed={!specsEqual(specifications, getOriginalSpecsArray())}>
             <Text style={styles.sectionHint}>Add product details like storage, color, weight, material</Text>
             {specifications.map((spec, index) => (
               <View key={index} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -507,13 +529,13 @@ const UpdateProductScreen = ({ route, navigation }) => {
             <TouchableOpacity style={styles.addSpecBtn} onPress={addSpecField} activeOpacity={0.8}><Ionicons name="add-circle-outline" size={20} color={C.brand} /><Text style={styles.addSpecBtnText}>Add Specification</Text></TouchableOpacity>
           </SectionCard>
 
-          <SectionCard title="Campus & Location" accent={C.brandL} changed={campus !== (originalProduct?.campus || '') || campusArea !== (originalProduct?.location?.campusArea || '') || hostel !== (originalProduct?.location?.hostel || '')}>
-            <DropdownSelector label="Campus" placeholder="Select your campus" items={CAMPUS_OPTIONS} selectedValue={campus} onSelect={setCampus} required style={{ marginBottom: 14 }} />
-            <FloatingInput label="Campus Area" icon="location-outline" placeholder="e.g. Main Campus, North Campus" value={campusArea} onChangeText={setCampusArea} required />
-            <FloatingInput label="Hostel / Hall (optional)" icon="home-outline" placeholder="e.g. Mensah Sarbah Hall, Pentagon" value={hostel} onChangeText={setHostel} />
+          <SectionCard title="Campus & Location (Optional)" accent={C.brandL} changed={campus !== (originalProduct?.campus || '') || city !== (originalProduct?.location?.city || '') || area !== (originalProduct?.location?.area || '')}>
+            <DropdownSelector label="Campus (optional)" placeholder="Select your campus" items={CAMPUS_OPTIONS} selectedValue={campus} onSelect={setCampus} />
+            <FloatingInput label="City" icon="location-outline" placeholder="e.g. Accra, Kumasi" value={city} onChangeText={setCity} />
+            <FloatingInput label="Area / Address" icon="home-outline" placeholder="e.g. Rawlings Circle, Madina" value={area} onChangeText={setArea} />
           </SectionCard>
 
-          <SectionCard title="Description & Tags" accent={C.brandBorder} changed={description !== (originalProduct?.description || '') || JSON.stringify(selectedTags.sort()) !== JSON.stringify((originalProduct?.tags || []).sort())}>
+          <SectionCard title="Description & Tags" accent={C.brandBorder} changed={description !== (originalProduct?.description || '') || !tagsEqual(selectedTags, originalProduct?.tags || [])}>
             <FloatingInput label="Description" icon="document-text-outline" placeholder="Describe your item, reason for selling, etc." value={description} onChangeText={setDescription} multiline />
             <Text style={[styles.quickLabel, { marginTop: 4 }]}>Tags <Text style={styles.optional}>(optional)</Text></Text>
             <View style={styles.tagsGrid}>
@@ -521,7 +543,6 @@ const UpdateProductScreen = ({ route, navigation }) => {
                 const active = selectedTags.includes(key);
                 return (
                   <TouchableOpacity key={key} style={[styles.tagChip, active && styles.tagChipActive]} onPress={() => toggleTag(key)} activeOpacity={0.75}>
-                    {/* FIXED: Render Ionicons component instead of text */}
                     <Ionicons 
                       name={icon} 
                       size={16} 
@@ -647,5 +668,6 @@ const styles = StyleSheet.create({
   updateBtnText: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
   deleteListingBtn: { width: 56, height: 56, borderRadius: 18, backgroundColor: C.white, borderWidth: 1.5, borderColor: C.dangerBorder, justifyContent: 'center', alignItems: 'center' },
 });
+
 
 export default UpdateProductScreen;
