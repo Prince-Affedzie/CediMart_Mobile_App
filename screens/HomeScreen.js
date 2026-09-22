@@ -293,7 +293,7 @@ const CategoryProductSection = ({ category, products, loading, onProductPress, o
           <View style={[styles.categoryDot, { backgroundColor: catCfg.color }]} />
           <View>
             <Text style={styles.sectionTitle}>{catCfg.icon} {catCfg.label}</Text>
-            <Text style={styles.sectionSubtitle}>Shop {catCfg.label.toLowerCase()} from campus sellers</Text>
+            <Text style={styles.sectionSubtitle}>Shop {catCfg.label.toLowerCase()} from trusted sellers</Text>
           </View>
         </View>
         <TouchableOpacity onPress={() => onSeeAll(category)} style={styles.seeAllRow}>
@@ -377,7 +377,7 @@ const HomeScreen = () => {
   ]).current;
   const nextSectionIndexRef = useRef(0);
   const isLoadingSectionRef = useRef(false);
-  // 🔥 NEW: handle for the pending "start next batch" timer, so a
+  //  NEW: handle for the pending "start next batch" timer, so a
   // scroll-triggered fast-forward can cancel it (no point firing twice)
   // and so it can be cleared on refresh/unmount.
   const backgroundTimerRef = useRef(null);
@@ -406,7 +406,7 @@ const HomeScreen = () => {
     }
   }, []);
 
-  // 🔥 NEW: loads the next BATCH_SIZE queued sections together, and once
+  // NEW: loads the next BATCH_SIZE queued sections together, and once
   // they've all resolved, automatically schedules the batch after that —
   // this is the actual background chain. onEndReached-style scroll calls
   // this same function; if a batch is already in flight or a stagger timer
@@ -568,7 +568,7 @@ const HomeScreen = () => {
               <Text style={styles.headerTitle}>CediMart</Text>
               <View style={styles.locationPill}>
                 <View style={styles.locationDot} />
-                <Text style={styles.locationText}>Ghana's Campus Marketplace</Text>
+                <Text style={styles.locationText}>Ghana's trusted Marketplace</Text>
               </View>
             </View>
             <View style={styles.headerActions}>
@@ -662,6 +662,18 @@ const HomeScreen = () => {
           </ScrollView>
         </View>
 
+
+        {/* FEATURED — loaded eagerly (feeds the hero carousel too), no skeleton branch needed */}
+        {featuredProducts.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View><Text style={styles.sectionTitle}>Featured Listings</Text><Text style={styles.sectionSubtitle}>Hand-picked by our team</Text></View>
+              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'featured' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
+            </View>
+            <View style={styles.productsGrid}>{featuredProducts.slice(0, 10).map(p => <ProductCard key={p._id} product={p} onPress={handleProductPress} onAddToCart={handleAddToCart} isAdding={addingProductId === p._id} isInCart={getQtyInCart(p._id) > 0} />)}</View>
+          </View>
+        )}
+
         {/*  FASHION — first lazy section, kicked off right after initial load */}
         <CategoryProductSection
           category="fashion"
@@ -674,16 +686,7 @@ const HomeScreen = () => {
           onSeeAll={handleCategorySeeAll}
         />
 
-        {/* FEATURED — loaded eagerly (feeds the hero carousel too), no skeleton branch needed */}
-        {featuredProducts.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View><Text style={styles.sectionTitle}>Featured Listings</Text><Text style={styles.sectionSubtitle}>Hand-picked by our team</Text></View>
-              <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'featured' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
-            </View>
-            <View style={styles.productsGrid}>{featuredProducts.slice(0, 10).map(p => <ProductCard key={p._id} product={p} onPress={handleProductPress} onAddToCart={handleAddToCart} isAdding={addingProductId === p._id} isInCart={getQtyInCart(p._id) > 0} />)}</View>
-          </View>
-        )}
+        
 
         {/*  COMPUTERS & LAPTOPS */}
         <CategoryProductSection
@@ -703,7 +706,7 @@ const HomeScreen = () => {
         ) : urgentSales.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}><View style={styles.urgentDot} /><View><Text style={styles.sectionTitle}>Urgent Sales</Text><Text style={styles.sectionSubtitle}>Grab them before they're gone</Text></View></View>
+              <View style={styles.sectionTitleRow}><View style={styles.urgentDot} /><View><Text style={styles.sectionTitle}>Flash Sales</Text><Text style={styles.sectionSubtitle}>Grab them before they're gone</Text></View></View>
               <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'urgent-sale' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>{urgentSales.map(p => <DealCard key={p._id} product={p} onPress={handleProductPress} onAddToCart={handleAddToCart} isAdding={addingProductId === p._id} isInCart={getQtyInCart(p._id) > 0} />)}</ScrollView>
@@ -728,7 +731,7 @@ const HomeScreen = () => {
         ) : popularProducts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View><Text style={styles.sectionTitle}>Popular on Campus</Text><Text style={styles.sectionSubtitle}>Most viewed this week</Text></View>
+              <View><Text style={styles.sectionTitle}>Popular</Text><Text style={styles.sectionSubtitle}>Most viewed this week</Text></View>
               <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'popular', sort: 'popular' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <View style={styles.productsGrid}>{popularProducts.slice(0, 10).map(p => <ProductCard key={p._id} product={p} onPress={handleProductPress} onAddToCart={handleAddToCart} isAdding={addingProductId === p._id} isInCart={getQtyInCart(p._id) > 0} />)}</View>
@@ -753,7 +756,7 @@ const HomeScreen = () => {
         ) : newArrivals.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View><Text style={styles.sectionTitle}>New Arrivals</Text><Text style={styles.sectionSubtitle}>Just listed by students</Text></View>
+              <View><Text style={styles.sectionTitle}>New Arrivals</Text><Text style={styles.sectionSubtitle}>Just listed</Text></View>
               <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'new-arrival', sort: 'newest' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>{newArrivals.map(p => <DealCard key={p._id} product={p} onPress={handleProductPress} onAddToCart={handleAddToCart} isAdding={addingProductId === p._id} isInCart={getQtyInCart(p._id) > 0} />)}</ScrollView>
@@ -766,7 +769,7 @@ const HomeScreen = () => {
         ) : studentFavorites.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View><Text style={styles.sectionTitle}>Student Favorites</Text><Text style={styles.sectionSubtitle}>Loved by campus shoppers</Text></View>
+              <View><Text style={styles.sectionTitle}>Just for you</Text><Text style={styles.sectionSubtitle}>curated just for you</Text></View>
               <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'student-favorite' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <View style={styles.productsGrid}>{studentFavorites.slice(0, 10).map(p => <ProductCard key={p._id} product={p} onPress={handleProductPress} onAddToCart={handleAddToCart} isAdding={addingProductId === p._id} isInCart={getQtyInCart(p._id) > 0} />)}</View>

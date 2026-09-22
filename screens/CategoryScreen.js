@@ -9,6 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { getProductsByCategory } from '../apis/productApi';
+import AIFAB from '../components/AIFAB';
+import VisualSearchFab from '../components/VisualSearchFab';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 44) / 2;
@@ -504,6 +506,7 @@ const CategoryScreen = () => {
     <View style={styles.container}>
       <StatusBar backgroundColor="transparent" translucent barStyle="light-content" />
       <CartToast visible={toastVisible} message={toastMessage} />
+      
 
       {/* Sort Modal */}
       <Modal visible={showSortModal} transparent animationType="slide" onRequestClose={() => setShowSortModal(false)}>
@@ -528,6 +531,7 @@ const CategoryScreen = () => {
             {subcategories.length > 0 && (<><Text style={[styles.filterSectionLabel, { marginTop: 20 }]}>Subcategory</Text><View style={styles.filterChipsWrap}><TouchableOpacity style={[styles.filterChip, !selectedSubcategory && styles.filterChipActive]} onPress={() => setSelectedSubcategory('')}><Text style={[styles.filterChipText, !selectedSubcategory && styles.filterChipTextActive]}>All</Text></TouchableOpacity>{subcategories.map(sub => { const active = selectedSubcategory === sub.value; return (<TouchableOpacity key={sub.value} style={[styles.filterChip, active && styles.filterChipActive]} onPress={() => setSelectedSubcategory(active ? '' : sub.value)}><Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{sub.label}</Text></TouchableOpacity>); })}</View></>)}
           </ScrollView>
           <TouchableOpacity style={styles.applyBtn} onPress={() => setShowFilterSheet(false)}><Text style={styles.applyBtnText}>Apply{activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}</Text></TouchableOpacity>
+          
           <SafeAreaView edges={['bottom']} style={{ paddingBottom: 8 }} />
         </View>
       </Modal>
@@ -544,6 +548,8 @@ const CategoryScreen = () => {
         onEndReachedThreshold={0.35} showsVerticalScrollIndicator={false}
         extraData={[searchQuery, selectedSubcategory, selectedCampus, sort]}
       />
+      <VisualSearchFab navigation={navigation} bottom={128} right={20} />
+      <AIFAB style={{ position: 'absolute', bottom: 44, right: 16 }} />
     </View>
   );
 };

@@ -66,7 +66,7 @@ const AIFAB = ({ style, label = true }) => {
         <TouchableOpacity style={styles.fab} onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} activeOpacity={0.85}>
           <View style={styles.fabContent}>
             <Ionicons name="sparkles" size={20} color="#FFFFFF" style={styles.fabIcon} />
-            {label && <Text style={styles.fabText}>Shop with CediAI</Text>}
+            {label && <Text style={styles.fabText}>Find Faster with CediAI</Text>}
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   fab: {
     height: 46, borderRadius: 23, backgroundColor: BRAND_GREEN,
     justifyContent: 'center', alignItems: 'center', flexDirection: 'row',
-    paddingHorizontal: 16,
+    paddingHorizontal: 21,
     shadowColor: BRAND_GREEN,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

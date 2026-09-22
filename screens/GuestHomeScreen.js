@@ -365,7 +365,7 @@ const CategoryProductSection = ({ category, products, loading, onProductPress, o
           <View style={[styles.categoryDot, { backgroundColor: catCfg.color }]} />
           <View>
             <Text style={styles.sectionTitle}>{catCfg.icon} {catCfg.label}</Text>
-            <Text style={styles.sectionSubtitle}>Shop {catCfg.label.toLowerCase()} from campus sellers</Text>
+            <Text style={styles.sectionSubtitle}>Shop {catCfg.label.toLowerCase()} from trusted sellers</Text>
           </View>
         </View>
         <TouchableOpacity onPress={() => onSeeAll(category)} style={styles.seeAllRow}>
@@ -450,7 +450,7 @@ const GuestHomeScreen = () => {
     }
   }, []);
 
-  // 🔥 Same background chain as HomeScreen: loads BATCH_SIZE sections
+  //  Same background chain as HomeScreen: loads BATCH_SIZE sections
   // together, then auto-schedules the next batch after a short stagger —
   // no scrolling required for content to keep loading progressively.
   const triggerNextBatch = useCallback(() => {
@@ -599,7 +599,7 @@ const GuestHomeScreen = () => {
               <Text style={styles.headerTitle}>CediMart</Text>
               <View style={styles.locationPill}>
                 <View style={styles.locationDot} />
-                <Text style={styles.locationText}>Ghana's Campus Marketplace</Text>
+                <Text style={styles.locationText}>Ghana's trusted Marketplace</Text>
               </View>
             </View>
             <View style={styles.headerActions}>
@@ -719,14 +719,6 @@ const GuestHomeScreen = () => {
           </ScrollView>
         </View>
 
-        {/* FASHION CATEGORY */}
-        <CategoryProductSection
-          category="fashion"
-          products={categoryProducts['fashion']}
-          loading={categoryLoading['fashion']}
-          onProductPress={handleProductPress}
-          onSeeAll={handleCategorySeeAll}
-        />
 
         {/* FEATURED PRODUCTS */}
         {featuredProducts.length > 0 && (
@@ -739,6 +731,17 @@ const GuestHomeScreen = () => {
           </View>
         )}
 
+
+        {/* FASHION CATEGORY */}
+        <CategoryProductSection
+          category="fashion"
+          products={categoryProducts['fashion']}
+          loading={categoryLoading['fashion']}
+          onProductPress={handleProductPress}
+          onSeeAll={handleCategorySeeAll}
+        />
+
+        
         {/* COMPUTERS & LAPTOPS */}
         <CategoryProductSection
           category="computers and laptops"
@@ -754,7 +757,7 @@ const GuestHomeScreen = () => {
         ) : urgentSales.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}><View style={styles.urgentDot} /><View><Text style={styles.sectionTitle}>Urgent Sales</Text><Text style={styles.sectionSubtitle}>Grab them before they're gone</Text></View></View>
+              <View style={styles.sectionTitleRow}><View style={styles.urgentDot} /><View><Text style={styles.sectionTitle}>Flash Sales</Text><Text style={styles.sectionSubtitle}>Grab them before they're gone</Text></View></View>
               <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'urgent-sale' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>{urgentSales.map(p => <DealCard key={p._id} product={p} onPress={handleProductPress} />)}</ScrollView>
@@ -776,7 +779,7 @@ const GuestHomeScreen = () => {
         ) : popularProducts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View><Text style={styles.sectionTitle}>Popular on Campus</Text><Text style={styles.sectionSubtitle}>Most viewed this week</Text></View>
+              <View><Text style={styles.sectionTitle}>Popular</Text><Text style={styles.sectionSubtitle}>Most viewed this week</Text></View>
               <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'popular', sort: 'popular' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <View style={styles.productsGrid}>{popularProducts.slice(0, 10).map(p => <ProductCard key={p._id} product={p} onPress={handleProductPress} />)}</View>
@@ -798,7 +801,7 @@ const GuestHomeScreen = () => {
         ) : newArrivals.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View><Text style={styles.sectionTitle}>New Arrivals</Text><Text style={styles.sectionSubtitle}>Just listed by students</Text></View>
+              <View><Text style={styles.sectionTitle}>New Arrivals</Text><Text style={styles.sectionSubtitle}>Just listed</Text></View>
               <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'new-arrival', sort: 'newest' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>{newArrivals.map(p => <DealCard key={p._id} product={p} onPress={handleProductPress} />)}</ScrollView>
@@ -811,7 +814,7 @@ const GuestHomeScreen = () => {
         ) : studentFavorites.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View><Text style={styles.sectionTitle}>Student Favorites</Text><Text style={styles.sectionSubtitle}>Loved by campus shoppers</Text></View>
+              <View><Text style={styles.sectionTitle}>Just for you</Text><Text style={styles.sectionSubtitle}>curated just for you</Text></View>
               <TouchableOpacity onPress={() => navigation.navigate('TagProducts', { tag: 'student-favorite' })} style={styles.seeAllRow}><Text style={styles.seeAllText}>See all</Text><Ionicons name="chevron-forward" size={13} color="#0D9488" /></TouchableOpacity>
             </View>
             <View style={styles.productsGrid}>{studentFavorites.slice(0, 10).map(p => <ProductCard key={p._id} product={p} onPress={handleProductPress} />)}</View>
@@ -824,7 +827,7 @@ const GuestHomeScreen = () => {
             <View style={styles.sellBannerContent}>
               <View style={styles.sellBannerTag}><Ionicons name="storefront-outline" size={11} color="#fff" /><Text style={styles.sellBannerTagText}>FOR SELLERS</Text></View>
               <Text style={styles.sellBannerTitle}>Got something{'\n'}to sell?</Text>
-              <Text style={styles.sellBannerSub}>List your items for free and reach thousands of students across campuses</Text>
+              <Text style={styles.sellBannerSub}>List your items for free and reach thousands of customers across the city</Text>
               <View style={styles.sellBannerBtn}><Text style={styles.sellBannerBtnText}>Start Selling</Text><Ionicons name="arrow-forward" size={13} color="#0D9488" /></View>
             </View>
             <View style={styles.sellBannerIllustration}><Text style={{ fontSize: 60 }}>🛍️</Text></View>
