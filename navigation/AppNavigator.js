@@ -106,7 +106,7 @@ const TAB_BADGE_COLOR    = '#DC2626';
 const TAB_BAR_BORDER     = '#E2E8F0';
 
 // ───────────────────────────────────────────────────
-// GUEST TAB NAVIGATOR (NEW)
+// GUEST TAB NAVIGATOR
 // ───────────────────────────────────────────────────
 function GuestTabNavigator() {
   const { bottom } = useSafeAreaInsets();
@@ -117,12 +117,12 @@ function GuestTabNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           switch (route.name) {
-            case 'GuestFeed':     iconName = focused ? 'newspaper' : 'newspaper-outline'; break;
-            case 'GuestDiscover': iconName = focused ? 'compass' : 'compass-outline'; break;
-            case 'GuestShop':     iconName = focused ? 'storefront' : 'storefront-outline'; break;
-            case 'GuestCart':     iconName = focused ? 'cart' : 'cart-outline'; break;
-            case 'GuestProfile':  iconName = focused ? 'person' : 'person-outline'; break;
-            case 'Inbox':       iconName = focused ? 'chatbubbles' : 'chatbubbles-outline'; break;
+            case 'GuestFeed':     iconName = focused ? 'newspaper'    : 'newspaper-outline';  break;
+            case 'GuestProducts': iconName = focused ? 'grid'         : 'grid-outline';       break;
+            case 'GuestShop':     iconName = focused ? 'storefront'   : 'storefront-outline'; break;
+            case 'GuestCart':     iconName = focused ? 'cart'         : 'cart-outline';       break;
+            case 'GuestProfile':  iconName = focused ? 'person'       : 'person-outline';     break;
+            case 'Inbox':         iconName = focused ? 'chatbubbles'  : 'chatbubbles-outline'; break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -140,11 +140,11 @@ function GuestTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="GuestShop"     component={GuestHomeScreen} options={{ title: 'Shop' }} />
-      <Tab.Screen name="GuestDiscover" component={DiscoverScreen} options={{ title: 'Discover' }} />
+      <Tab.Screen name="GuestShop"     component={GuestHomeScreen}  options={{ title: 'Shop' }} />
+      <Tab.Screen name="GuestProducts" component={ProductsScreen}   options={{ title: 'Products' }} />
       <Tab.Screen name="GuestFeed"     component={CampusFeedScreen} options={{ title: 'Feed' }} />
-      <Tab.Screen name="Inbox"      component={InboxScreen} options={{ title: 'Inbox'}} />
-      <Tab.Screen name="GuestProfile"  component={AccountScreen} options={{ title: 'Profile' }} />
+      <Tab.Screen name="Inbox"         component={InboxScreen}      options={{ title: 'Inbox' }} />
+      <Tab.Screen name="GuestProfile"  component={AccountScreen}    options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }
@@ -163,12 +163,12 @@ function MainTabNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           switch (route.name) {
-            case 'CampusFeed': iconName = focused ? 'newspaper' : 'newspaper-outline'; break;
-            case 'Discover':   iconName = focused ? 'compass' : 'compass-outline'; break;
-            case 'Shopping':   iconName = focused ? 'storefront' : 'storefront-outline'; break;
-            case 'Cart':       iconName = focused ? 'cart' : 'cart-outline'; break;
-            case 'Profile':    iconName = focused ? 'person' : 'person-outline'; break;
-            case 'Inbox':       iconName = focused ? 'chatbubbles' : 'chatbubbles-outline'; break;
+            case 'CampusFeed': iconName = focused ? 'newspaper'   : 'newspaper-outline';  break;
+            case 'Products':   iconName = focused ? 'grid'        : 'grid-outline';       break;
+            case 'Shopping':   iconName = focused ? 'storefront'  : 'storefront-outline'; break;
+            case 'Cart':       iconName = focused ? 'cart'        : 'cart-outline';       break;
+            case 'Profile':    iconName = focused ? 'person'      : 'person-outline';     break;
+            case 'Inbox':      iconName = focused ? 'chatbubbles' : 'chatbubbles-outline'; break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -186,11 +186,19 @@ function MainTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Shopping"   component={HomeScreen} options={{ title: 'Shop' }} />
-      <Tab.Screen name="Discover"   component={DiscoverScreen} options={{ title: 'Discover' }} />
+      <Tab.Screen name="Shopping"   component={HomeScreen}       options={{ title: 'Shop' }} />
+      <Tab.Screen name="Products"   component={ProductsScreen}   options={{ title: 'Products' }} />
       <Tab.Screen name="CampusFeed" component={CampusFeedScreen} options={{ title: 'Feed' }} />
-      <Tab.Screen name="Inbox"      component={InboxScreen} options={{ title: 'Inbox', tabBarBadge: totalUnread > 0 ? totalUnread : null, tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 } }} />
-      <Tab.Screen name="Profile"    component={AccountScreen} options={{ title: 'Profile' }} />
+      <Tab.Screen
+        name="Inbox"
+        component={InboxScreen}
+        options={{
+          title: 'Inbox',
+          tabBarBadge: totalUnread > 0 ? totalUnread : null,
+          tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 },
+        }}
+      />
+      <Tab.Screen name="Profile"    component={AccountScreen}    options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }
@@ -270,8 +278,9 @@ function MainStackNavigator() {
           <Stack.Screen name="CampusFeed" component={CampusFeedScreen} />
           <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
           <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
           <Stack.Screen name="GuestMarketDetail" component={GuestMarketDetailScreen} />
+          {/*  Discover is now a stack screen (was a tab) */}
+          <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
         </>
       ) : (
         <>
@@ -288,6 +297,8 @@ function MainStackNavigator() {
               <Stack.Screen name="ReferralStats" component={VendorReferralStatsScreen} options={{ headerShown: false }} />
               <Stack.Screen name="CampusFeed" component={CampusFeedScreen} options={{ title: 'Feed' }} />
               <Stack.Screen name="SelectProduct" component={SelectProductScreen} options={{ headerShown: false }} />
+              {/*  Discover available to vendors too */}
+              <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
             </>
           ) : (
             <>
@@ -311,10 +322,11 @@ function MainStackNavigator() {
               <Stack.Screen name="Inbox" component={InboxScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Earnings" component={EarningsScreen} options={{ headerShown: false }} />
               <Stack.Screen name="CediAi" component={AIShoppingScreen} />
+              {/*  Discover is now a stack screen (was a tab) */}
+              <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
             </>
           )}
           {/* Shared screens for both roles */}
-
           <Stack.Screen name="Products" component={ProductsScreen} />
           <Stack.Screen name="VisualSearch" component={VisualSearchScreen} />
           <Stack.Screen name="ChatScreen" component={ChatScreen} />
@@ -325,8 +337,7 @@ function MainStackNavigator() {
           <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CreateStory" component={CreateStoryScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
-          
+          {/*  NOTE: Discover is registered inside each role branch above, not here. */}
         </>
       )}
     </Stack.Navigator>

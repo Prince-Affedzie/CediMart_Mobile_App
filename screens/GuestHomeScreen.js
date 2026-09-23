@@ -31,6 +31,7 @@ import ProductHeroCarousel from '../components/ProductHeroCarousel';
 import {ProductGridSkeleton} from '../components/SkeletonLoader'
 import ShopFAB from '../components/ShopFAB'
 import VisualSearchFab from '../components/VisualSearchFab';
+import VendorSpotlight from '../components/VendorSpotlight';
 
 const { width } = Dimensions.get('window');
 
@@ -718,6 +719,13 @@ const GuestHomeScreen = () => {
             ))}
           </ScrollView>
         </View>
+
+        <VendorSpotlight
+          title="Featured vendors"
+          subtitle="Top-rated Vendors "
+          limit={5}
+          sortBy="rating"
+        />
 
 
         {/* FEATURED PRODUCTS */}

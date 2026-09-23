@@ -1,49 +1,20 @@
 // src/screens/main/CategoryScreen.js
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Image,
-  FlatList, ActivityIndicator, RefreshControl, Dimensions,
-  TextInput, Modal, StatusBar, Animated, Platform,
+  View, Text, ScrollView, TouchableOpacity, Image,
+  FlatList, ActivityIndicator, RefreshControl, TextInput,
+  Modal, StatusBar, Animated, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { getProductsByCategory } from '../apis/productApi';
+import productService from '../services/productService';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import AIFAB from '../components/AIFAB';
 import VisualSearchFab from '../components/VisualSearchFab';
-
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 44) / 2;
-
-// ─── Teal + Coral Color Palette ────────────────────────────────────────────
-const C = {
-  bg:           '#F8FAFC',
-  surface:      '#FFFFFF',
-  elev:         '#F1F5F9',
-  t1:           '#0F172A',
-  t2:           '#475569',
-  t3:           '#94A3B8',
-  brand:        '#0D9488',
-  brandL:       '#14B8A6',
-  brandD:       '#0F766E',
-  brandBg:      '#F0FDFA',
-  brandBorder:  '#99F6E4',
-  accent:       '#F97316',
-  accentL:      '#FB923C',
-  accentBg:     '#FFF7ED',
-  accentBorder: '#FED7AA',
-  success:      '#059669',
-  successBg:    '#ECFDF5',
-  successBorder:'#A7F3D0',
-  danger:       '#DC2626',
-  dangerBg:     '#FEF2F2',
-  dangerBorder: '#FECACA',
-  info:         '#0284C7',
-  infoBg:       '#F0F9FF',
-  infoBorder:   '#BAE6FD',
-  white:        '#FFFFFF',
-  black:        '#000000',
-};
+import { ProductGridSkeleton } from '../components/SkeletonLoader';
+import { styles, Colors as C } from '../styles/category';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -185,7 +156,23 @@ const CONDITION_CONFIG = {
   'for-parts':     { label: 'For Parts',     color: C.danger,  bg: C.dangerBg },
 };
 
+const CONDITION_FILTER_OPTIONS = [
+  { id: '', label: 'Any' },
+  ...Object.entries(CONDITION_CONFIG).map(([k, v]) => ({ id: k, label: v.label })),
+];
+
 const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/300x300/F5F5F5/BDBDBD?text=No+Image';
+
+// Location can arrive as a plain string, the current { area, city } shape, or
+// — for older listings — the legacy { campusArea, hostel } shape. Always
+// resolve it to a displayable string rather than rendering the object.
+const getLocationLabel = (location) => {
+  if (!location) return null;
+  if (typeof location === 'string') return location;
+  if (location.city) return location.area ? `${location.area}, ${location.city}` : location.city;
+  if (location.campusArea) return location.hostel ? `${location.hostel}, ${location.campusArea}` : location.campusArea;
+  return null;
+};
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -230,26 +217,36 @@ const FilterPill = ({ label, onRemove }) => (
 );
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-const ProductCard = React.memo(({ item, onPress }) => {
+const ProductCard = React.memo(({
+  item, onPress, onAddToCart, onQtyChange,
+  qtyInCart = 0, isAdding = false, isUpdating = false,
+}) => {
   const condition = CONDITION_CONFIG[item.condition] || CONDITION_CONFIG['good'];
   const isAvailable = item.isAvailable && (item.countInStock ?? 0) > 0;
   const isLowStock = isAvailable && (item.countInStock ?? 0) <= 3;
   const images = item.images?.length > 0 ? item.images : [PLACEHOLDER_IMAGE];
+  const isLoading = isAdding || isUpdating;
+  const locationLabel = getLocationLabel(item.location);
 
   const discountInfo = item.discountInfo;
-  const hasActiveDiscount = discountInfo?.isOnSale && 
+  const hasActiveDiscount = discountInfo?.isOnSale &&
     (!discountInfo.discountStartDate || new Date(discountInfo.discountStartDate) <= Date.now()) &&
     (!discountInfo.discountEndDate || new Date(discountInfo.discountEndDate) >= Date.now());
-  
+
   const currentPrice = Number(item.price);
   const originalPrice = discountInfo?.originalPrice;
-  const discountPercentage = hasActiveDiscount 
+  const discountPercentage = hasActiveDiscount
     ? (discountInfo?.discountPercentage ?? (originalPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0))
     : 0;
   const savingsAmount = hasActiveDiscount && originalPrice ? originalPrice - currentPrice : 0;
 
   return (
-    <TouchableOpacity style={styles.card} onPress={() => onPress(item)} activeOpacity={0.88}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => onPress(item)}
+      activeOpacity={0.88}
+      disabled={isLoading}
+    >
       <View style={styles.cardImageWrap}>
         <Image source={{ uri: images[0] }} style={styles.cardImage} resizeMode="cover" />
         {hasActiveDiscount && isAvailable && (
@@ -283,11 +280,11 @@ const ProductCard = React.memo(({ item, onPress }) => {
 
       <View style={styles.cardBody}>
         <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
-        {(item.campus || item.location?.campusArea) && (
+        {(item.campus || locationLabel) && (
           <View style={styles.cardLocationRow}>
             <Ionicons name="location-outline" size={11} color={C.t3} />
             <Text style={styles.cardLocation} numberOfLines={1}>
-              {[item.campus, item.location?.campusArea].filter(Boolean).join(' · ')}
+              {[item.campus, locationLabel].filter(Boolean).join(' · ')}
             </Text>
           </View>
         )}
@@ -309,13 +306,40 @@ const ProductCard = React.memo(({ item, onPress }) => {
             )}
             {item.vendor?.name && <Text style={styles.cardVendor} numberOfLines={1}>@{item.vendor.name}</Text>}
           </View>
-          {(item.rating > 0 || item.numReviews > 0) && (
-            <View style={styles.cardRatingRow}>
-              <Ionicons name="star" size={12} color={C.accent} />
-              <Text style={styles.cardRatingText}>
-                {item.rating?.toFixed(1) || '0.0'}
-                {item.numReviews > 0 && ` (${item.numReviews})`}
-              </Text>
+
+          {qtyInCart === 0 ? (
+            <TouchableOpacity
+              style={[styles.cardAddBtn, !isAvailable && styles.cardAddBtnDisabled]}
+              onPress={() => onAddToCart(item)}
+              disabled={isLoading || !isAvailable}
+              activeOpacity={0.85}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              {isAdding
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Ionicons name="add" size={18} color="#fff" />}
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.cardQtyPill}>
+              <TouchableOpacity
+                style={styles.cardQtyBtn}
+                onPress={() => onQtyChange(item, 'decrease')}
+                disabled={isLoading}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              >
+                <Ionicons name="remove" size={12} color="#0D9488" />
+              </TouchableOpacity>
+              {isUpdating
+                ? <ActivityIndicator size="small" color="#0D9488" style={{ width: 22 }} />
+                : <Text style={styles.cardQtyNum}>{qtyInCart}</Text>}
+              <TouchableOpacity
+                style={styles.cardQtyBtn}
+                onPress={() => onQtyChange(item, 'increase')}
+                disabled={isLoading || qtyInCart >= (item.countInStock ?? 0)}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+              >
+                <Ionicons name="add" size={12} color="#0D9488" />
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -324,11 +348,301 @@ const ProductCard = React.memo(({ item, onPress }) => {
   );
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LIST HEADER — extracted + memoized so it keeps its identity across
+// re-renders (this is what keeps the search TextInput mounted and focused,
+// and is the main lever for making typing feel fast).
+// ─────────────────────────────────────────────────────────────────────────────
+const ListHeader = React.memo(({
+  navigation,
+  displayName,
+  loading,
+  total,
+  searchQuery,
+  onChangeSearch,
+  searchFocused,
+  setSearchFocused,
+  searchInputRef,
+  handleSearchSubmit,
+  clearSearch,
+  showLiveDropdown,
+  liveSearching,
+  liveSearchResults,
+  onLiveResultPress,
+  subcategories,
+  selectedSubcategory,
+  setSelectedSubcategory,
+  activeFilterCount,
+  setShowFilterSheet,
+  sort,
+  setShowSortModal,
+  handleClearFilters,
+  recentSearches,
+  setRecentSearches,
+  onRecentChipPress,
+  selectedCampus,
+  selectedCondition,
+  negotiableOnly,
+  minPrice,
+  maxPrice,
+  setSelectedCampus,
+  setSelectedCondition,
+  setNegotiableOnly,
+  setMinPrice,
+  setMaxPrice,
+  filteredProductsCount,
+  heroScaleAnim,
+}) => (
+  <>
+    <View style={styles.heroWrap}>
+      <Animated.Image
+        source={{ uri: `https://res.cloudinary.com/duv3qvvjz/image/upload/v1780782982/flyer13_1_fyp0xj.png` }}
+        style={[styles.heroImage, { transform: [{ scale: heroScaleAnim }] }]}
+        resizeMode="cover"
+      />
+      <View style={styles.heroScrimTop} />
+      <View style={styles.heroScrimBottom} />
+      <SafeAreaView style={styles.heroNav} edges={['top']}>
+        <TouchableOpacity style={styles.heroIconBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={22} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.heroTitleWrap}>
+          <Text style={styles.heroTitle} numberOfLines={1}>
+            {displayName.charAt(0).toUpperCase() + displayName.slice(1)}
+          </Text>
+          {!loading && (
+            <Text style={styles.heroCount}>{total} {total === 1 ? 'listing' : 'listings'}</Text>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.heroIconBtn}
+          onPress={() => navigation.navigate('MainTabs', { screen: 'Cart' })}
+        >
+          <Ionicons name="cart-outline" size={20} color="#fff" />
+        </TouchableOpacity>
+      </SafeAreaView>
+
+      {/* ── SEARCH BAR — persistent, same interaction as the Products screen:
+          clear (x) + an explicit "go" arrow, instead of an expand/collapse
+          toggle. This also removes the "add every keystroke to recent
+          searches" behaviour that was the real cause of the typing lag. ── */}
+      <View style={styles.heroSearchWrap}>
+        <View style={[styles.heroSearchBar, searchFocused && styles.heroSearchBarFocused]}>
+          <Ionicons name="search-outline" size={17} color={C.brand} style={{ marginLeft: 14 }} />
+          <TextInput
+            ref={searchInputRef}
+            style={styles.heroSearchInput}
+            placeholder={`Search in ${displayName}…`}
+            placeholderTextColor={C.t3}
+            value={searchQuery}
+            onChangeText={onChangeSearch}
+            onSubmitEditing={handleSearchSubmit}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            autoCapitalize="none"
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <>
+              <TouchableOpacity onPress={clearSearch} style={{ padding: 8 }}>
+                <Ionicons name="close-circle" size={18} color={C.t3} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.searchGoBtn} onPress={handleSearchSubmit} activeOpacity={0.8}>
+                <Ionicons name="arrow-forward" size={15} color="#fff" />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
+        {showLiveDropdown && (
+          <View style={styles.liveDropdown}>
+            {liveSearching ? (
+              <View style={{ padding: 16, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={C.brand} />
+              </View>
+            ) : liveSearchResults.length > 0 ? (
+              <>
+                {liveSearchResults.map(p => (
+                  <TouchableOpacity
+                    key={p._id || p.id}
+                    style={styles.liveRow}
+                    onPress={() => onLiveResultPress(p)}
+                  >
+                    {p.images?.[0] ? (
+                      <Image source={{ uri: p.images[0] }} style={styles.liveThumb} />
+                    ) : (
+                      <View style={[styles.liveThumb, { backgroundColor: C.elev, justifyContent: 'center', alignItems: 'center' }]}>
+                        <Ionicons name="image-outline" size={16} color={C.t3} />
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.liveRowName} numberOfLines={1}>{p.name}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                        <Text style={styles.liveRowPrice}>GH₵ {Number(p.price).toFixed(2)}</Text>
+                        {(p.campus || getLocationLabel(p.location)) && (
+                          <Text style={styles.liveRowLocation} numberOfLines={1}>{p.campus || getLocationLabel(p.location)}</Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity style={styles.liveViewAll} onPress={handleSearchSubmit}>
+                  <Text style={styles.liveViewAllText}>See all results for "{searchQuery}"</Text>
+                  <Ionicons name="arrow-forward" size={13} color={C.brand} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Ionicons name="search-outline" size={28} color={C.brandBorder} />
+                <Text style={styles.liveEmptyText}>No results found</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+
+    {searchFocused && !searchQuery && recentSearches.length > 0 && (
+      <View style={styles.recentWrap}>
+        <View style={styles.recentHeader}>
+          <Text style={styles.recentTitle}>Recent</Text>
+          <TouchableOpacity onPress={() => setRecentSearches([])}>
+            <Text style={styles.recentClear}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          {recentSearches.map((s, i) => (
+            <TouchableOpacity key={i} style={styles.recentChip} onPress={() => onRecentChipPress(s)}>
+              <Ionicons name="time-outline" size={13} color={C.brand} />
+              <Text style={styles.recentChipText}>{s}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    )}
+
+    {subcategories.length > 0 && (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.subcatStrip}
+        style={styles.subcatStripWrap}
+      >
+        <TouchableOpacity
+          style={[styles.subcatPill, !selectedSubcategory && styles.subcatPillActive]}
+          onPress={() => setSelectedSubcategory('')}
+        >
+          <Text style={[styles.subcatPillText, !selectedSubcategory && styles.subcatPillTextActive]}>All</Text>
+        </TouchableOpacity>
+        {subcategories.map(sub => {
+          const active = selectedSubcategory === sub.value;
+          return (
+            <TouchableOpacity
+              key={sub.value}
+              style={[styles.subcatPill, active && styles.subcatPillActive]}
+              onPress={() => setSelectedSubcategory(active ? '' : sub.value)}
+            >
+              <Text style={[styles.subcatPillText, active && styles.subcatPillTextActive]}>{sub.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    )}
+
+    {/* ── RESULTS META + SORT/FILTER BAR — same standard layout as the
+        Products screen, instead of two small floating pill buttons. ── */}
+    <View style={styles.resultsMetaRow}>
+      <View style={styles.resultsMetaLeft}>
+        <Text style={styles.toolbarCount}>
+          {loading ? 'Loading…' : (
+            <><Text style={styles.toolbarCountBold}>{total}</Text> listings</>
+          )}
+        </Text>
+        {!!searchQuery && (
+          <View style={styles.searchActiveTag}>
+            <Text style={styles.searchActiveTagText} numberOfLines={1}>"{searchQuery}"</Text>
+            <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+              <Ionicons name="close" size={11} color={C.info} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </View>
+
+    <View style={styles.sortFilterBar}>
+      <TouchableOpacity
+        style={[styles.sortFilterSegment, sort !== 'newest' && styles.sortFilterSegmentActive]}
+        onPress={() => setShowSortModal(true)}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="swap-vertical-outline" size={16} color={sort !== 'newest' ? C.brandD : C.brand} />
+        <Text style={[styles.sortFilterText, sort !== 'newest' && styles.sortFilterTextActive]} numberOfLines={1}>
+          Sort{sort !== 'newest' ? `: ${SORT_OPTIONS.find(s => s.id === sort)?.label.split(':')[0].split(' ')[0]}` : ' by'}
+        </Text>
+      </TouchableOpacity>
+
+      <View style={styles.sortFilterDivider} />
+
+      <TouchableOpacity
+        style={[styles.sortFilterSegment, activeFilterCount > 0 && styles.sortFilterSegmentActive]}
+        onPress={() => setShowFilterSheet(true)}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="options-outline" size={16} color={activeFilterCount > 0 ? C.brandD : C.brand} />
+        <Text style={[styles.sortFilterText, activeFilterCount > 0 && styles.sortFilterTextActive]}>Filter</Text>
+        {activeFilterCount > 0 && (
+          <View style={styles.filterCountBadge}>
+            <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
+
+    {(selectedSubcategory || selectedCampus || selectedCondition || negotiableOnly || minPrice || maxPrice) && (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFiltersRow}>
+        {selectedSubcategory && (
+          <FilterPill
+            label={subcategories.find(s => s.value === selectedSubcategory)?.label || selectedSubcategory}
+            onRemove={() => setSelectedSubcategory('')}
+          />
+        )}
+        {selectedCampus && (
+          <FilterPill
+            label={CAMPUS_OPTIONS.find(c => c.value === selectedCampus)?.label || selectedCampus}
+            onRemove={() => setSelectedCampus('')}
+          />
+        )}
+        {selectedCondition && (
+          <FilterPill
+            label={CONDITION_CONFIG[selectedCondition]?.label || selectedCondition}
+            onRemove={() => setSelectedCondition('')}
+          />
+        )}
+        {negotiableOnly && (
+          <FilterPill label="Negotiable" onRemove={() => setNegotiableOnly(false)} />
+        )}
+        {(minPrice || maxPrice) && (
+          <FilterPill
+            label={`GH₵${minPrice || '0'} – ${maxPrice || '∞'}`}
+            onRemove={() => { setMinPrice(''); setMaxPrice(''); }}
+          />
+        )}
+        <TouchableOpacity style={styles.clearAllPill} onPress={handleClearFilters}>
+          <Text style={styles.clearAllPillText}>Clear all</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    )}
+  </>
+));
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 const CategoryScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { category, categoryName } = route.params || {};
+
+  const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
+  const { isAuthenticated } = useAuth();
 
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -336,9 +650,13 @@ const CategoryScreen = () => {
   const [sort, setSort] = useState('newest');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
   const [selectedCampus, setSelectedCampus] = useState('');
+  const [selectedCondition, setSelectedCondition] = useState('');
+  const [negotiableOnly, setNegotiableOnly] = useState(false);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [recentSearches, setRecentSearches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -348,59 +666,288 @@ const CategoryScreen = () => {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
+  const [liveSearchResults, setLiveSearchResults] = useState([]);
+  const [liveSearching, setLiveSearching] = useState(false);
+  const [showLiveDropdown, setShowLiveDropdown] = useState(false);
+
+  const [addingProductId, setAddingProductId] = useState(null);
+  const [updatingProductId, setUpdatingProductId] = useState(null);
+
   const searchInputRef = useRef(null);
   const toastTimeoutRef = useRef(null);
   const heroScaleAnim = useRef(new Animated.Value(1.05)).current;
+  const fetchIdRef = useRef(0);
+  const isMountedRef = useRef(true);
 
   const subcategories = SUBCATEGORY_MAP[category] || [];
   const displayName = categoryName || category?.replace(/-/g, ' ') || '';
 
   useEffect(() => {
+    isMountedRef.current = true;
     Animated.spring(heroScaleAnim, { toValue: 1, tension: 60, friction: 12, useNativeDriver: true }).start();
-    return () => { if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); };
+    return () => {
+      isMountedRef.current = false;
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
   }, []);
 
-  useEffect(() => {
-    if (showSearch && searchInputRef.current) setTimeout(() => searchInputRef.current?.focus(), 100);
-  }, [showSearch]);
-
-  useEffect(() => { setPage(1); setProducts([]); fetchProducts(1, false); }, [sort, selectedSubcategory, selectedCampus]);
-
-  const fetchProducts = async (pageNum = 1, append = false) => {
+  // ── Fetch ────────────────────────────────────────────────────────────────
+  //  `searchOverride` gives callers a way to force a specific term for THIS
+  //  fetch without relying on the async state update (fixes "clearing the
+  //  search doesn't clear the results").
+  //
+  //  NOTE: this now goes through the generic `productService.getProducts`
+  //  endpoint (passing `category` as a filter) instead of the dedicated
+  //  `getProductsByCategory` API — that endpoint doesn't appear to apply the
+  //  search/condition/negotiable/price params, which was why the list never
+  //  actually updated when searching or filtering. `productService.getProducts`
+  //  is the same call the live-search dropdown (below) and the Products
+  //  screen already use successfully.
+  const fetchProducts = useCallback(async (pageNum = 1, append = false, searchOverride) => {
     if (!category) return;
+    const myId = ++fetchIdRef.current;
     try {
-      append ? setLoadingMore(true) : setLoading(true);
-      const params = { sort, page: pageNum, limit: 200 };
-      if (selectedSubcategory) params.subcategory = selectedSubcategory;
-      if (selectedCampus) params.campus = selectedCampus;
-      const response = await getProductsByCategory(category, params);
-      if (response.success || response.status === 200) {
-        const incoming = response.data.data || [];
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        // Clear stale results immediately so the skeleton (not old items)
+        // is what shows while this fetch — initial or a new search/filter —
+        // is in flight.
+        setProducts([]);
+      }
+
+      const effectiveSearch = searchOverride !== undefined ? searchOverride : searchQuery;
+      const params = {
+        category,
+        sort,
+        page: pageNum,
+        limit: 20,
+        subcategory: selectedSubcategory || undefined,
+        campus: selectedCampus || undefined,
+        condition: selectedCondition || undefined,
+        negotiable: negotiableOnly || undefined,
+        minPrice: minPrice || undefined,
+        maxPrice: maxPrice || undefined,
+        search: effectiveSearch.trim() || undefined,
+      };
+
+      const res = await productService.getProducts(params);
+      if (myId !== fetchIdRef.current || !isMountedRef.current) return;
+
+      if (res?.success) {
+        const incoming = res.data || [];
         setProducts(prev => append ? [...prev, ...incoming] : incoming);
-        setPagination(response.pagination);
-        setTotal(response.total ?? 0);
+        setPagination(res.pagination || {});
+        setTotal(res.total ?? 0);
       }
     } catch (err) {
       showToast('Failed to load products. Pull to refresh.');
-    } finally { setLoading(false); setLoadingMore(false); setRefreshing(false); }
+    } finally {
+      if (myId !== fetchIdRef.current || !isMountedRef.current) return;
+      setLoading(false); setLoadingMore(false); setRefreshing(false);
+    }
+  }, [category, sort, selectedSubcategory, selectedCampus, selectedCondition, negotiableOnly, minPrice, maxPrice, searchQuery]);
+
+  //  Reload when any filter changes. `fetchProducts` is deliberately left out
+  //  of this dependency list: it's recreated on every keystroke (since it
+  //  reads `searchQuery`), and including it here would re-run this effect —
+  //  and fire a brand-new full-list fetch — on every single keystroke
+  //  instead of only when an actual filter changes. Search has its own
+  //  debounced flow via handleSearchSubmit / clearSearch / onRecentChipPress.
+  useEffect(() => {
+    setPage(1);
+    fetchProducts(1, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort, selectedSubcategory, selectedCampus, selectedCondition, negotiableOnly, minPrice, maxPrice]);
+
+  // ── Live search debounce ────────────────────────────────────────────────
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) performLiveSearch();
+      else {
+        setLiveSearchResults([]);
+        setShowLiveDropdown(false);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const performLiveSearch = async () => {
+    setLiveSearching(true);
+    try {
+      const res = await productService.getProducts({
+        search: searchQuery.trim(),
+        category,
+        subcategory: selectedSubcategory || undefined,
+        campus: selectedCampus || undefined,
+        limit: 6,
+      });
+      if (isMountedRef.current) {
+        setLiveSearchResults(res?.data || []);
+        setShowLiveDropdown(true);
+      }
+    } catch { /* silent */ }
+    finally { setLiveSearching(false); }
   };
 
-  const onRefresh = useCallback(() => { setRefreshing(true); setPage(1); setProducts([]); fetchProducts(1, false); }, [sort, selectedSubcategory, selectedCampus]);
+  const onRefresh = useCallback(() => { setRefreshing(true); setPage(1); fetchProducts(1, false); }, [fetchProducts]);
   const handleLoadMore = () => { if (!pagination?.hasNextPage || loadingMore || loading) return; const nextPage = page + 1; setPage(nextPage); fetchProducts(nextPage, true); };
 
-  const showToast = (msg) => { setToastMessage(msg); setToastVisible(true); if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current); toastTimeoutRef.current = setTimeout(() => setToastVisible(false), 2400); };
-  const handleSearch = (text) => { setSearchQuery(text); if (text.trim() && !recentSearches.includes(text.trim().toLowerCase())) setRecentSearches(prev => [text.trim(), ...prev.slice(0, 4)]); };
-  const clearSearch = () => setSearchQuery('');
-  const handleProductPress = useCallback((item) => { navigation.navigate('ProductDetail', { productId: item._id || item.id, product: item }); }, [navigation]);
-  const handleClearFilters = () => { setSelectedSubcategory(''); setSelectedCampus(''); setSort('newest'); };
+  const showToast = useCallback((msg) => {
+    setToastMessage(msg); setToastVisible(true);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setToastVisible(false), 2400);
+  }, []);
 
-  const filteredProducts = searchQuery.trim()
-    ? products.filter(p => { const q = searchQuery.toLowerCase().trim(); return p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q) || p.subcategory?.toLowerCase().includes(q) || p.location?.campusArea?.toLowerCase().includes(q) || p.vendor?.name?.toLowerCase().includes(q); })
-    : products;
+  // ── Search handlers ─────────────────────────────────────────────────────
+  // `onChangeSearch` ONLY updates the text as the person types — it no
+  // longer touches `recentSearches` on every keystroke. Previously, every
+  // partial keystroke ("i", "ip", "iph"…) that wasn't already in the recent
+  // list got pushed into it, which meant a brand-new `recentSearches` array
+  // on almost every keystroke — forcing the whole (memoized) header to
+  // re-render each time and making typing feel sluggish. Recording a term
+  // now only happens once, on submit.
+  const onChangeSearch = useCallback((text) => {
+    setSearchQuery(text);
+  }, []);
 
-  const activeFilterCount = [selectedSubcategory, selectedCampus].filter(Boolean).length;
+  const recordRecentSearch = useCallback((term) => {
+    const trimmed = term.trim();
+    if (!trimmed) return;
+    setRecentSearches(prev => {
+      const lower = trimmed.toLowerCase();
+      if (prev.some(s => s.toLowerCase() === lower)) return prev;
+      return [trimmed, ...prev.slice(0, 4)];
+    });
+  }, []);
 
-  const renderProductItem = ({ item }) => <ProductCard item={item} onPress={handleProductPress} />;
+  const handleSearchSubmit = useCallback(() => {
+    setShowLiveDropdown(false);
+    recordRecentSearch(searchQuery);
+    setPage(1);
+    fetchProducts(1, false, searchQuery);
+  }, [fetchProducts, searchQuery, recordRecentSearch]);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    setLiveSearchResults([]);
+    setShowLiveDropdown(false);
+    setPage(1);
+    fetchProducts(1, false, '');
+  }, [fetchProducts]);
+
+  const onRecentChipPress = useCallback((term) => {
+    setSearchQuery(term);
+    setShowLiveDropdown(false);
+    recordRecentSearch(term);
+    setPage(1);
+    fetchProducts(1, false, term);
+  }, [fetchProducts, recordRecentSearch]);
+
+  const handleProductPress = useCallback((item) => {
+    navigation.navigate('ProductDetail', { productId: item._id || item.id, product: item });
+  }, [navigation]);
+
+  const handleClearFilters = useCallback(() => {
+    setSelectedSubcategory('');
+    setSelectedCampus('');
+    setSelectedCondition('');
+    setNegotiableOnly(false);
+    setMinPrice('');
+    setMaxPrice('');
+    setSort('newest');
+  }, []);
+
+  // ── Cart helpers ────────────────────────────────────────────────────────
+  const cartQtyMap = useMemo(() => {
+    const map = {};
+    (cartItems || []).forEach(i => {
+      const id = i.product?._id || i.productId;
+      if (id) map[id] = i.quantity ?? 0;
+    });
+    return map;
+  }, [cartItems]);
+
+  const handleAddToCart = useCallback(async (product) => {
+    if (!isAuthenticated) {
+      Alert.alert('Login Required', 'Please log in to save items.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => navigation.navigate('Login') },
+      ]);
+      return;
+    }
+    if ((product.countInStock ?? 0) <= 0) {
+      Alert.alert('Unavailable', `${product.name} is no longer available.`);
+      return;
+    }
+    try {
+      const id = product._id || product.id;
+      setAddingProductId(id);
+      await addToCart(id, 1);
+      showToast(`${product.name} saved to cart`);
+    } catch {
+      Alert.alert('Error', 'Could not add item. Please try again.');
+    } finally {
+      setAddingProductId(null);
+    }
+  }, [isAuthenticated, addToCart, navigation, showToast]);
+
+  const handleQtyChange = useCallback(async (product, action) => {
+    const productId = product._id || product.id;
+    const qty = cartQtyMap[productId] || 0;
+    try {
+      if (action === 'increase') {
+        if (qty >= (product.countInStock ?? 0)) {
+          Alert.alert('Stock Limit', `Only ${product.countInStock} unit(s) available.`);
+          return;
+        }
+        setUpdatingProductId(productId);
+        await addToCart(productId, 1);
+      } else if (action === 'decrease' && qty > 1) {
+        setUpdatingProductId(productId);
+        await updateQuantity(productId, qty - 1);
+      } else if (action === 'decrease' && qty === 1) {
+        Alert.alert('Remove Item?', `Remove ${product.name} from cart?`, [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove', style: 'destructive',
+            onPress: async () => {
+              setUpdatingProductId(productId);
+              await removeFromCart(productId);
+              setUpdatingProductId(null);
+            },
+          },
+        ]);
+        return;
+      }
+    } catch {
+      Alert.alert('Error', 'Could not update cart.');
+    } finally {
+      setUpdatingProductId(null);
+    }
+  }, [cartQtyMap, addToCart, updateQuantity, removeFromCart]);
+
+  // ── Derived ─────────────────────────────────────────────────────────────
+  const filteredProducts = products;
+  const activeFilterCount = [
+    selectedSubcategory, selectedCampus, selectedCondition, negotiableOnly, minPrice, maxPrice,
+  ].filter(Boolean).length;
+
+  const renderProductItem = useCallback(({ item }) => {
+    const id = item._id || item.id;
+    return (
+      <ProductCard
+        item={item}
+        onPress={handleProductPress}
+        onAddToCart={handleAddToCart}
+        onQtyChange={handleQtyChange}
+        qtyInCart={cartQtyMap[id] || 0}
+        isAdding={addingProductId === id}
+        isUpdating={updatingProductId === id}
+      />
+    );
+  }, [handleProductPress, handleAddToCart, handleQtyChange, cartQtyMap, addingProductId, updatingProductId]);
 
   const renderFooter = () => {
     if (loadingMore) return (<View style={styles.loadMoreWrap}><ActivityIndicator size="small" color={C.brand} /><Text style={styles.loadMoreText}>Loading more…</Text></View>);
@@ -409,8 +956,8 @@ const CategoryScreen = () => {
   };
 
   const renderEmptyState = () => {
-    if (loading) return null;
-    const isFiltered = selectedSubcategory || selectedCampus || searchQuery;
+    if (loading) return <ProductGridSkeleton />;
+    const isFiltered = selectedSubcategory || selectedCampus || selectedCondition || negotiableOnly || minPrice || maxPrice || searchQuery;
     return (
       <View style={styles.emptyWrap}>
         <View style={styles.emptyIconBg}><Ionicons name={isFiltered ? 'filter-outline' : 'storefront-outline'} size={36} color={C.brandBorder} /></View>
@@ -425,91 +972,67 @@ const CategoryScreen = () => {
     );
   };
 
-  const renderListHeader = () => (
-    <>
-      <View style={styles.heroWrap}>
-        <Animated.Image source={{ uri: `https://res.cloudinary.com/duv3qvvjz/image/upload/v1780782982/flyer13_1_fyp0xj.png` }} style={[styles.heroImage, { transform: [{ scale: heroScaleAnim }] }]} resizeMode="cover" />
-        <View style={styles.heroScrimTop} />
-        <View style={styles.heroScrimBottom} />
-        <SafeAreaView style={styles.heroNav} edges={['top']}>
-          <TouchableOpacity style={styles.heroIconBtn} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={22} color="#fff" /></TouchableOpacity>
-          <View style={styles.heroTitleWrap}><Text style={styles.heroTitle} numberOfLines={1}>{displayName.charAt(0).toUpperCase() + displayName.slice(1)}</Text>{!loading && <Text style={styles.heroCount}>{total} {total === 1 ? 'listing' : 'listings'}</Text>}</View>
-          <TouchableOpacity style={styles.heroIconBtn} onPress={() => navigation.navigate('MainTabs', { screen: 'Cart' })}><Ionicons name="cart-outline" size={20} color="#fff" /></TouchableOpacity>
-        </SafeAreaView>
-        <View style={styles.heroSearchWrap}>
-          {showSearch ? (
-            <View style={styles.heroSearchActive}>
-              <Ionicons name="search-outline" size={17} color={C.brand} style={{ marginLeft: 14 }} />
-              <TextInput ref={searchInputRef} style={styles.heroSearchInput} placeholder={`Search in ${displayName}…`} placeholderTextColor={C.t3} value={searchQuery} onChangeText={handleSearch} autoCapitalize="none" returnKeyType="search" />
-              {!!searchQuery && <TouchableOpacity onPress={clearSearch} style={{ padding: 8 }}><Ionicons name="close-circle" size={18} color={C.t3} /></TouchableOpacity>}
-              <TouchableOpacity style={styles.heroSearchDoneBtn} onPress={() => { setShowSearch(false); clearSearch(); }}><Text style={styles.heroSearchDoneText}>Done</Text></TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.heroSearchInactive} onPress={() => setShowSearch(true)} activeOpacity={0.9}>
-              <Ionicons name="search-outline" size={17} color={C.t3} style={{ marginRight: 8 }} /><Text style={styles.heroSearchPlaceholder}>Search in {displayName}…</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {showSearch && recentSearches.length > 0 && !searchQuery && (
-        <View style={styles.recentWrap}>
-          <View style={styles.recentHeader}><Text style={styles.recentTitle}>Recent</Text><TouchableOpacity onPress={() => setRecentSearches([])}><Text style={styles.recentClear}>Clear</Text></TouchableOpacity></View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>{recentSearches.map((s, i) => (<TouchableOpacity key={i} style={styles.recentChip} onPress={() => handleSearch(s)}><Ionicons name="time-outline" size={13} color={C.brand} /><Text style={styles.recentChipText}>{s}</Text></TouchableOpacity>))}</ScrollView>
-        </View>
-      )}
-
-      {subcategories.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subcatStrip} style={styles.subcatStripWrap}>
-          <TouchableOpacity style={[styles.subcatPill, !selectedSubcategory && styles.subcatPillActive]} onPress={() => setSelectedSubcategory('')}><Text style={[styles.subcatPillText, !selectedSubcategory && styles.subcatPillTextActive]}>All</Text></TouchableOpacity>
-          {subcategories.map(sub => { const active = selectedSubcategory === sub.value; return (<TouchableOpacity key={sub.value} style={[styles.subcatPill, active && styles.subcatPillActive]} onPress={() => setSelectedSubcategory(active ? '' : sub.value)}><Text style={[styles.subcatPillText, active && styles.subcatPillTextActive]}>{sub.label}</Text></TouchableOpacity>); })}
-        </ScrollView>
-      )}
-
-      <View style={styles.toolbar}>
-        <Text style={styles.toolbarCount}>{loading ? 'Loading…' : searchQuery ? `${filteredProducts.length} results for "${searchQuery}"` : `${total} listings`}</Text>
-        <View style={styles.toolbarRight}>
-          <TouchableOpacity style={[styles.toolbarBtn, activeFilterCount > 0 && styles.toolbarBtnActive]} onPress={() => setShowFilterSheet(true)} activeOpacity={0.8}><Ionicons name="options-outline" size={14} color={activeFilterCount > 0 ? '#fff' : C.brand} /><Text style={[styles.toolbarBtnText, activeFilterCount > 0 && { color: '#fff' }]}>Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.toolbarBtn} onPress={() => setShowSortModal(true)} activeOpacity={0.8}><Ionicons name="swap-vertical-outline" size={14} color={C.brand} /><Text style={styles.toolbarBtnText}>{SORT_OPTIONS.find(s => s.id === sort)?.label.split(':')[0].split(' ')[0] || 'Sort'}</Text><Ionicons name="chevron-down" size={12} color={C.brand} /></TouchableOpacity>
-        </View>
-      </View>
-
-      {(selectedSubcategory || selectedCampus) && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFiltersRow}>
-          {selectedSubcategory && <FilterPill label={subcategories.find(s => s.value === selectedSubcategory)?.label || selectedSubcategory} onRemove={() => setSelectedSubcategory('')} />}
-          {selectedCampus && <FilterPill label={CAMPUS_OPTIONS.find(c => c.value === selectedCampus)?.label || selectedCampus} onRemove={() => setSelectedCampus('')} />}
-          <TouchableOpacity style={styles.clearAllPill} onPress={handleClearFilters}><Text style={styles.clearAllPillText}>Clear all</Text></TouchableOpacity>
-        </ScrollView>
-      )}
-
-      {searchQuery.trim() && (
-        <View style={styles.searchResultBanner}>
-          <Ionicons name="search" size={14} color={C.brand} /><Text style={styles.searchResultText}>{filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''} for <Text style={styles.searchResultQuery}>"{searchQuery}"</Text> (searching loaded listings)</Text>
-          <TouchableOpacity onPress={clearSearch}><Ionicons name="close-circle" size={16} color={C.t3} /></TouchableOpacity>
-        </View>
-      )}
-    </>
-  );
-
-  if (loading && products.length === 0) {
-    return (
-      <View style={styles.loadingScreen}>
-        <StatusBar backgroundColor="transparent" translucent barStyle="dark-content" />
-        <View style={styles.loadingIconWrap}><ActivityIndicator size="large" color={C.brand} /></View>
-        <Text style={styles.loadingTitle}>{displayName}</Text>
-        <Text style={styles.loadingSubtitle}>Fetching listings for you…</Text>
-      </View>
-    );
-  }
+  //  Stable header element. Every dependency of ListHeader is either a
+  //  useCallback-wrapped function or primitive/simple state, so this only
+  //  changes when something the header actually displays changes.
+  const listHeaderElement = useMemo(() => (
+    <ListHeader
+      navigation={navigation}
+      displayName={displayName}
+      loading={loading}
+      total={total}
+      searchQuery={searchQuery}
+      onChangeSearch={onChangeSearch}
+      searchFocused={searchFocused}
+      setSearchFocused={setSearchFocused}
+      searchInputRef={searchInputRef}
+      handleSearchSubmit={handleSearchSubmit}
+      clearSearch={clearSearch}
+      showLiveDropdown={showLiveDropdown}
+      liveSearching={liveSearching}
+      liveSearchResults={liveSearchResults}
+      onLiveResultPress={handleProductPress}
+      subcategories={subcategories}
+      selectedSubcategory={selectedSubcategory}
+      setSelectedSubcategory={setSelectedSubcategory}
+      activeFilterCount={activeFilterCount}
+      setShowFilterSheet={setShowFilterSheet}
+      sort={sort}
+      setShowSortModal={setShowSortModal}
+      handleClearFilters={handleClearFilters}
+      recentSearches={recentSearches}
+      setRecentSearches={setRecentSearches}
+      onRecentChipPress={onRecentChipPress}
+      selectedCampus={selectedCampus}
+      selectedCondition={selectedCondition}
+      negotiableOnly={negotiableOnly}
+      minPrice={minPrice}
+      maxPrice={maxPrice}
+      setSelectedCampus={setSelectedCampus}
+      setSelectedCondition={setSelectedCondition}
+      setNegotiableOnly={setNegotiableOnly}
+      setMinPrice={setMinPrice}
+      setMaxPrice={setMaxPrice}
+      filteredProductsCount={filteredProducts.length}
+      heroScaleAnim={heroScaleAnim}
+    />
+  ), [
+    navigation, displayName, loading, total, searchQuery, onChangeSearch, searchFocused,
+    handleSearchSubmit, clearSearch,
+    showLiveDropdown, liveSearching, liveSearchResults, handleProductPress,
+    subcategories, selectedSubcategory, activeFilterCount,
+    sort, handleClearFilters, recentSearches, onRecentChipPress,
+    selectedCampus, selectedCondition, negotiableOnly, minPrice, maxPrice,
+    filteredProducts.length, heroScaleAnim,
+  ]);
 
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="transparent" translucent barStyle="light-content" />
       <CartToast visible={toastVisible} message={toastMessage} />
-      
 
       {/* Sort Modal */}
-      <Modal visible={showSortModal} transparent animationType="slide" onRequestClose={() => setShowSortModal(false)}>
+      <Modal visible={showSortModal} transparent animationType="slide" onRequestClose={() => setShowSortModal(false)} statusBarTranslucent>
         <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowSortModal(false)} />
         <View style={styles.bottomSheet}>
           <View style={styles.sheetHandle} />
@@ -519,169 +1042,133 @@ const CategoryScreen = () => {
         </View>
       </Modal>
 
-      {/* Filter Sheet */}
-      <Modal visible={showFilterSheet} transparent animationType="slide" onRequestClose={() => setShowFilterSheet(false)}>
+      {/* Filter Sheet — now also includes Condition, Price Range and
+          Negotiable Only, matching the Products screen's filter set. */}
+      <Modal visible={showFilterSheet} transparent animationType="slide" onRequestClose={() => setShowFilterSheet(false)} statusBarTranslucent>
         <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowFilterSheet(false)} />
-        <View style={[styles.bottomSheet, { maxHeight: '80%' }]}>
+        <View style={[styles.bottomSheet, { maxHeight: '85%' }]}>
           <View style={styles.sheetHandle} />
-          <View style={styles.sheetTitleRow}><Text style={styles.sheetTitle}>Filters</Text>{activeFilterCount > 0 && <TouchableOpacity onPress={handleClearFilters}><Text style={styles.sheetClearBtn}>Clear all</Text></TouchableOpacity>}</View>
+          <View style={styles.sheetTitleRow}>
+            <Text style={styles.sheetTitle}>Filters</Text>
+            {activeFilterCount > 0 && <TouchableOpacity onPress={handleClearFilters}><Text style={styles.sheetClearBtn}>Clear all</Text></TouchableOpacity>}
+          </View>
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={styles.filterSectionLabel}>Campus</Text>
-            <View style={styles.filterChipsWrap}>{CAMPUS_OPTIONS.map(opt => { const active = selectedCampus === opt.value; return (<TouchableOpacity key={opt.value} style={[styles.filterChip, active && styles.filterChipActive]} onPress={() => setSelectedCampus(active ? '' : opt.value)}><Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{opt.label}</Text></TouchableOpacity>); })}</View>
-            {subcategories.length > 0 && (<><Text style={[styles.filterSectionLabel, { marginTop: 20 }]}>Subcategory</Text><View style={styles.filterChipsWrap}><TouchableOpacity style={[styles.filterChip, !selectedSubcategory && styles.filterChipActive]} onPress={() => setSelectedSubcategory('')}><Text style={[styles.filterChipText, !selectedSubcategory && styles.filterChipTextActive]}>All</Text></TouchableOpacity>{subcategories.map(sub => { const active = selectedSubcategory === sub.value; return (<TouchableOpacity key={sub.value} style={[styles.filterChip, active && styles.filterChipActive]} onPress={() => setSelectedSubcategory(active ? '' : sub.value)}><Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{sub.label}</Text></TouchableOpacity>); })}</View></>)}
+            <View style={styles.filterChipsWrap}>
+              {CAMPUS_OPTIONS.map(opt => {
+                const active = selectedCampus === opt.value;
+                return (
+                  <TouchableOpacity key={opt.value} style={[styles.filterChip, active && styles.filterChipActive]} onPress={() => setSelectedCampus(active ? '' : opt.value)}>
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {subcategories.length > 0 && (
+              <>
+                <Text style={[styles.filterSectionLabel, { marginTop: 20 }]}>Subcategory</Text>
+                <View style={styles.filterChipsWrap}>
+                  <TouchableOpacity style={[styles.filterChip, !selectedSubcategory && styles.filterChipActive]} onPress={() => setSelectedSubcategory('')}>
+                    <Text style={[styles.filterChipText, !selectedSubcategory && styles.filterChipTextActive]}>All</Text>
+                  </TouchableOpacity>
+                  {subcategories.map(sub => {
+                    const active = selectedSubcategory === sub.value;
+                    return (
+                      <TouchableOpacity key={sub.value} style={[styles.filterChip, active && styles.filterChipActive]} onPress={() => setSelectedSubcategory(active ? '' : sub.value)}>
+                        <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{sub.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            <Text style={[styles.filterSectionLabel, { marginTop: 20 }]}>Condition</Text>
+            <View style={styles.filterChipsWrap}>
+              {CONDITION_FILTER_OPTIONS.map(opt => {
+                const active = selectedCondition === opt.id;
+                return (
+                  <TouchableOpacity key={opt.id} style={[styles.filterChip, active && styles.filterChipActive]} onPress={() => setSelectedCondition(opt.id)}>
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.sheetSubHeading}>Price Range (GH₵)</Text>
+            <View style={styles.priceRow}>
+              <View style={styles.priceInputWrap}>
+                <Text style={styles.priceInputLabel}>Min</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="0"
+                  placeholderTextColor="#BDBDBD"
+                  keyboardType="numeric"
+                  value={minPrice}
+                  onChangeText={setMinPrice}
+                />
+              </View>
+              <View style={styles.priceDash} />
+              <View style={styles.priceInputWrap}>
+                <Text style={styles.priceInputLabel}>Max</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="Any"
+                  placeholderTextColor="#BDBDBD"
+                  keyboardType="numeric"
+                  value={maxPrice}
+                  onChangeText={setMaxPrice}
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.toggleRow} onPress={() => setNegotiableOnly(v => !v)} activeOpacity={0.8}>
+              <View>
+                <Text style={styles.toggleRowLabel}>Negotiable Only</Text>
+                <Text style={styles.toggleRowSub}>Show listings open to price discussion</Text>
+              </View>
+              <View style={[styles.toggleSwitch, negotiableOnly && styles.toggleSwitchOn]}>
+                <View style={[styles.toggleThumb, negotiableOnly && styles.toggleThumbOn]} />
+              </View>
+            </TouchableOpacity>
           </ScrollView>
-          <TouchableOpacity style={styles.applyBtn} onPress={() => setShowFilterSheet(false)}><Text style={styles.applyBtnText}>Apply{activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}</Text></TouchableOpacity>
-          
+
+          <TouchableOpacity style={styles.applyBtn} onPress={() => setShowFilterSheet(false)}>
+            <Ionicons name="checkmark" size={16} color="#fff" />
+            <Text style={styles.applyBtnText}>Apply{activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}</Text>
+          </TouchableOpacity>
+
           <SafeAreaView edges={['bottom']} style={{ paddingBottom: 8 }} />
         </View>
       </Modal>
 
       {/* Product List */}
       <FlatList
-        data={filteredProducts} renderItem={renderProductItem}
+        data={filteredProducts}
+        renderItem={renderProductItem}
         keyExtractor={item => (item._id || item.id || String(Math.random())).toString()}
-        numColumns={2} columnWrapperStyle={styles.row}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.brand} colors={[C.brand]} />}
-        ListHeaderComponent={renderListHeader} ListEmptyComponent={renderEmptyState}
-        ListFooterComponent={renderFooter} onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.35} showsVerticalScrollIndicator={false}
-        extraData={[searchQuery, selectedSubcategory, selectedCampus, sort]}
+        ListHeaderComponent={listHeaderElement}
+        ListEmptyComponent={renderEmptyState}
+        ListFooterComponent={renderFooter}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        extraData={{ cartQtyMap, addingProductId, updatingProductId }}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
       />
       <VisualSearchFab navigation={navigation} bottom={128} right={20} />
       <AIFAB style={{ position: 'absolute', bottom: 44, right: 16 }} />
     </View>
   );
 };
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  listContent: { paddingBottom: 20 },
-  row: { justifyContent: 'space-between', paddingHorizontal: 12, marginBottom: 2 },
-
-  loadingScreen: { flex: 1, backgroundColor: C.bg, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  loadingIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  loadingTitle: { fontSize: 20, fontWeight: '800', color: C.brand, marginBottom: 6, textTransform: 'capitalize' },
-  loadingSubtitle: { fontSize: 14, color: C.t3, textAlign: 'center' },
-
-  heroWrap: { height: 260, overflow: 'hidden', backgroundColor: C.brandD },
-  heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  heroScrimTop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.22)' },
-  heroScrimBottom: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 130, backgroundColor: 'rgba(0,0,0,0.48)' },
-  heroNav: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 10 },
-  heroIconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
-  heroTitleWrap: { flex: 1, alignItems: 'center' },
-  heroTitle: { fontSize: 19, fontWeight: '800', color: '#fff', letterSpacing: 0.2, textTransform: 'capitalize', textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  heroCount: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2, fontWeight: '500' },
-  heroSearchWrap: { position: 'absolute', bottom: 18, left: 16, right: 16 },
-  heroSearchInactive: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 16, shadowColor: C.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 6 },
-  heroSearchPlaceholder: { flex: 1, fontSize: 14, color: C.t3 },
-  heroSearchActive: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, borderRadius: 14, borderWidth: 2, borderColor: C.brand, shadowColor: C.brand, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 6, overflow: 'hidden' },
-  heroSearchInput: { flex: 1, fontSize: 14, color: C.t1, paddingVertical: 13, paddingHorizontal: 10 },
-  heroSearchDoneBtn: { backgroundColor: C.brand, paddingHorizontal: 14, paddingVertical: 13 },
-  heroSearchDoneText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-
-  recentWrap: { backgroundColor: C.white, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  recentHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  recentTitle: { fontSize: 12, color: C.t3, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-  recentClear: { fontSize: 12, color: C.danger, fontWeight: '600' },
-  recentChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.brandBg, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: C.brandBorder, gap: 5 },
-  recentChipText: { fontSize: 13, color: C.brand, fontWeight: '600' },
-
-  subcatStripWrap: { backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  subcatStrip: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
-  subcatPill: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0E0E0', backgroundColor: C.white },
-  subcatPillActive: { backgroundColor: C.brand, borderColor: C.brand },
-  subcatPillText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  subcatPillTextActive: { color: '#fff' },
-
-  toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.white, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', marginBottom: 4 },
-  toolbarCount: { fontSize: 13, color: C.t3, fontWeight: '500', flex: 1, marginRight: 8 },
-  toolbarRight: { flexDirection: 'row', gap: 8 },
-  toolbarBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.brandBg, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, gap: 4, borderWidth: 1, borderColor: C.brandBorder },
-  toolbarBtnActive: { backgroundColor: C.brand, borderColor: C.brand },
-  toolbarBtnText: { fontSize: 12, color: C.brand, fontWeight: '700' },
-
-  activeFiltersRow: { paddingHorizontal: 14, paddingVertical: 8, gap: 8, backgroundColor: C.bg },
-  activePill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.infoBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.infoBorder },
-  activePillText: { fontSize: 12, fontWeight: '600', color: C.info },
-  clearAllPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: C.dangerBorder, backgroundColor: C.dangerBg },
-  clearAllPillText: { fontSize: 12, fontWeight: '600', color: C.danger },
-
-  searchResultBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.brandBg, paddingHorizontal: 14, paddingVertical: 10, gap: 7, borderBottomWidth: 1, borderBottomColor: C.brandBorder },
-  searchResultText: { flex: 1, fontSize: 13, color: '#555', fontWeight: '500' },
-  searchResultQuery: { color: C.brand, fontWeight: '700' },
-
-  card: { width: CARD_WIDTH, backgroundColor: C.white, borderRadius: 18, overflow: 'hidden', marginBottom: 12, marginTop: 6, shadowColor: C.black, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 4 },
-  cardImageWrap: { height: 148, position: 'relative', backgroundColor: '#F5F5F5' },
-  cardImage: { width: '100%', height: '100%' },
-  conditionBadge: { position: 'absolute', top: 8, left: 8, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  conditionBadgeText: { fontSize: 10, fontWeight: '700' },
-  oosOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  oosText: { color: '#fff', fontSize: 13, fontWeight: '800', letterSpacing: 0.4 },
-  lowStockBadge: { position: 'absolute', bottom: 8, left: 8, flexDirection: 'row', alignItems: 'center', backgroundColor: C.danger, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, gap: 3 },
-  lowStockText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  negotiableTag: { position: 'absolute', top: 8, right: 8, backgroundColor: C.accent, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
-  negotiableTagText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  imageCountBadge: { position: 'absolute', bottom: 8, right: 8, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8, gap: 3 },
-  imageCountText: { color: '#fff', fontSize: 10, fontWeight: '600' },
-  cardBody: { padding: 12, paddingTop: 10 },
-  cardName: { fontSize: 13, fontWeight: '700', color: C.t1, lineHeight: 18, minHeight: 36, marginBottom: 4 },
-  cardLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 6 },
-  cardLocation: { fontSize: 11, color: C.t3, flex: 1 },
-  cardFooter: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  cardPrice: { fontSize: 16, fontWeight: '800', color: C.accent },
-  cardVendor: { fontSize: 10, color: C.t3, marginTop: 1 },
-  cardPriceSection: { flex: 1 },
-  cardPriceStack: { gap: 3 },
-  cardPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardOriginalPrice: { fontSize: 11, color: C.t3, fontWeight: '600', textDecorationLine: 'line-through' },
-  cardDiscountPill: { backgroundColor: C.dangerBg, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: C.dangerBorder },
-  cardDiscountPillText: { fontSize: 9, fontWeight: '800', color: C.danger },
-  cardSavingsText: { fontSize: 10, color: C.success, fontWeight: '700' },
-  cardRatingRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 },
-  cardRatingText: { fontSize: 11, color: C.t2, fontWeight: '600' },
-
-  loadMoreWrap: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, paddingVertical: 20 },
-  loadMoreText: { fontSize: 13, color: C.t3, fontWeight: '500' },
-  endOfListWrap: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 28, gap: 12 },
-  endOfListLine: { flex: 1, height: 1, backgroundColor: '#E0E0E0' },
-  endOfListText: { fontSize: 12, color: C.t3, fontWeight: '500' },
-
-  emptyWrap: { alignItems: 'center', paddingVertical: 64, paddingHorizontal: 40 },
-  emptyIconBg: { width: 88, height: 88, borderRadius: 44, backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: C.brand, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: C.t3, textAlign: 'center', lineHeight: 22, marginBottom: 28 },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.brand, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 12, gap: 8, shadowColor: C.brand, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 4 },
-  emptyBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
-  bottomSheet: { backgroundColor: C.white, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 20, paddingTop: 12, shadowColor: C.black, shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 16 },
-  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E0E0E0', alignSelf: 'center', marginBottom: 18 },
-  sheetTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  sheetTitle: { fontSize: 18, fontWeight: '800', color: C.brand },
-  sheetClearBtn: { fontSize: 14, color: C.danger, fontWeight: '600' },
-  sheetRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, marginBottom: 6, gap: 12 },
-  sheetRowActive: { backgroundColor: C.brandBg },
-  sheetRowIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
-  sheetRowIconActive: { backgroundColor: C.brand },
-  sheetRowText: { flex: 1, fontSize: 15, color: '#333', fontWeight: '500' },
-  sheetRowTextActive: { color: C.brand, fontWeight: '700' },
-  filterSectionLabel: { fontSize: 12, color: C.t3, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 },
-  filterChipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0E0E0', backgroundColor: C.white },
-  filterChipActive: { backgroundColor: C.brand, borderColor: C.brand },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  filterChipTextActive: { color: '#fff' },
-  applyBtn: { backgroundColor: C.brand, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 20, marginBottom: 4, shadowColor: C.brand, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4 },
-  applyBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-
-  toastWrap: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 999, alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 54 : 40, pointerEvents: 'none' },
-  toast: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.brandD, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 30, gap: 10, shadowColor: C.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 8, maxWidth: width - 60 },
-  toastText: { fontSize: 13, color: 'rgba(255,255,255,0.92)', flex: 1 },
-  discountBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: C.danger, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4, zIndex: 3 },
-  discountBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
-});
 
 export default CategoryScreen;

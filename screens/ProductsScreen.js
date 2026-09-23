@@ -1,10 +1,10 @@
 // src/screens/main/ProductsScreen.js
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
+  FlatList,
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
@@ -15,19 +15,20 @@ import {
   StatusBar,
   RefreshControl,
   Animated,
-  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import productService from '../services/productService';
-import {styles} from '../styles/products'
-import {CONDITION_CONFIG,SUBCATEGORIES,CATEGORIES} from '../data/General'
-import {ProductGridSkeleton} from '../components/SkeletonLoader'
+import { styles, Colors as C } from '../styles/products';
+import { CONDITION_CONFIG, SUBCATEGORIES, CATEGORIES } from '../data/General';
+import { ProductGridSkeleton } from '../components/SkeletonLoader';
+import ShopFAB from '../components/ShopFAB'
+import VisualSearchFab from '../components/VisualSearchFab';
+import AIFAB from '../components/AIFAB';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 44) / 2;
 
 const SORT_OPTIONS = [
   { id: 'newest',     label: 'Newest First',        icon: 'time-outline' },
@@ -38,25 +39,45 @@ const SORT_OPTIONS = [
   { id: 'rating',     label: 'Top Rated',            icon: 'star-outline' },
 ];
 
-const CAMPUS_OPTIONS = [
-  { id: '',       label: 'All Campuses' },
-  { id: 'UG',     label: 'University of Ghana' },
-  { id: 'KNUST',  label: 'KNUST' },
-  { id: 'UCC',    label: 'Univ. of Cape Coast' },
-  { id: 'ASHESI', label: 'Ashesi University' },
-  { id: 'GIMPA',  label: 'GIMPA' },
-  { id: 'UEW',    label: 'Univ. of Education' },
-  { id: 'UPSA',   label: 'UPSA' },
-  { id: 'ATU',    label: 'Accra Technical Univ.' },
-  { id: 'OTHER',  label: 'Other Campus' },
+// Location is intentionally broader than "campus" now — these are the
+// general delivery areas the marketplace serves. Extend this list (or wire
+// it to a real places lookup) as coverage grows beyond its campus origins.
+const LOCATION_OPTIONS = [
+  { id: '',           label: 'All Locations' },
+  { id: 'ACCRA',       label: 'Accra' },
+  { id: 'TEMA',        label: 'Tema' },
+  { id: 'KUMASI',      label: 'Kumasi' },
+  { id: 'TAKORADI',    label: 'Takoradi' },
+  { id: 'CAPE_COAST',  label: 'Cape Coast' },
+  { id: 'TAMALE',      label: 'Tamale' },
+  { id: 'HO',          label: 'Ho' },
+  { id: 'KOFORIDUA',   label: 'Koforidua' },
+  { id: 'SUNYANI',     label: 'Sunyani' },
+  { id: 'OTHER',       label: 'Other Location' },
 ];
+
+const CONDITION_FILTER_OPTIONS = [
+  { id: '', label: 'Any' },
+  ...Object.entries(CONDITION_CONFIG).map(([k, v]) => ({ id: k, label: v.label })),
+];
+
+// Location can arrive as a plain string, as the current { area, city } shape,
+// or — for older listings — as the legacy { campusArea, hostel } shape. This
+// always resolves it down to a single displayable string, never an object.
+const getLocationLabel = (location) => {
+  if (!location) return null;
+  if (typeof location === 'string') return location;
+  if (location.city) return location.area ? `${location.area}, ${location.city}` : location.city;
+  if (location.campusArea) return location.hostel ? `${location.hostel}, ${location.campusArea}` : location.campusArea;
+  return null;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUB-COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Animated toast notification
-const CartToast = ({ visible, productName }) => {
+const CartToast = React.memo(({ visible, productName }) => {
   const slideAnim = useRef(new Animated.Value(-80)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -89,10 +110,10 @@ const CartToast = ({ visible, productName }) => {
       </View>
     </Animated.View>
   );
-};
+});
 
 // Condition pill badge
-const ConditionBadge = ({ condition }) => {
+const ConditionBadge = React.memo(({ condition }) => {
   const cfg = CONDITION_CONFIG[condition];
   if (!cfg) return null;
   return (
@@ -100,37 +121,38 @@ const ConditionBadge = ({ condition }) => {
       <Text style={[styles.condBadgeText, { color: cfg.textColor }]}>{cfg.label}</Text>
     </View>
   );
-};
+});
 
 // Negotiable tag
-const NegotiableTag = () => (
+const NegotiableTag = React.memo(() => (
   <View style={styles.negTag}>
     <Text style={styles.negTagText}>Nego</Text>
   </View>
-);
+));
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GRID CARD
+// GRID CARD  (memoized — with stable callbacks + a cart-qty lookup map passed
+// in from the parent, this only re-renders when its own item/qty/loading
+// state actually changes, not on every keystroke elsewhere on the screen)
 // ─────────────────────────────────────────────────────────────────────────────
-const GridCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding, isUpdating }) => {
-  const productId = item._id;
+const GridCard = React.memo(({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding, isUpdating }) => {
   const imageUri = item.images?.[0];
   const catCfg = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[CATEGORIES.length - 1];
   const outOfStock = (item.countInStock ?? 0) <= 0;
   const isLoading = isAdding || isUpdating;
 
-  // ─── Discount calculations ──────────────────────────────────────────────
   const discountInfo = item.discountInfo;
-  const hasActiveDiscount = discountInfo?.isOnSale && 
+  const hasActiveDiscount = discountInfo?.isOnSale &&
     (!discountInfo.discountStartDate || new Date(discountInfo.discountStartDate) <= Date.now()) &&
     (!discountInfo.discountEndDate || new Date(discountInfo.discountEndDate) >= Date.now());
-  
+
   const currentPrice = Number(item.price);
   const originalPrice = discountInfo?.originalPrice;
-  const discountPercentage = hasActiveDiscount 
+  const discountPercentage = hasActiveDiscount
     ? (discountInfo?.discountPercentage ?? (originalPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0))
     : 0;
-  const savingsAmount = hasActiveDiscount && originalPrice ? originalPrice - currentPrice : 0;
+
+  const locationLabel = getLocationLabel(item.location);
 
   return (
     <TouchableOpacity
@@ -139,7 +161,6 @@ const GridCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
       activeOpacity={0.88}
       disabled={isLoading}
     >
-      {/* Image */}
       <View style={styles.gridImgWrap}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.gridImg} resizeMode="cover" />
@@ -155,21 +176,18 @@ const GridCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
           </View>
         )}
 
-        {/* Discount badge - shows first if active */}
         {hasActiveDiscount && !outOfStock && (
           <View style={styles.discountBadgeGrid}>
             <Text style={styles.discountBadgeGridText}>-{discountPercentage}%</Text>
           </View>
         )}
 
-        {/* Top-left: condition */}
         {item.condition && !outOfStock && (
           <View style={styles.gridCondPos}>
             <ConditionBadge condition={item.condition} />
           </View>
         )}
 
-        {/* Top-right: negotiable */}
         {item.negotiable && !outOfStock && (
           <View style={styles.gridNegPos}>
             <NegotiableTag />
@@ -177,16 +195,14 @@ const GridCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
         )}
       </View>
 
-      {/* Body */}
       <View style={styles.gridBody}>
         <Text style={styles.gridName} numberOfLines={2}>{item.name}</Text>
 
-        {/* Campus + subcategory row */}
         <View style={styles.gridMetaRow}>
-          {item.campus && (
-            <View style={styles.campusMicroPill}>
-              <Ionicons name="school-outline" size={8} color="#0D9488" />
-              <Text style={styles.campusMicroText}>{item.campus}</Text>
+          {locationLabel && (
+            <View style={styles.locationMicroPill}>
+              <Ionicons name="location-outline" size={8} color="#0D9488" />
+              <Text style={styles.locationMicroText} numberOfLines={1}>{locationLabel}</Text>
             </View>
           )}
           {item.subcategory && (
@@ -197,7 +213,6 @@ const GridCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
         </View>
 
         <View style={styles.gridFooter}>
-          {/* Price section */}
           {hasActiveDiscount ? (
             <View style={styles.gridPriceStack}>
               <View style={styles.gridPriceRow}>
@@ -252,28 +267,29 @@ const GridCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
       </View>
     </TouchableOpacity>
   );
-};
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LIST CARD
+// LIST CARD  (memoized, same rationale as GridCard)
 // ─────────────────────────────────────────────────────────────────────────────
-const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding, isUpdating }) => {
+const ListCard = React.memo(({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding, isUpdating }) => {
   const imageUri = item.images?.[0];
   const catCfg = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[CATEGORIES.length - 1];
   const outOfStock = (item.countInStock ?? 0) <= 0;
   const isLoading = isAdding || isUpdating;
 
-  // ─── Discount calculations ──────────────────────────────────────────────
   const discountInfo = item.discountInfo;
-  const hasActiveDiscount = discountInfo?.isOnSale && 
+  const hasActiveDiscount = discountInfo?.isOnSale &&
     (!discountInfo.discountStartDate || new Date(discountInfo.discountStartDate) <= Date.now()) &&
     (!discountInfo.discountEndDate || new Date(discountInfo.discountEndDate) >= Date.now());
-  
+
   const currentPrice = Number(item.price);
   const originalPrice = discountInfo?.originalPrice;
-  const discountPercentage = hasActiveDiscount 
+  const discountPercentage = hasActiveDiscount
     ? (discountInfo?.discountPercentage ?? (originalPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0))
     : 0;
+
+  const locationLabel = getLocationLabel(item.location);
 
   return (
     <TouchableOpacity
@@ -282,7 +298,6 @@ const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
       activeOpacity={0.85}
       disabled={isLoading}
     >
-      {/* Image */}
       <View style={styles.listImgWrap}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.listImg} resizeMode="cover" />
@@ -296,8 +311,7 @@ const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
             <Text style={styles.listOosText}>N/A</Text>
           </View>
         )}
-        
-        {/* Discount badge on image */}
+
         {hasActiveDiscount && !outOfStock && (
           <View style={styles.discountBadgeList}>
             <Text style={styles.discountBadgeListText}>-{discountPercentage}% OFF</Text>
@@ -305,9 +319,7 @@ const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
         )}
       </View>
 
-      {/* Content */}
       <View style={styles.listContent}>
-        {/* Top row: name + category chip */}
         <View style={styles.listTopRow}>
           <Text style={styles.listName} numberOfLines={2}>{item.name}</Text>
           <View style={[styles.listCatChip, { backgroundColor: catCfg.color }]}>
@@ -315,12 +327,11 @@ const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
           </View>
         </View>
 
-        {/* Meta row: campus, subcategory, condition, negotiable */}
         <View style={styles.listMetaRow}>
-          {item.campus && (
-            <View style={styles.campusMicroPill}>
-              <Ionicons name="school-outline" size={8} color="#0D9488" />
-              <Text style={styles.campusMicroText}>{item.campus}</Text>
+          {locationLabel && (
+            <View style={styles.locationMicroPill}>
+              <Ionicons name="location-outline" size={8} color="#0D9488" />
+              <Text style={styles.locationMicroText} numberOfLines={1}>{locationLabel}</Text>
             </View>
           )}
           {item.condition && <ConditionBadge condition={item.condition} />}
@@ -333,9 +344,7 @@ const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
           </Text>
         )}
 
-        {/* Bottom row: price + cart control */}
         <View style={styles.listBottomRow}>
-          {/* Price section with discount */}
           {hasActiveDiscount ? (
             <View style={styles.listPriceStack}>
               <View style={styles.listPriceRow}>
@@ -395,13 +404,13 @@ const ListCard = ({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding
       </View>
     </TouchableOpacity>
   );
-};
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BOTTOM SHEET  (reusable)
 // ─────────────────────────────────────────────────────────────────────────────
 const BottomSheet = ({ visible, onClose, title, children }) => (
-  <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+  <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
     <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose} />
     <View style={styles.sheet}>
       <View style={styles.sheetHandle} />
@@ -423,33 +432,36 @@ const ProductsScreen = ({ navigation, route }) => {
   const [products, setProducts]           = useState([]);
   const [loading, setLoading]             = useState(true);
   const [refreshing, setRefreshing]       = useState(false);
+  //  NEW: separate flag so switching a chip shows the skeleton list WITHOUT
+  //  unmounting the header, tabs and filter bar. The header stays interactive
+  //  while the list body swaps to a loader.
+  const [filterLoading, setFilterLoading] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
   const [pagination, setPagination]       = useState({});
 
   // Filters
-  const [selectedCategory, setSelectedCategory]   = useState('all');
+  const [selectedCategory, setSelectedCategory]       = useState('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
-  const [selectedCampus, setSelectedCampus]       = useState('');
-  const [selectedSort, setSelectedSort]           = useState('newest');
-  const [selectedCondition, setSelectedCondition] = useState('');
-  const [negotiableOnly, setNegotiableOnly]       = useState(false);
-  const [minPrice, setMinPrice]                   = useState('');
-  const [maxPrice, setMaxPrice]                   = useState('');
-  const [currentPage, setCurrentPage]             = useState(1);
+  const [selectedLocation, setSelectedLocation]       = useState('');
+  const [selectedSort, setSelectedSort]               = useState('newest');
+  const [selectedCondition, setSelectedCondition]     = useState('');
+  const [negotiableOnly, setNegotiableOnly]           = useState(false);
+  const [minPrice, setMinPrice]                       = useState('');
+  const [maxPrice, setMaxPrice]                       = useState('');
+  const [currentPage, setCurrentPage]                 = useState(1);
 
   // Search
   const [searchQuery, setSearchQuery]         = useState('');
-  const [showSearch, setShowSearch]           = useState(false);
   const [searchFocused, setSearchFocused]     = useState(false);
   const [liveSearchResults, setLiveSearchResults] = useState([]);
   const [liveSearching, setLiveSearching]     = useState(false);
   const [showLiveDropdown, setShowLiveDropdown] = useState(false);
 
   // UI
-  const [viewMode, setViewMode]             = useState('grid');
+  const [viewMode, setViewMode]                 = useState('grid');
   const [sortSheetVisible, setSortSheetVisible]     = useState(false);
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
-  const [campusSheetVisible, setCampusSheetVisible] = useState(false);
+  const [locationSheetVisible, setLocationSheetVisible] = useState(false);
   const [addingProductId, setAddingProductId]   = useState(null);
   const [updatingProductId, setUpdatingProductId] = useState(null);
   const [toastVisible, setToastVisible]         = useState(false);
@@ -464,25 +476,16 @@ const ProductsScreen = ({ navigation, route }) => {
   useEffect(() => {
     isMountedRef.current = true;
 
-    // Accept initial params from navigation
-    if (route.params?.category)    setSelectedCategory(route.params.category);
-    if (route.params?.campus)      setSelectedCampus(route.params.campus);
-    if (route.params?.search)      setSearchQuery(route.params.search);
-    if (route.params?.sort)        setSelectedSort(route.params.sort);
+    if (route.params?.category) setSelectedCategory(route.params.category);
+    if (route.params?.location) setSelectedLocation(route.params.location);
+    if (route.params?.search)   setSearchQuery(route.params.search);
+    if (route.params?.sort)     setSelectedSort(route.params.sort);
 
     return () => {
       isMountedRef.current = false;
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
   }, []);
-
-  // ── Search auto-focus ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (showSearch && searchInputRef.current) {
-      const t = setTimeout(() => searchInputRef.current?.focus(), 100);
-      return () => clearTimeout(t);
-    }
-  }, [showSearch]);
 
   // ── Live search debounce ───────────────────────────────────────────────────
   useEffect(() => {
@@ -497,40 +500,58 @@ const ProductsScreen = ({ navigation, route }) => {
   }, [searchQuery]);
 
   // ── Reload on filter changes ───────────────────────────────────────────────
+  //  Both of these effects fire `filterChange: true` so the skeleton list
+  //  appears during the fetch instead of leaving stale results on screen.
   useEffect(() => {
     setSelectedSubcategory('');
-    loadProducts({ page: 1 });
+    loadProducts({ page: 1, filterChange: true });
   }, [selectedCategory]);
 
   useEffect(() => {
-    if (!loading) loadProducts({ page: 1 });
-  }, [selectedSubcategory, selectedCampus, selectedSort, selectedCondition, negotiableOnly, minPrice, maxPrice]);
+    //  Skip the very first run so we don't double-fetch on mount.
+    if (!loading) loadProducts({ page: 1, filterChange: true });
+  }, [selectedSubcategory, selectedLocation, selectedSort, selectedCondition, negotiableOnly, minPrice, maxPrice]);
 
   // ── Data fetch ─────────────────────────────────────────────────────────────
-  const buildParams = (overrides = {}) => {
+  // `searchOverride` lets a caller force the exact search term used for this
+  // fetch instead of relying on the `searchQuery` state — state updates are
+  // asynchronous, so reading `searchQuery` right after calling setSearchQuery
+  // (e.g. when clearing search) would still see the old value. This was the
+  // cause of "clearing the search doesn't clear the results".
+  const buildParams = (overrides = {}, searchOverride) => {
+    const effectiveSearch = searchOverride !== undefined ? searchOverride : searchQuery;
     const base = {
       category:    selectedCategory !== 'all' ? selectedCategory : undefined,
       subcategory: selectedSubcategory || undefined,
-      campus:      selectedCampus || undefined,
+      // NOTE: sent as `location` — the backend/API and product schema need to
+      // expose a `location` field (renamed from the old `campus` field) for
+      // this filter to actually narrow results server-side.
+      location:    selectedLocation || undefined,
       sort:        selectedSort,
       condition:   selectedCondition || undefined,
       negotiable:  negotiableOnly || undefined,
       minPrice:    minPrice || undefined,
       maxPrice:    maxPrice || undefined,
-      search:      searchQuery.trim() || undefined,
+      search:      effectiveSearch.trim() || undefined,
       limit:       20,
     };
     return { ...base, ...overrides };
   };
 
-  const loadProducts = useCallback(async ({ page = 1, append = false } = {}) => {
+  const loadProducts = useCallback(async ({ page = 1, append = false, searchOverride, filterChange = false } = {}) => {
     fetchIdRef.current += 1;
     const myId = fetchIdRef.current;
 
-    if (!append) setLoading(true);
+    //  Only show the full-screen skeleton for the very first load. Filter
+    //  switches use the lighter `filterLoading` path so the header never
+    //  disappears mid-interaction.
+    if (!append) {
+      if (filterChange) setFilterLoading(true);
+      else setLoading(true);
+    }
 
     try {
-      const params = buildParams({ page });
+      const params = buildParams({ page }, searchOverride);
       const res = await productService.getProducts(params);
 
       if (myId !== fetchIdRef.current || !isMountedRef.current) return;
@@ -546,9 +567,10 @@ const ProductsScreen = ({ navigation, route }) => {
     } finally {
       if (myId !== fetchIdRef.current || !isMountedRef.current) return;
       setLoading(false);
+      setFilterLoading(false);
       setRefreshing(false);
     }
-  }, [selectedCategory, selectedSubcategory, selectedCampus, selectedSort, selectedCondition, negotiableOnly, minPrice, maxPrice, searchQuery]);
+  }, [selectedCategory, selectedSubcategory, selectedLocation, selectedSort, selectedCondition, negotiableOnly, minPrice, maxPrice, searchQuery]);
 
   const performLiveSearch = async () => {
     setLiveSearching(true);
@@ -557,7 +579,7 @@ const ProductsScreen = ({ navigation, route }) => {
         search: searchQuery.trim(),
         limit: 6,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
-        campus: selectedCampus || undefined,
+        location: selectedLocation || undefined,
       });
       if (isMountedRef.current) {
         setLiveSearchResults(res?.data || []);
@@ -572,38 +594,53 @@ const ProductsScreen = ({ navigation, route }) => {
     loadProducts({ page: 1 });
   }, [loadProducts]);
 
-  const handleLoadMore = () => {
-    if (!loading && pagination.hasNextPage) {
+  const handleLoadMore = useCallback(() => {
+    if (!loading && !filterLoading && pagination.hasNextPage) {
       loadProducts({ page: currentPage + 1, append: true });
     }
-  };
+  }, [loading, filterLoading, pagination.hasNextPage, currentPage, loadProducts]);
 
-  const handleSearchSubmit = () => {
+  const handleSearchSubmit = useCallback(() => {
     setShowLiveDropdown(false);
-    loadProducts({ page: 1 });
-  };
+    loadProducts({ page: 1, filterChange: true, searchOverride: searchQuery });
+  }, [loadProducts, searchQuery]);
 
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setSearchQuery('');
     setLiveSearchResults([]);
     setShowLiveDropdown(false);
-    loadProducts({ page: 1 });
-  };
+    // Explicitly force an empty search term for this fetch — see the note on
+    // buildParams above for why relying on state here would be stale.
+    loadProducts({ page: 1, filterChange: true, searchOverride: '' });
+  }, [loadProducts]);
+
+  const handleUseCurrentLocation = useCallback(() => {
+    Alert.alert(
+      'Location detection',
+      'Automatic location detection is coming soon. For now, pick your location from the list below.'
+    );
+  }, []);
 
   // ── Cart helpers ───────────────────────────────────────────────────────────
-  const getQtyInCart = (productId) => {
-    const item = cartItems?.find(i => i.product?._id === productId || i.productId === productId);
-    return item?.quantity ?? 0;
-  };
+  // A lookup map built once per cart change, instead of scanning the whole
+  // cart array for every single product card on every render.
+  const cartQtyMap = useMemo(() => {
+    const map = {};
+    (cartItems || []).forEach(i => {
+      const id = i.product?._id || i.productId;
+      if (id) map[id] = i.quantity ?? 0;
+    });
+    return map;
+  }, [cartItems]);
 
-  const showToast = (name) => {
+  const showToast = useCallback((name) => {
     setAddedProductName(name);
     setToastVisible(true);
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     toastTimeoutRef.current = setTimeout(() => setToastVisible(false), 2200);
-  };
+  }, []);
 
-  const handleAddToCart = async (product) => {
+  const handleAddToCart = useCallback(async (product) => {
     if (!isAuthenticated) {
       Alert.alert('Login Required', 'Please log in to save items.', [
         { text: 'Cancel', style: 'cancel' },
@@ -624,11 +661,11 @@ const ProductsScreen = ({ navigation, route }) => {
     } finally {
       setAddingProductId(null);
     }
-  };
+  }, [isAuthenticated, addToCart, showToast, navigation]);
 
-  const handleQtyChange = async (product, action) => {
+  const handleQtyChange = useCallback(async (product, action) => {
     const productId = product._id;
-    const qty = getQtyInCart(productId);
+    const qty = cartQtyMap[productId] || 0;
     try {
       if (action === 'increase') {
         if (qty >= (product.countInStock ?? 0)) {
@@ -659,51 +696,403 @@ const ProductsScreen = ({ navigation, route }) => {
     } finally {
       setUpdatingProductId(null);
     }
-  };
+  }, [cartQtyMap, addToCart, updateQuantity, removeFromCart]);
+
+  const navigateToDetail = useCallback((p) => {
+    navigation.navigate('ProductDetail', { productId: p._id, product: p });
+  }, [navigation]);
 
   // ── Computed values ────────────────────────────────────────────────────────
   const activeCatConfig   = CATEGORIES.find(c => c.id === selectedCategory) || CATEGORIES[0];
   const subcatsForCat     = SUBCATEGORIES[selectedCategory] || [];
   const activeSortLabel   = SORT_OPTIONS.find(s => s.id === selectedSort)?.label || 'Sort';
-  const activeCampusLabel = CAMPUS_OPTIONS.find(c => c.id === selectedCampus)?.label || 'Campus';
+  const activeLocationLabel = LOCATION_OPTIONS.find(l => l.id === selectedLocation)?.label || 'All Locations';
 
   const activeFilterCount = [
-    selectedCampus, selectedCondition, negotiableOnly, minPrice, maxPrice,
+    selectedCondition, negotiableOnly, minPrice, maxPrice,
   ].filter(Boolean).length;
 
+  const hasAnyActiveFilter = !!(selectedLocation || selectedCondition || negotiableOnly || minPrice || maxPrice);
+
+  const clearAllFilters = useCallback(() => {
+    setSelectedLocation('');
+    setSelectedCondition('');
+    setNegotiableOnly(false);
+    setMinPrice('');
+    setMaxPrice('');
+  }, []);
+
+  const handleResetEverything = useCallback(() => {
+    setSearchQuery('');
+    setSelectedCategory('all');
+    setSelectedSubcategory('');
+    clearAllFilters();
+    setSelectedSort('newest');
+    loadProducts({ page: 1, filterChange: true, searchOverride: '' });
+  }, [clearAllFilters, loadProducts]);
+
+  // ── FlatList renderItem — stable identity unless something the row
+  // actually depends on changes (view mode, cart quantities, in-flight
+  // add/update state). Typing in the search box, opening a sheet, etc. do
+  // NOT change this, so rows are left completely alone. ─────────────────────
+  const renderItem = useCallback(({ item }) => {
+    const qty = cartQtyMap[item._id] || 0;
+    const commonProps = {
+      item,
+      onPress: navigateToDetail,
+      onAddToCart: handleAddToCart,
+      onQtyChange: handleQtyChange,
+      qtyInCart: qty,
+      isAdding: addingProductId === item._id,
+      isUpdating: updatingProductId === item._id,
+    };
+    return viewMode === 'grid' ? <GridCard {...commonProps} /> : <ListCard {...commonProps} />;
+  }, [viewMode, cartQtyMap, navigateToDetail, handleAddToCart, handleQtyChange, addingProductId, updatingProductId]);
+
+  const keyExtractor = useCallback((item) => item._id, []);
+
+  const extraData = useMemo(
+    () => ({ cartQtyMap, addingProductId, updatingProductId, viewMode }),
+    [cartQtyMap, addingProductId, updatingProductId, viewMode]
+  );
+
   // ── Render helpers ─────────────────────────────────────────────────────────
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <View style={styles.emptyIconBg}>
-        <Ionicons name="search-outline" size={38} color="#A5D6A7" />
+  const renderEmptyState = () => {
+    if (loading) return <ProductGridSkeleton />;
+    return (
+      <View style={styles.emptyState}>
+        <View style={styles.emptyIconBg}>
+          <Ionicons name="search-outline" size={38} color={C.brandL} />
+        </View>
+        <Text style={styles.emptyTitle}>No listings found</Text>
+        <Text style={styles.emptySubtitle}>
+          {searchQuery
+            ? `No results for "${searchQuery}"`
+            : selectedCategory !== 'all'
+              ? `Nothing in ${activeCatConfig.label} yet`
+              : 'Try adjusting your filters'}
+        </Text>
+        <TouchableOpacity style={styles.resetBtn} onPress={handleResetEverything}>
+          <Ionicons name="refresh-outline" size={15} color="#fff" />
+          <Text style={styles.resetBtnText}>Clear All Filters</Text>
+        </TouchableOpacity>
       </View>
-      <Text style={styles.emptyTitle}>No listings found</Text>
-      <Text style={styles.emptySubtitle}>
-        {searchQuery
-          ? `No results for "${searchQuery}"`
-          : selectedCategory !== 'all'
-            ? `Nothing in ${activeCatConfig.label} yet`
-            : 'Try adjusting your filters'}
-      </Text>
-      <TouchableOpacity
-        style={styles.resetBtn}
-        onPress={() => {
-          setSearchQuery('');
-          setSelectedCategory('all');
-          setSelectedSubcategory('');
-          setSelectedCampus('');
-          setSelectedSort('newest');
-          setSelectedCondition('');
-          setNegotiableOnly(false);
-          setMinPrice('');
-          setMaxPrice('');
-          loadProducts({ page: 1 });
-        }}
-      >
-        <Ionicons name="refresh-outline" size={15} color="#fff" />
-        <Text style={styles.resetBtnText}>Clear All Filters</Text>
-      </TouchableOpacity>
-    </View>
+    );
+  };
+
+  // ── Header (title, deliver-to, search, categories, sort/filter bar) ────────
+  const listHeader = (
+    <>
+      <View style={styles.headerCardWrap}>
+        <View style={styles.topBar}>
+          <View style={styles.topBarTitleWrap}>
+            <Text style={styles.topBarTitle}>
+              {activeCatConfig.id === 'all' ? 'Shop' : activeCatConfig.label}
+            </Text>
+            {totalProducts > 0 && (
+              <Text style={styles.topBarCount}>{totalProducts} items</Text>
+            )}
+          </View>
+
+          <View style={styles.topBarRight}>
+            <TouchableOpacity
+              style={styles.deliveryPill}
+              onPress={() => setLocationSheetVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="location" size={13} color="#0D9488" />
+              <View style={styles.deliveryPillTextWrap}>
+                <Text style={styles.deliveryPillLabel}>Deliver to</Text>
+                <Text style={styles.deliveryPillValue} numberOfLines={1}>{activeLocationLabel}</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.topBarCartBtn}
+              onPress={() => navigation.navigate('Cart')}
+            >
+              <Ionicons name={cartCount > 0 ? 'cart' : 'cart-outline'} size={22} color="#0D9488" />
+              {cartCount > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ── SEARCH BAR ── */}
+        <View style={styles.searchBarWrap}>
+          <View style={[styles.searchBarActive, searchFocused && styles.searchBarActiveFocused]}>
+            <Ionicons name="search-outline" size={17} color="#0D9488" style={{ marginLeft: 13 }} />
+            <TextInput
+              ref={searchInputRef}
+              style={styles.searchBarInput}
+              placeholder="Search listings…"
+              placeholderTextColor="#9E9E9E"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearchSubmit}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <>
+                <TouchableOpacity style={{ padding: 10 }} onPress={clearSearch}>
+                  <Ionicons name="close-circle" size={17} color="#BDBDBD" />
+                </TouchableOpacity>
+                {/* Explicit "go" button — runs a full search on tap instead of
+                    relying only on the keyboard's search/return key. */}
+                <TouchableOpacity style={styles.searchGoBtn} onPress={handleSearchSubmit} activeOpacity={0.8}>
+                  <Ionicons name="arrow-forward" size={15} color="#fff" />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+
+          {showLiveDropdown && (
+            <View style={styles.liveDropdown}>
+              {liveSearching ? (
+                <View style={{ padding: 16, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color="#0D9488" />
+                </View>
+              ) : liveSearchResults.length > 0 ? (
+                <>
+                  {liveSearchResults.map(p => {
+                    const catCfg = CATEGORIES.find(c => c.id === p.category) || CATEGORIES[CATEGORIES.length - 1];
+                    return (
+                      <TouchableOpacity
+                        key={p._id}
+                        style={styles.liveRow}
+                        onPress={() => {
+                          setShowLiveDropdown(false);
+                          navigation.navigate('ProductDetail', { productId: p._id, product: p });
+                        }}
+                      >
+                        {p.images?.[0] ? (
+                          <Image source={{ uri: p.images[0] }} style={styles.liveThumb} />
+                        ) : (
+                          <View style={[styles.liveThumb, { backgroundColor: catCfg.color, justifyContent: 'center', alignItems: 'center' }]}>
+                            <Ionicons name={catCfg.icon} size={16} color={catCfg.accent} />
+                          </View>
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.liveRowName} numberOfLines={1}>{p.name}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                            <Text style={styles.liveRowPrice}>GH₵ {p.price?.toFixed(2)}</Text>
+                            {getLocationLabel(p.location) && (
+                              <Text style={styles.liveRowLocation} numberOfLines={1}>{getLocationLabel(p.location)}</Text>
+                            )}
+                          </View>
+                        </View>
+                        {p.condition && <ConditionBadge condition={p.condition} />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  <TouchableOpacity style={styles.liveViewAll} onPress={handleSearchSubmit}>
+                    <Text style={styles.liveViewAllText}>See all results for "{searchQuery}"</Text>
+                    <Ionicons name="arrow-forward" size={13} color="#0D9488" />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Ionicons name="search-outline" size={28} color={C.brandBorder} />
+                  <Text style={styles.liveEmptyText}>No results found</Text>
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* ── CATEGORY TABS ── */}
+        <View style={styles.catStrip}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catStripInner}>
+            {CATEGORIES.map(cat => {
+              const isActive = selectedCategory === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={styles.catTab}
+                  onPress={() => setSelectedCategory(cat.id)}
+                  activeOpacity={0.75}
+                  disabled={loading || filterLoading}
+                >
+                  <View style={[styles.catIconWrap, isActive && styles.catIconWrapActive]}>
+                    <Ionicons
+                      name={cat.icon}
+                      size={20}
+                      color={isActive ? C.brand : cat.accent}
+                    />
+                  </View>
+                  <Text style={[styles.catTabText, isActive && styles.catTabTextActive]}>
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* ── SUBCATEGORY ROW ── */}
+        {subcatsForCat.length > 0 && (
+          <View style={styles.subCatStrip}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subCatStripInner}>
+              <TouchableOpacity
+                style={[styles.subCatPill, selectedSubcategory === '' && styles.subCatPillActive]}
+                onPress={() => setSelectedSubcategory('')}
+                disabled={filterLoading}
+              >
+                <Text style={[styles.subCatPillText, selectedSubcategory === '' && styles.subCatPillTextActive]}>
+                  All
+                </Text>
+              </TouchableOpacity>
+              {subcatsForCat.map(sub => {
+                const isActive = selectedSubcategory === sub.id;
+                return (
+                  <TouchableOpacity
+                    key={sub.id}
+                    style={[styles.subCatPill, isActive && styles.subCatPillActive]}
+                    onPress={() => setSelectedSubcategory(isActive ? '' : sub.id)}
+                    activeOpacity={0.75}
+                    disabled={filterLoading}
+                  >
+                    <Text style={[styles.subCatPillText, isActive && styles.subCatPillTextActive]}>
+                      {sub.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+      </View>
+
+      {/* ── RESULTS META + SORT/FILTER BAR ── */}
+      <View style={styles.resultsMetaRow}>
+        <View style={styles.resultsMetaLeft}>
+          <Text style={styles.toolbarCount}>
+            <Text style={styles.toolbarCountBold}>{totalProducts}</Text> results
+          </Text>
+          {searchQuery ? (
+            <View style={styles.searchActiveTag}>
+              <Text style={styles.searchActiveTagText} numberOfLines={1}>"{searchQuery}"</Text>
+              <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Ionicons name="close" size={11} color="#0284C7" />
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.viewGroup}>
+          <TouchableOpacity
+            style={[styles.viewBtn, viewMode === 'grid' && styles.viewBtnOn]}
+            onPress={() => setViewMode('grid')}
+          >
+            <Ionicons name="grid" size={15} color={viewMode === 'grid' ? '#0D9488' : '#BDBDBD'} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.viewBtn, viewMode === 'list' && styles.viewBtnOn]}
+            onPress={() => setViewMode('list')}
+          >
+            <Ionicons name="list" size={15} color={viewMode === 'list' ? '#0D9488' : '#BDBDBD'} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.sortFilterBar}>
+        <TouchableOpacity
+          style={[styles.sortFilterSegment, selectedSort !== 'newest' && styles.sortFilterSegmentActive]}
+          onPress={() => setSortSheetVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="swap-vertical-outline" size={16} color={selectedSort !== 'newest' ? '#0F766E' : '#0D9488'} />
+          <Text style={[styles.sortFilterText, selectedSort !== 'newest' && styles.sortFilterTextActive]} numberOfLines={1}>
+            Sort{selectedSort !== 'newest' ? `: ${activeSortLabel.split(':')[0].split('→')[0].trim()}` : ' by'}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.sortFilterDivider} />
+
+        <TouchableOpacity
+          style={[styles.sortFilterSegment, activeFilterCount > 0 && styles.sortFilterSegmentActive]}
+          onPress={() => setFilterSheetVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="options-outline" size={16} color={activeFilterCount > 0 ? '#0F766E' : '#0D9488'} />
+          <Text style={[styles.sortFilterText, activeFilterCount > 0 && styles.sortFilterTextActive]}>
+            Filter
+          </Text>
+          {activeFilterCount > 0 && (
+            <View style={styles.filterCountBadge}>
+              <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {hasAnyActiveFilter && (
+        <View style={styles.activeFiltersRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFiltersContent}>
+            {selectedLocation && (
+              <View style={styles.activeFChip}>
+                <Ionicons name="location-outline" size={11} color="#0284C7" />
+                <Text style={styles.activeFChipText}>{activeLocationLabel}</Text>
+                <TouchableOpacity onPress={() => setSelectedLocation('')}>
+                  <Ionicons name="close" size={11} color="#0284C7" />
+                </TouchableOpacity>
+              </View>
+            )}
+            {selectedCondition && (
+              <View style={styles.activeFChip}>
+                <Text style={styles.activeFChipText}>{CONDITION_CONFIG[selectedCondition]?.label}</Text>
+                <TouchableOpacity onPress={() => setSelectedCondition('')}>
+                  <Ionicons name="close" size={11} color="#0284C7" />
+                </TouchableOpacity>
+              </View>
+            )}
+            {negotiableOnly && (
+              <View style={styles.activeFChip}>
+                <Text style={styles.activeFChipText}>Negotiable</Text>
+                <TouchableOpacity onPress={() => setNegotiableOnly(false)}>
+                  <Ionicons name="close" size={11} color="#0284C7" />
+                </TouchableOpacity>
+              </View>
+            )}
+            {(minPrice || maxPrice) && (
+              <View style={styles.activeFChip}>
+                <Text style={styles.activeFChipText}>
+                  GH₵{minPrice || '0'} – {maxPrice || '∞'}
+                </Text>
+                <TouchableOpacity onPress={() => { setMinPrice(''); setMaxPrice(''); }}>
+                  <Ionicons name="close" size={11} color="#0284C7" />
+                </TouchableOpacity>
+              </View>
+            )}
+            <TouchableOpacity style={styles.clearAllChip} onPress={clearAllFilters}>
+              <Text style={styles.clearAllChipText}>Clear all</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+    </>
+  );
+
+  const listFooter = (
+    <>
+      {!loading && !filterLoading && pagination.hasNextPage && (
+        <TouchableOpacity style={styles.loadMoreBtn} onPress={handleLoadMore} activeOpacity={0.8}>
+          <Ionicons name="chevron-down-circle-outline" size={17} color="#0D9488" />
+          <Text style={styles.loadMoreText}>Load More Listings</Text>
+        </TouchableOpacity>
+      )}
+      {loading && products.length > 0 && (
+        <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+          <ActivityIndicator size="small" color="#0D9488" />
+        </View>
+      )}
+      <View style={{ height: 100 }} />
+    </>
   );
 
   // ── RENDER ─────────────────────────────────────────────────────────────────
@@ -711,7 +1100,6 @@ const ProductsScreen = ({ navigation, route }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
-      {/* Toast */}
       <CartToast visible={toastVisible} productName={addedProductName} />
 
       {/* ── SORT SHEET ── */}
@@ -736,19 +1124,31 @@ const ProductsScreen = ({ navigation, route }) => {
         </ScrollView>
       </BottomSheet>
 
-      {/* ── CAMPUS SHEET ── */}
-      <BottomSheet visible={campusSheetVisible} onClose={() => setCampusSheetVisible(false)} title="Filter by Campus">
-        <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-          {CAMPUS_OPTIONS.map(opt => {
-            const isActive = selectedCampus === opt.id;
+      {/* ── LOCATION SHEET ── */}
+      <BottomSheet visible={locationSheetVisible} onClose={() => setLocationSheetVisible(false)} title="Deliver To">
+        <TouchableOpacity style={styles.useLocationRow} onPress={handleUseCurrentLocation} activeOpacity={0.8}>
+          <View style={styles.useLocationIcon}>
+            <Ionicons name="navigate" size={16} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.useLocationText}>Use my current location</Text>
+            <Text style={styles.useLocationSub}>Automatically detect where you are</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#0D9488" />
+        </TouchableOpacity>
+
+        <Text style={styles.sheetSubHeading}>Choose a location</Text>
+        <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+          {LOCATION_OPTIONS.map(opt => {
+            const isActive = selectedLocation === opt.id;
             return (
               <TouchableOpacity
                 key={opt.id}
                 style={[styles.sheetRow, isActive && styles.sheetRowActive]}
-                onPress={() => { setSelectedCampus(opt.id); setCampusSheetVisible(false); }}
+                onPress={() => { setSelectedLocation(opt.id); setLocationSheetVisible(false); }}
               >
                 <View style={[styles.sheetRowIcon, isActive && styles.sheetRowIconActive]}>
-                  <Ionicons name="school-outline" size={16} color={isActive ? '#fff' : '#757575'} />
+                  <Ionicons name="location-outline" size={16} color={isActive ? '#fff' : '#757575'} />
                 </View>
                 <Text style={[styles.sheetRowText, isActive && styles.sheetRowTextActive]}>{opt.label}</Text>
                 {isActive && <Ionicons name="checkmark-circle" size={20} color="#0D9488" />}
@@ -759,11 +1159,11 @@ const ProductsScreen = ({ navigation, route }) => {
       </BottomSheet>
 
       {/* ── ADVANCED FILTER SHEET ── */}
-      <BottomSheet visible={filterSheetVisible} onClose={() => setFilterSheetVisible(false)} title="Advanced Filters">
+      <BottomSheet visible={filterSheetVisible} onClose={() => setFilterSheetVisible(false)} title="Filters">
         <ScrollView style={{ maxHeight: 520 }} showsVerticalScrollIndicator={false}>
           <Text style={styles.sheetSubHeading}>Condition</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipRow}>
-            {[{ id: '', label: 'Any' }, ...Object.entries(CONDITION_CONFIG).map(([k, v]) => ({ id: k, label: v.label }))].map(opt => {
+            {CONDITION_FILTER_OPTIONS.map(opt => {
               const isActive = selectedCondition === opt.id;
               return (
                 <TouchableOpacity
@@ -819,10 +1219,12 @@ const ProductsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.applyBtn}
-            onPress={() => { setFilterSheetVisible(false); loadProducts({ page: 1 }); }}
+            style={[styles.applyBtn, filterLoading && { opacity: 0.6 }]}
+            onPress={() => { setFilterSheetVisible(false); loadProducts({ page: 1, filterChange: true }); }}
+            disabled={filterLoading}
           >
-            <Text style={styles.applyBtnText}>Apply Filters</Text>
+            <Ionicons name="checkmark" size={16} color="#fff" />
+            <Text style={styles.applyBtnText}>{filterLoading ? 'Applying…' : 'Apply Filters'}</Text>
           </TouchableOpacity>
 
           {(selectedCondition || negotiableOnly || minPrice || maxPrice) ? (
@@ -841,336 +1243,52 @@ const ProductsScreen = ({ navigation, route }) => {
         </ScrollView>
       </BottomSheet>
 
-      {/* ── MAIN SCROLL ─────────────────────────────────────────────────────── */}
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" colors={['#0D9488']} />
-        }
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        onScrollEndDrag={() => { if (pagination.hasNextPage) handleLoadMore(); }}
-      >
-        {/* ════════════════════════════════════════════════════════════════
-            HEADER CARD — title, search, category tabs and subcategory row
-            unified into one elevated white surface instead of four blocks
-            each sitting on a different background.
-            ════════════════════════════════════════════════════════════════ */}
-        <View style={styles.headerCardWrap}>
-          {/* ── TOP BAR ── */}
-          <View style={styles.topBar}>
-            <View style={styles.topBarTitleWrap}>
-              <Text style={styles.topBarTitle}>
-                {activeCatConfig.id === 'all' ? 'Shop' : activeCatConfig.label}
-              </Text>
-              {totalProducts > 0 && (
-                <Text style={styles.topBarCount}>{totalProducts} items</Text>
-              )}
-            </View>
-            <TouchableOpacity
-              style={styles.topBarCartBtn}
-              onPress={() => navigation.navigate('Cart')}
-            >
-              <Ionicons name={cartCount > 0 ? 'cart' : 'cart-outline'} size={22} color="#0D9488" />
-              {cartCount > 0 && (
-                <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+      {/* ── MAIN LIST ──
+          Two FlatLists share the exact same `listHeader`. While a filter/
+          category/sort fetch is in flight we mount the skeleton list so the
+          header, tabs and filter bar stay interactive but the results body
+          is replaced by a clean loading state. Otherwise we mount the real
+          list with the fetched products. */}
+      {filterLoading ? (
+        <FlatList
+          data={[]}
+          keyExtractor={() => 'skeleton'}
+          renderItem={null}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={<ProductGridSkeleton />}
+          contentContainerStyle={viewMode === 'grid' ? styles.gridListContent : styles.listWrap}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        />
+      ) : (
+        <FlatList
+          key={viewMode}
+          data={products}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          extraData={extraData}
+          numColumns={viewMode === 'grid' ? 2 : 1}
+          columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
+          contentContainerStyle={viewMode === 'grid' ? styles.gridListContent : styles.listWrap}
+          ListHeaderComponent={listHeader}
+          ListFooterComponent={listFooter}
+          ListEmptyComponent={renderEmptyState}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" colors={['#0D9488']} />
+          }
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews
+        />
+      )}
 
-          {/* ── SEARCH BAR ── */}
-          <View style={styles.searchBarWrap}>
-            <View style={[styles.searchBarActive, searchFocused && styles.searchBarActiveFocused]}>
-              <Ionicons name="search-outline" size={17} color="#0D9488" style={{ marginLeft: 13 }} />
-              <TextInput
-                ref={searchInputRef}
-                style={styles.searchBarInput}
-                placeholder="Search listings…"
-                placeholderTextColor="#9E9E9E"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearchSubmit}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity style={{ padding: 10 }} onPress={clearSearch}>
-                  <Ionicons name="close-circle" size={17} color="#BDBDBD" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Live search dropdown */}
-            {showLiveDropdown && (
-              <View style={styles.liveDropdown}>
-                {liveSearching ? (
-                  <View style={{ padding: 16, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color="#0D9488" />
-                  </View>
-                ) : liveSearchResults.length > 0 ? (
-                  <>
-                    {liveSearchResults.map(p => {
-                      const catCfg = CATEGORIES.find(c => c.id === p.category) || CATEGORIES[CATEGORIES.length - 1];
-                      return (
-                        <TouchableOpacity
-                          key={p._id}
-                          style={styles.liveRow}
-                          onPress={() => {
-                            setShowLiveDropdown(false);
-                            navigation.navigate('ProductDetail', { productId: p._id, product: p });
-                          }}
-                        >
-                          {p.images?.[0] ? (
-                            <Image source={{ uri: p.images[0] }} style={styles.liveThumb} />
-                          ) : (
-                            <View style={[styles.liveThumb, { backgroundColor: catCfg.color, justifyContent: 'center', alignItems: 'center' }]}>
-                              <Ionicons name={catCfg.icon} size={16} color={catCfg.accent} />
-                            </View>
-                          )}
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.liveRowName} numberOfLines={1}>{p.name}</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                              <Text style={styles.liveRowPrice}>GH₵ {p.price?.toFixed(2)}</Text>
-                              {p.campus && <Text style={styles.liveRowCampus}>{p.campus}</Text>}
-                            </View>
-                          </View>
-                          {p.condition && <ConditionBadge condition={p.condition} />}
-                        </TouchableOpacity>
-                      );
-                    })}
-                    <TouchableOpacity style={styles.liveViewAll} onPress={handleSearchSubmit}>
-                      <Text style={styles.liveViewAllText}>See all results for "{searchQuery}"</Text>
-                      <Ionicons name="arrow-forward" size={13} color="#0D9488" />
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <View style={{ padding: 20, alignItems: 'center' }}>
-                    <Ionicons name="search-outline" size={28} color="#C8E6C9" />
-                    <Text style={{ fontSize: 13, color: '#9E9E9E', marginTop: 8 }}>No results found</Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* ── CATEGORY TABS ── */}
-          <View style={styles.catStrip}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catStripInner}>
-              {CATEGORIES.map(cat => {
-                const isActive = selectedCategory === cat.id;
-                return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[styles.catTab, isActive && styles.catTabActive]}
-                    onPress={() => setSelectedCategory(cat.id)}
-                    activeOpacity={0.75}
-                    disabled={loading}
-                  >
-                    <View style={[styles.catIconWrap, isActive && styles.catIconWrapActive]}>
-                      <Ionicons 
-                        name={cat.icon} 
-                        size={24} 
-                        color={isActive ? '#fff' : cat.accent} 
-                      />
-                    </View>
-                    <Text style={[styles.catTabText, isActive && styles.catTabTextActive]}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {/* ── SUBCATEGORY ROW ── */}
-          {subcatsForCat.length > 0 && (
-            <View style={styles.subCatStrip}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subCatStripInner}>
-                <TouchableOpacity
-                  style={[styles.subCatPill, selectedSubcategory === '' && styles.subCatPillActive]}
-                  onPress={() => setSelectedSubcategory('')}
-                >
-                  <Text style={[styles.subCatPillText, selectedSubcategory === '' && styles.subCatPillTextActive]}>
-                    All
-                  </Text>
-                </TouchableOpacity>
-                {subcatsForCat.map(sub => {
-                  const isActive = selectedSubcategory === sub.id;
-                  return (
-                    <TouchableOpacity
-                      key={sub.id}
-                      style={[styles.subCatPill, isActive && styles.subCatPillActive]}
-                      onPress={() => setSelectedSubcategory(isActive ? '' : sub.id)}
-                      activeOpacity={0.75}
-                    >
-                      <Text style={[styles.subCatPillText, isActive && styles.subCatPillTextActive]}>
-                        {sub.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-
-        {/* ════════════════════════════════
-            TOOLBAR
-            ════════════════════════════════ */}
-        <View style={styles.toolbar}>
-          <View style={styles.toolbarLeft}>
-            {searchQuery ? (
-              <View style={styles.searchActiveTag}>
-                <Text style={styles.searchActiveTagText} numberOfLines={1}>"{searchQuery}"</Text>
-                <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                  <Ionicons name="close" size={11} color="#1565C0" />
-                </TouchableOpacity>
-              </View>
-            ) : null}
-          </View>
-
-          <View style={styles.toolbarRight}>
-            <TouchableOpacity
-              style={[styles.toolbarChip, selectedCampus && styles.toolbarChipActive]}
-              onPress={() => setCampusSheetVisible(true)}
-            >
-              <Ionicons name="school-outline" size={13} color={selectedCampus ? '#fff' : '#0D9488'} />
-              <Text style={[styles.toolbarChipText, selectedCampus && styles.toolbarChipTextActive]} numberOfLines={1}>
-                {selectedCampus || 'Campus'}
-              </Text>
-              <Ionicons name="chevron-down" size={11} color={selectedCampus ? '#fff' : '#0D9488'} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.toolbarChip} onPress={() => setSortSheetVisible(true)}>
-              <Ionicons name="swap-vertical-outline" size={13} color="#0D9488" />
-              <Text style={styles.toolbarChipText} numberOfLines={1}>
-                {activeSortLabel.split(':')[0].split('→')[0].trim()}
-              </Text>
-              <Ionicons name="chevron-down" size={11} color="#0D9488" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.toolbarIconBtn, activeFilterCount > 0 && styles.toolbarIconBtnActive]}
-              onPress={() => setFilterSheetVisible(true)}
-            >
-              <Ionicons name="options-outline" size={16} color={activeFilterCount > 0 ? '#fff' : '#0D9488'} />
-              {activeFilterCount > 0 && (
-                <View style={styles.filterBadge}>
-                  <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.viewGroup}>
-              <TouchableOpacity
-                style={[styles.viewBtn, viewMode === 'grid' && styles.viewBtnOn]}
-                onPress={() => setViewMode('grid')}
-              >
-                <Ionicons name="grid" size={15} color={viewMode === 'grid' ? '#0D9488' : '#BDBDBD'} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.viewBtn, viewMode === 'list' && styles.viewBtnOn]}
-                onPress={() => setViewMode('list')}
-              >
-                <Ionicons name="list" size={15} color={viewMode === 'list' ? '#0D9488' : '#BDBDBD'} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* Active filters row */}
-        {(selectedCampus || selectedCondition || negotiableOnly || minPrice || maxPrice) && (
-          <View style={styles.activeFiltersRow}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFiltersContent}>
-              {selectedCampus && (
-                <View style={styles.activeFChip}>
-                  <Text style={styles.activeFChipText}>{selectedCampus}</Text>
-                  <TouchableOpacity onPress={() => setSelectedCampus('')}>
-                    <Ionicons name="close" size={11} color="#1565C0" />
-                  </TouchableOpacity>
-                </View>
-              )}
-              {selectedCondition && (
-                <View style={styles.activeFChip}>
-                  <Text style={styles.activeFChipText}>{CONDITION_CONFIG[selectedCondition]?.label}</Text>
-                  <TouchableOpacity onPress={() => setSelectedCondition('')}>
-                    <Ionicons name="close" size={11} color="#1565C0" />
-                  </TouchableOpacity>
-                </View>
-              )}
-              {negotiableOnly && (
-                <View style={styles.activeFChip}>
-                  <Text style={styles.activeFChipText}>Negotiable</Text>
-                  <TouchableOpacity onPress={() => setNegotiableOnly(false)}>
-                    <Ionicons name="close" size={11} color="#1565C0" />
-                  </TouchableOpacity>
-                </View>
-              )}
-              {(minPrice || maxPrice) && (
-                <View style={styles.activeFChip}>
-                  <Text style={styles.activeFChipText}>
-                    GH₵{minPrice || '0'} – {maxPrice || '∞'}
-                  </Text>
-                  <TouchableOpacity onPress={() => { setMinPrice(''); setMaxPrice(''); }}>
-                    <Ionicons name="close" size={11} color="#1565C0" />
-                  </TouchableOpacity>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ════════════════════════════════
-            PRODUCTS
-            ════════════════════════════════ */}
-        <View style={{ position: 'relative', minHeight: loading && products.length > 0 ? 200 : undefined }}>
-          {loading && products.length === 0 ? (
-            <ProductGridSkeleton/>
-          ) : products.length === 0 ? (
-            renderEmptyState()
-          ) : viewMode === 'grid' ? (
-            <View style={styles.gridWrap}>
-              {products.map(item => (
-                <GridCard key={item._id} item={item} onPress={p => navigation.navigate('ProductDetail', { productId: p._id, product: p })} onAddToCart={handleAddToCart} onQtyChange={handleQtyChange} qtyInCart={getQtyInCart(item._id)} isAdding={addingProductId === item._id} isUpdating={updatingProductId === item._id} />
-              ))}
-            </View>
-          ) : (
-            <View style={styles.listWrap}>
-              {products.map(item => (
-                <ListCard key={item._id} item={item} onPress={p => navigation.navigate('ProductDetail', { productId: p._id, product: p })} onAddToCart={handleAddToCart} onQtyChange={handleQtyChange} qtyInCart={getQtyInCart(item._id)} isAdding={addingProductId === item._id} isUpdating={updatingProductId === item._id} />
-              ))}
-            </View>
-          )}
-
-          {loading && products.length > 0 && (
-            <View style={styles.categorySwitchOverlay}>
-              <View style={styles.categorySwitchCard}>
-                <ActivityIndicator size="small" color="#0D9488" />
-                <Text style={styles.categorySwitchText}>Loading…</Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Load more */}
-        {!loading && pagination.hasNextPage && (
-          <TouchableOpacity style={styles.loadMoreBtn} onPress={handleLoadMore} activeOpacity={0.8}>
-            <Ionicons name="chevron-down-circle-outline" size={17} color="#0D9488" />
-            <Text style={styles.loadMoreText}>Load More Listings</Text>
-          </TouchableOpacity>
-        )}
-
-        {loading && products.length > 0 && (
-          <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-            <ActivityIndicator size="small" color="#0D9488" />
-          </View>
-        )}
-
-        <View style={{ height: 100 }} />
-      </ScrollView>
+      <VisualSearchFab navigation={navigation} bottom={118} right={20} />
+      <AIFAB style={{ position: 'absolute', bottom: 24, right: 16 }} />
     </SafeAreaView>
   );
 };

@@ -1,20 +1,4 @@
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Modal,
-  Dimensions,
-  Alert,
-  Image,
-  StatusBar,
-  RefreshControl,
-  Animated,
-  FlatList,
-} from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 44) / 2;
 
@@ -24,6 +8,7 @@ const C = {
   bg:      '#F8FAFC',
   surface: '#FFFFFF',
   elev:    '#F1F5F9',
+  border:  '#E2E8F0',
 
   // Text
   t1:  '#0F172A',
@@ -61,6 +46,8 @@ const C = {
   white: '#FFFFFF',
   black: '#000000',
 };
+
+export const Colors = C;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STYLES
@@ -123,7 +110,7 @@ export const styles = StyleSheet.create({
   liveDropdown: {
     position: 'absolute', top: 60, left: 0, right: 0,
     backgroundColor: C.white, borderRadius: 14,
-    borderWidth: 1, borderColor: C.border || '#E2E8F0',
+    borderWidth: 1, borderColor: C.border,
     shadowColor: C.black, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08, shadowRadius: 14, elevation: 12, zIndex: 999,
     overflow: 'hidden',
@@ -136,7 +123,7 @@ export const styles = StyleSheet.create({
   liveThumb: { width: 44, height: 44, borderRadius: 10, backgroundColor: C.brandBg },
   liveRowName: { fontSize: 13, fontWeight: '600', color: C.t1 },
   liveRowPrice: { fontSize: 12, fontWeight: '700', color: C.accent },
-  liveRowCampus: {
+  liveRowLocation: {
     fontSize: 10, fontWeight: '600', color: C.brand,
     backgroundColor: C.brandBg, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
   },
@@ -146,11 +133,10 @@ export const styles = StyleSheet.create({
     borderTopWidth: 0.5, borderTopColor: '#F0F0F0',
   },
   liveViewAllText: { fontSize: 13, fontWeight: '600', color: C.brand },
+  liveEmptyIcon: { color: C.brandBorder },
+  liveEmptyText: { fontSize: 13, color: C.t3, marginTop: 8 },
 
   // ── Subcategory strip ───────────────────────────────────────────────────────
-  // Lives inside headerCardWrap now (see below) — a hairline top border reads
-  // as a section break within the same white surface, instead of its own
-  // separate grey-tinted box that broke continuity with the rest of the header.
   subCatStrip: {
     borderTopWidth: 1, borderTopColor: C.elev,
     paddingTop: 4,
@@ -164,44 +150,20 @@ export const styles = StyleSheet.create({
   subCatPillText: { fontSize: 11, fontWeight: '600', color: C.t1 },
   subCatPillTextActive: { color: C.brand },
 
-  // ── Toolbar ─────────────────────────────────────────────────────────────────
-  toolbar: {
+  // ── Results meta row (count + view toggle) ──────────────────────────────────
+  resultsMetaRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 10,
-     borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
-    marginBottom: 8,
   },
-  toolbarLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  resultsMetaLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   toolbarCount: { fontSize: 13, color: C.t3, fontWeight: '500' },
   toolbarCountBold: { fontWeight: '800', color: C.t1 },
   searchActiveTag: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: C.infoBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
-    maxWidth: 100,
+    maxWidth: 130,
   },
   searchActiveTagText: { fontSize: 11, color: C.info, fontWeight: '600' },
-  toolbarRight: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  toolbarChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: C.brandBg, paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 16, borderWidth: 1, borderColor: C.brandBorder, maxWidth: 90,
-  },
-  toolbarChipActive: { backgroundColor: C.brand, borderColor: C.brand },
-  toolbarChipText: { fontSize: 11, color: C.brand, fontWeight: '700', flex: 1 },
-  toolbarChipTextActive: { color: '#fff' },
-  toolbarIconBtn: {
-    width: 34, height: 34, borderRadius: 10,
-    backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: C.brandBorder, position: 'relative',
-  },
-  toolbarIconBtnActive: { backgroundColor: C.brand, borderColor: C.brand },
-  filterBadge: {
-    position: 'absolute', top: -4, right: -4,
-    backgroundColor: C.danger, borderRadius: 8,
-    width: 14, height: 14, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: C.white,
-  },
-  filterBadgeText: { color: '#fff', fontSize: 8, fontWeight: '800' },
   viewGroup: {
     flexDirection: 'row', backgroundColor: '#F5F5F5', borderRadius: 10, padding: 3, gap: 2,
   },
@@ -212,17 +174,44 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.08, shadowRadius: 2, elevation: 2,
   },
 
+  // ── Sort / Filter bar ────────────────────────────────────────────────────────
+  // A full-width, two-segment bar sitting directly under the header — the
+  // same "Sort by | Filter" layout used on Jumia and most large marketplace
+  // apps, instead of small floating chips easy to miss.
+  sortFilterBar: {
+    flexDirection: 'row', alignItems: 'stretch',
+    backgroundColor: C.white,
+    borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#EEF1F4',
+  },
+  sortFilterSegment: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 7, paddingVertical: 13,
+  },
+  sortFilterSegmentActive: { backgroundColor: C.brandBg },
+  sortFilterDivider: { width: 1, backgroundColor: '#EEF1F4', marginVertical: 8 },
+  sortFilterText: { fontSize: 13, fontWeight: '700', color: C.t1 },
+  sortFilterTextActive: { color: C.brandD },
+  filterCountBadge: {
+    backgroundColor: C.danger, borderRadius: 8, minWidth: 16, height: 16,
+    justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3, marginLeft: 1,
+  },
+  filterCountBadgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+
   // Active filter chips row
   activeFiltersRow: {
     backgroundColor: C.white, borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
     paddingVertical: 6, marginBottom: 4,
   },
-  activeFiltersContent: { paddingHorizontal: 14, gap: 7, flexDirection: 'row' },
+  activeFiltersContent: { paddingHorizontal: 14, gap: 7, flexDirection: 'row', alignItems: 'center' },
   activeFChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: C.infoBg, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10,
   },
   activeFChipText: { fontSize: 11, color: C.info, fontWeight: '600' },
+  clearAllChip: {
+    paddingHorizontal: 8, paddingVertical: 5,
+  },
+  clearAllChipText: { fontSize: 11, color: C.t3, fontWeight: '700', textDecorationLine: 'underline' },
 
   // ── Condition & negotiable badges ───────────────────────────────────────────
   condBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, alignSelf: 'flex-start' },
@@ -231,7 +220,8 @@ export const styles = StyleSheet.create({
   negTagText: { color: '#fff', fontSize: 9, fontWeight: '700' },
 
   // ── Grid card ───────────────────────────────────────────────────────────────
-  gridWrap: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 10, paddingTop: 4 },
+  gridListContent: { paddingTop: 4, paddingBottom: 4 },
+  gridRow: { paddingHorizontal: 12, justifyContent: 'space-between', marginBottom: 10 },
   gridCard: {
     width: CARD_WIDTH,
     backgroundColor: C.white, borderRadius: 16, overflow: 'hidden',
@@ -251,11 +241,11 @@ export const styles = StyleSheet.create({
   gridBody: { padding: 11, paddingTop: 9 },
   gridName: { fontSize: 13, fontWeight: '700', color: C.t1, lineHeight: 18, marginBottom: 5 },
   gridMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8, flexWrap: 'wrap' },
-  campusMicroPill: {
+  locationMicroPill: {
     flexDirection: 'row', alignItems: 'center', gap: 2,
     backgroundColor: C.brandBg, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5,
   },
-  campusMicroText: { fontSize: 9, fontWeight: '700', color: C.brand },
+  locationMicroText: { fontSize: 9, fontWeight: '700', color: C.brand },
   subCatMicro: { fontSize: 9, color: C.t3, fontWeight: '500', flex: 1 },
   gridFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   gridPrice: { fontSize: 15, fontWeight: '800', color: C.accent },
@@ -382,6 +372,21 @@ export const styles = StyleSheet.create({
   sheetRowTextActive: { color: C.brand, fontWeight: '700' },
   sheetSubHeading: { fontSize: 13, fontWeight: '700', color: C.t2, marginBottom: 10, marginTop: 14 },
 
+  // Location sheet — "use my current location" action row
+  useLocationRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: C.brandBg, borderRadius: 12,
+    paddingVertical: 12, paddingHorizontal: 12,
+    borderWidth: 1, borderColor: C.brandBorder, marginBottom: 14,
+  },
+  useLocationIcon: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: C.brand, justifyContent: 'center', alignItems: 'center',
+  },
+  useLocationText: { fontSize: 13.5, fontWeight: '700', color: C.brandD },
+  useLocationSub: { fontSize: 11, color: C.t3, marginTop: 1 },
+  sheetDivider: { height: 1, backgroundColor: '#F0F0F0', marginVertical: 12 },
+
   // Filter sheet specifics
   filterChipRow: { gap: 8, paddingBottom: 4, flexDirection: 'row' },
   filterChip: {
@@ -421,6 +426,7 @@ export const styles = StyleSheet.create({
   applyBtn: {
     backgroundColor: C.brand, borderRadius: 14,
     paddingVertical: 14, alignItems: 'center', marginTop: 16,
+    flexDirection: 'row', justifyContent: 'center', gap: 8, bottom:24,
   },
   applyBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   clearFiltersBtn: { paddingVertical: 12, alignItems: 'center', marginTop: 6 },
@@ -563,18 +569,14 @@ export const styles = StyleSheet.create({
   },
 
   // ── Header card ─────────────────────────────────────────────────────────────
-  // Wraps the title row, search bar, category tabs and subcategory row into
-  // one elevated white surface, instead of four sibling blocks each on a
-  // slightly different background (page bg → white → white → grey) that
-  // read as disconnected pieces rather than a single header.
+  // Wraps the title row, delivery-location bar, search bar, category tabs and
+  // subcategory row into one elevated white surface — the same "one card, one
+  // shadow" structure Amazon/Jumia use for their top navigation stack, instead
+  // of separate blocks each on a slightly different background.
   headerCardWrap: {
     backgroundColor: C.white,
-    marginBottom: 10,
-    shadowColor: C.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF1F4',
   },
 
   // ─── Top Bar ──────────────────────────────────────────────
@@ -585,6 +587,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 8,
+    gap: 10,
   },
   topBarTitleWrap: {
     flex: 1,
@@ -602,6 +605,11 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9E9E9E',
     fontWeight: '500',
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   topBarCartBtn: {
     width: 40,
@@ -632,10 +640,24 @@ export const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  // ─── Deliver-to location pill (Amazon-style "Deliver to …") ────────────────
+  deliveryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: C.brandBg,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: C.brandBorder,
+    maxWidth: 118,
+  },
+  deliveryPillTextWrap: { flexShrink: 1 },
+  deliveryPillLabel: { fontSize: 8.5, color: C.t3, fontWeight: '600', lineHeight: 10 },
+  deliveryPillValue: { fontSize: 11.5, color: C.brandD, fontWeight: '800', lineHeight: 14 },
+
   // ─── Search Bar ──────────────────────────────────────────
-  // Elevated recessed field on the header card's white surface (instead of a
-  // flat grey box with a hard border), with a brand-teal focus ring — same
-  // search-bar language used elsewhere in the app.
   searchBarWrap: {
     paddingHorizontal: 16,
     paddingBottom: 12,
@@ -660,13 +682,18 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 10,
     height: '100%',
   },
+  searchGoBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: C.brand,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    marginLeft: 2,
+  },
 
   // ─── Category Tabs ────────────────────────────────────────
-  // Sits on the same white header-card surface as the search bar above it —
-  // no separate background needed. Active state uses a single consistent
-  // brand teal (not each category's own accent) so the selected tab always
-  // reads the same way as you switch categories, while inactive icons still
-  // keep their individual category colour for a bit of visual variety.
   catStrip: {
     paddingBottom: 12,
   },
@@ -678,27 +705,27 @@ export const styles = StyleSheet.create({
   catTab: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 16,
-    minWidth: 72,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 14,
+    minWidth: 64,
     gap: 6,
   },
-  catTabActive: {
-    backgroundColor: '#0D9488',
-    borderRadius: 32,
-  },
+  catTabActive: {},
   catIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 26,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 2,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
   catIconWrapActive: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: C.brandBg,
+    borderColor: C.brand,
   },
   catTabEmoji: {
     fontSize: 18,
@@ -710,7 +737,7 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
   },
   catTabTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: C.brand,
+    fontWeight: '800',
   },
 });

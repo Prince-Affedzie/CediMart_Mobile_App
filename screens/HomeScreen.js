@@ -33,6 +33,7 @@ import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES} from '../data/General'
 import RecommendEarnBanner from '../components/RecommendEarnNotice'
 import {ProductGridSkeleton} from '../components/SkeletonLoader'
 import VisualSearchFab from '../components/VisualSearchFab';
+import VendorSpotlight from '../components/VendorSpotlight';
 
 const { width } = Dimensions.get('window');
 
@@ -661,6 +662,13 @@ const HomeScreen = () => {
             ))}
           </ScrollView>
         </View>
+
+        <VendorSpotlight
+            title="Featured vendors"
+             subtitle="Top-rated Vendors "
+            limit={5}
+            sortBy="rating"
+          />
 
 
         {/* FEATURED — loaded eagerly (feeds the hero carousel too), no skeleton branch needed */}
