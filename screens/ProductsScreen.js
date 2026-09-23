@@ -22,7 +22,10 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import productService from '../services/productService';
 import { styles, Colors as C } from '../styles/products';
-import { CONDITION_CONFIG, SUBCATEGORIES, CATEGORIES } from '../data/General';
+import {
+  CONDITION_CONFIG, SUBCATEGORIES, CATEGORIES,
+  CITY_OPTIONS, getSuburbs, GHANA_LOCATIONS,
+} from '../data/General';
 import { ProductGridSkeleton } from '../components/SkeletonLoader';
 import ShopFAB from '../components/ShopFAB'
 import VisualSearchFab from '../components/VisualSearchFab';
@@ -39,23 +42,6 @@ const SORT_OPTIONS = [
   { id: 'rating',     label: 'Top Rated',            icon: 'star-outline' },
 ];
 
-// Location is intentionally broader than "campus" now — these are the
-// general delivery areas the marketplace serves. Extend this list (or wire
-// it to a real places lookup) as coverage grows beyond its campus origins.
-const LOCATION_OPTIONS = [
-  { id: '',           label: 'All Locations' },
-  { id: 'ACCRA',       label: 'Accra' },
-  { id: 'TEMA',        label: 'Tema' },
-  { id: 'KUMASI',      label: 'Kumasi' },
-  { id: 'TAKORADI',    label: 'Takoradi' },
-  { id: 'CAPE_COAST',  label: 'Cape Coast' },
-  { id: 'TAMALE',      label: 'Tamale' },
-  { id: 'HO',          label: 'Ho' },
-  { id: 'KOFORIDUA',   label: 'Koforidua' },
-  { id: 'SUNYANI',     label: 'Sunyani' },
-  { id: 'OTHER',       label: 'Other Location' },
-];
-
 const CONDITION_FILTER_OPTIONS = [
   { id: '', label: 'Any' },
   ...Object.entries(CONDITION_CONFIG).map(([k, v]) => ({ id: k, label: v.label })),
@@ -67,7 +53,11 @@ const CONDITION_FILTER_OPTIONS = [
 const getLocationLabel = (location) => {
   if (!location) return null;
   if (typeof location === 'string') return location;
-  if (location.city) return location.area ? `${location.area}, ${location.city}` : location.city;
+  // Prefer the canonical lookup so ACCRA → "Accra" instead of the raw id.
+  if (location.city) {
+    const cityLabel = GHANA_LOCATIONS[location.city]?.label || location.city;
+    return location.area ? `${location.area}, ${cityLabel}` : cityLabel;
+  }
   if (location.campusArea) return location.hostel ? `${location.hostel}, ${location.campusArea}` : location.campusArea;
   return null;
 };
@@ -131,9 +121,7 @@ const NegotiableTag = React.memo(() => (
 ));
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GRID CARD  (memoized — with stable callbacks + a cart-qty lookup map passed
-// in from the parent, this only re-renders when its own item/qty/loading
-// state actually changes, not on every keystroke elsewhere on the screen)
+// GRID CARD
 // ─────────────────────────────────────────────────────────────────────────────
 const GridCard = React.memo(({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding, isUpdating }) => {
   const imageUri = item.images?.[0];
@@ -270,7 +258,7 @@ const GridCard = React.memo(({ item, onPress, onAddToCart, onQtyChange, qtyInCar
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LIST CARD  (memoized, same rationale as GridCard)
+// LIST CARD
 // ─────────────────────────────────────────────────────────────────────────────
 const ListCard = React.memo(({ item, onPress, onAddToCart, onQtyChange, qtyInCart, isAdding, isUpdating }) => {
   const imageUri = item.images?.[0];
@@ -407,7 +395,7 @@ const ListCard = React.memo(({ item, onPress, onAddToCart, onQtyChange, qtyInCar
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BOTTOM SHEET  (reusable)
+// BOTTOM SHEET
 // ─────────────────────────────────────────────────────────────────────────────
 const BottomSheet = ({ visible, onClose, title, children }) => (
   <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
@@ -432,9 +420,6 @@ const ProductsScreen = ({ navigation, route }) => {
   const [products, setProducts]           = useState([]);
   const [loading, setLoading]             = useState(true);
   const [refreshing, setRefreshing]       = useState(false);
-  //  NEW: separate flag so switching a chip shows the skeleton list WITHOUT
-  //  unmounting the header, tabs and filter bar. The header stays interactive
-  //  while the list body swaps to a loader.
   const [filterLoading, setFilterLoading] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
   const [pagination, setPagination]       = useState({});
@@ -442,7 +427,8 @@ const ProductsScreen = ({ navigation, route }) => {
   // Filters
   const [selectedCategory, setSelectedCategory]       = useState('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState('');
-  const [selectedLocation, setSelectedLocation]       = useState('');
+  const [selectedLocation, setSelectedLocation]       = useState('');  // city id
+  const [selectedSuburb, setSelectedSuburb]           = useState('');  // area string
   const [selectedSort, setSelectedSort]               = useState('newest');
   const [selectedCondition, setSelectedCondition]     = useState('');
   const [negotiableOnly, setNegotiableOnly]           = useState(false);
@@ -472,6 +458,18 @@ const ProductsScreen = ({ navigation, route }) => {
   const isMountedRef    = useRef(true);
   const toastTimeoutRef = useRef(null);
 
+  //  Derived from the canonical data/General location structure. These feed
+  //  the picker UI and never need updating by hand — add a city or suburb in
+  //  General.js and it shows up here.
+  const cityOptions = useMemo(
+    () => CITY_OPTIONS.map((c) => ({ id: c.id, label: c.label, region: c.region })),
+    []
+  );
+  const suburbOptions = useMemo(
+    () => getSuburbs(selectedLocation),   // array of plain strings
+    [selectedLocation]
+  );
+
   // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     isMountedRef.current = true;
@@ -500,8 +498,6 @@ const ProductsScreen = ({ navigation, route }) => {
   }, [searchQuery]);
 
   // ── Reload on filter changes ───────────────────────────────────────────────
-  //  Both of these effects fire `filterChange: true` so the skeleton list
-  //  appears during the fetch instead of leaving stale results on screen.
   useEffect(() => {
     setSelectedSubcategory('');
     loadProducts({ page: 1, filterChange: true });
@@ -510,23 +506,19 @@ const ProductsScreen = ({ navigation, route }) => {
   useEffect(() => {
     //  Skip the very first run so we don't double-fetch on mount.
     if (!loading) loadProducts({ page: 1, filterChange: true });
-  }, [selectedSubcategory, selectedLocation, selectedSort, selectedCondition, negotiableOnly, minPrice, maxPrice]);
+  }, [selectedSubcategory, selectedLocation, selectedSuburb, selectedSort, selectedCondition, negotiableOnly, minPrice, maxPrice]);
 
   // ── Data fetch ─────────────────────────────────────────────────────────────
-  // `searchOverride` lets a caller force the exact search term used for this
-  // fetch instead of relying on the `searchQuery` state — state updates are
-  // asynchronous, so reading `searchQuery` right after calling setSearchQuery
-  // (e.g. when clearing search) would still see the old value. This was the
-  // cause of "clearing the search doesn't clear the results".
   const buildParams = (overrides = {}, searchOverride) => {
     const effectiveSearch = searchOverride !== undefined ? searchOverride : searchQuery;
     const base = {
       category:    selectedCategory !== 'all' ? selectedCategory : undefined,
       subcategory: selectedSubcategory || undefined,
-      // NOTE: sent as `location` — the backend/API and product schema need to
-      // expose a `location` field (renamed from the old `campus` field) for
-      // this filter to actually narrow results server-side.
+      //  `location` is the city id (e.g. 'ACCRA'); `suburb` is the area
+      //  string (e.g. 'Madina'). Both are optional — a user can filter by
+      //  city alone, suburb alone (rare), or both.
       location:    selectedLocation || undefined,
+      suburb:      selectedSuburb || undefined,
       sort:        selectedSort,
       condition:   selectedCondition || undefined,
       negotiable:  negotiableOnly || undefined,
@@ -542,9 +534,6 @@ const ProductsScreen = ({ navigation, route }) => {
     fetchIdRef.current += 1;
     const myId = fetchIdRef.current;
 
-    //  Only show the full-screen skeleton for the very first load. Filter
-    //  switches use the lighter `filterLoading` path so the header never
-    //  disappears mid-interaction.
     if (!append) {
       if (filterChange) setFilterLoading(true);
       else setLoading(true);
@@ -570,7 +559,7 @@ const ProductsScreen = ({ navigation, route }) => {
       setFilterLoading(false);
       setRefreshing(false);
     }
-  }, [selectedCategory, selectedSubcategory, selectedLocation, selectedSort, selectedCondition, negotiableOnly, minPrice, maxPrice, searchQuery]);
+  }, [selectedCategory, selectedSubcategory, selectedLocation, selectedSuburb, selectedSort, selectedCondition, negotiableOnly, minPrice, maxPrice, searchQuery]);
 
   const performLiveSearch = async () => {
     setLiveSearching(true);
@@ -580,6 +569,7 @@ const ProductsScreen = ({ navigation, route }) => {
         limit: 6,
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
         location: selectedLocation || undefined,
+        suburb: selectedSuburb || undefined,
       });
       if (isMountedRef.current) {
         setLiveSearchResults(res?.data || []);
@@ -609,8 +599,6 @@ const ProductsScreen = ({ navigation, route }) => {
     setSearchQuery('');
     setLiveSearchResults([]);
     setShowLiveDropdown(false);
-    // Explicitly force an empty search term for this fetch — see the note on
-    // buildParams above for why relying on state here would be stale.
     loadProducts({ page: 1, filterChange: true, searchOverride: '' });
   }, [loadProducts]);
 
@@ -622,8 +610,6 @@ const ProductsScreen = ({ navigation, route }) => {
   }, []);
 
   // ── Cart helpers ───────────────────────────────────────────────────────────
-  // A lookup map built once per cart change, instead of scanning the whole
-  // cart array for every single product card on every render.
   const cartQtyMap = useMemo(() => {
     const map = {};
     (cartItems || []).forEach(i => {
@@ -706,16 +692,22 @@ const ProductsScreen = ({ navigation, route }) => {
   const activeCatConfig   = CATEGORIES.find(c => c.id === selectedCategory) || CATEGORIES[0];
   const subcatsForCat     = SUBCATEGORIES[selectedCategory] || [];
   const activeSortLabel   = SORT_OPTIONS.find(s => s.id === selectedSort)?.label || 'Sort';
-  const activeLocationLabel = LOCATION_OPTIONS.find(l => l.id === selectedLocation)?.label || 'All Locations';
+  const activeLocationLabel = selectedLocation
+    ? (GHANA_LOCATIONS[selectedLocation]?.label || selectedLocation)
+    : 'All Cities';
 
   const activeFilterCount = [
     selectedCondition, negotiableOnly, minPrice, maxPrice,
   ].filter(Boolean).length;
 
-  const hasAnyActiveFilter = !!(selectedLocation || selectedCondition || negotiableOnly || minPrice || maxPrice);
+  const hasAnyActiveFilter = !!(
+    selectedLocation || selectedSuburb ||
+    selectedCondition || negotiableOnly || minPrice || maxPrice
+  );
 
   const clearAllFilters = useCallback(() => {
     setSelectedLocation('');
+    setSelectedSuburb('');
     setSelectedCondition('');
     setNegotiableOnly(false);
     setMinPrice('');
@@ -731,10 +723,6 @@ const ProductsScreen = ({ navigation, route }) => {
     loadProducts({ page: 1, filterChange: true, searchOverride: '' });
   }, [clearAllFilters, loadProducts]);
 
-  // ── FlatList renderItem — stable identity unless something the row
-  // actually depends on changes (view mode, cart quantities, in-flight
-  // add/update state). Typing in the search box, opening a sheet, etc. do
-  // NOT change this, so rows are left completely alone. ─────────────────────
   const renderItem = useCallback(({ item }) => {
     const qty = cartQtyMap[item._id] || 0;
     const commonProps = {
@@ -780,7 +768,7 @@ const ProductsScreen = ({ navigation, route }) => {
     );
   };
 
-  // ── Header (title, deliver-to, search, categories, sort/filter bar) ────────
+  // ── Header ────────────────────────────────────────────────────────────────
   const listHeader = (
     <>
       <View style={styles.headerCardWrap}>
@@ -803,7 +791,9 @@ const ProductsScreen = ({ navigation, route }) => {
               <Ionicons name="location" size={13} color="#0D9488" />
               <View style={styles.deliveryPillTextWrap}>
                 <Text style={styles.deliveryPillLabel}>Deliver to</Text>
-                <Text style={styles.deliveryPillValue} numberOfLines={1}>{activeLocationLabel}</Text>
+                <Text style={styles.deliveryPillValue} numberOfLines={1}>
+                  {selectedSuburb ? `${selectedSuburb}, ${activeLocationLabel}` : activeLocationLabel}
+                </Text>
               </View>
             </TouchableOpacity>
 
@@ -842,8 +832,6 @@ const ProductsScreen = ({ navigation, route }) => {
                 <TouchableOpacity style={{ padding: 10 }} onPress={clearSearch}>
                   <Ionicons name="close-circle" size={17} color="#BDBDBD" />
                 </TouchableOpacity>
-                {/* Explicit "go" button — runs a full search on tap instead of
-                    relying only on the keyboard's search/return key. */}
                 <TouchableOpacity style={styles.searchGoBtn} onPress={handleSearchSubmit} activeOpacity={0.8}>
                   <Ionicons name="arrow-forward" size={15} color="#fff" />
                 </TouchableOpacity>
@@ -1037,8 +1025,19 @@ const ProductsScreen = ({ navigation, route }) => {
             {selectedLocation && (
               <View style={styles.activeFChip}>
                 <Ionicons name="location-outline" size={11} color="#0284C7" />
-                <Text style={styles.activeFChipText}>{activeLocationLabel}</Text>
-                <TouchableOpacity onPress={() => setSelectedLocation('')}>
+                <Text style={styles.activeFChipText}>
+                  {selectedSuburb ? `${selectedSuburb}, ${activeLocationLabel}` : activeLocationLabel}
+                </Text>
+                <TouchableOpacity onPress={() => { setSelectedLocation(''); setSelectedSuburb(''); }}>
+                  <Ionicons name="close" size={11} color="#0284C7" />
+                </TouchableOpacity>
+              </View>
+            )}
+            {selectedSuburb && !selectedLocation && (
+              <View style={styles.activeFChip}>
+                <Ionicons name="location-outline" size={11} color="#0284C7" />
+                <Text style={styles.activeFChipText}>{selectedSuburb}</Text>
+                <TouchableOpacity onPress={() => setSelectedSuburb('')}>
                   <Ionicons name="close" size={11} color="#0284C7" />
                 </TouchableOpacity>
               </View>
@@ -1124,8 +1123,12 @@ const ProductsScreen = ({ navigation, route }) => {
         </ScrollView>
       </BottomSheet>
 
-      {/* ── LOCATION SHEET ── */}
-      <BottomSheet visible={locationSheetVisible} onClose={() => setLocationSheetVisible(false)} title="Deliver To">
+      {/* ── LOCATION SHEET (City + Suburb picker) ── */}
+      <BottomSheet
+        visible={locationSheetVisible}
+        onClose={() => setLocationSheetVisible(false)}
+        title="Deliver To"
+      >
         <TouchableOpacity style={styles.useLocationRow} onPress={handleUseCurrentLocation} activeOpacity={0.8}>
           <View style={styles.useLocationIcon}>
             <Ionicons name="navigate" size={16} color="#fff" />
@@ -1137,25 +1140,85 @@ const ProductsScreen = ({ navigation, route }) => {
           <Ionicons name="chevron-forward" size={16} color="#0D9488" />
         </TouchableOpacity>
 
-        <Text style={styles.sheetSubHeading}>Choose a location</Text>
-        <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-          {LOCATION_OPTIONS.map(opt => {
-            const isActive = selectedLocation === opt.id;
-            return (
-              <TouchableOpacity
-                key={opt.id}
-                style={[styles.sheetRow, isActive && styles.sheetRowActive]}
-                onPress={() => { setSelectedLocation(opt.id); setLocationSheetVisible(false); }}
-              >
-                <View style={[styles.sheetRowIcon, isActive && styles.sheetRowIconActive]}>
-                  <Ionicons name="location-outline" size={16} color={isActive ? '#fff' : '#757575'} />
-                </View>
-                <Text style={[styles.sheetRowText, isActive && styles.sheetRowTextActive]}>{opt.label}</Text>
-                {isActive && <Ionicons name="checkmark-circle" size={20} color="#0D9488" />}
-              </TouchableOpacity>
-            );
-          })}
+        <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
+          {/* Step 1 — City */}
+          <Text style={styles.sheetSubHeading}>City</Text>
+          <View style={styles.locationChipsWrap}>
+            <TouchableOpacity
+              style={[styles.filterChip, !selectedLocation && styles.filterChipActive]}
+              onPress={() => { setSelectedLocation(''); setSelectedSuburb(''); }}
+            >
+              <Text style={[styles.filterChipText, !selectedLocation && styles.filterChipTextActive]}>
+                All Cities
+              </Text>
+            </TouchableOpacity>
+            {cityOptions.map(opt => {
+              const isActive = selectedLocation === opt.id;
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[styles.filterChip, isActive && styles.filterChipActive]}
+                  onPress={() => {
+                    setSelectedLocation(opt.id);
+                    setSelectedSuburb('');   // reset suburb when city changes
+                  }}
+                >
+                  <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Step 2 — Suburb (only after a city is picked) */}
+          {selectedLocation && suburbOptions.length > 0 && (
+            <>
+              <Text style={[styles.sheetSubHeading, { marginTop: 20 }]}>
+                Area in {GHANA_LOCATIONS[selectedLocation]?.label}
+              </Text>
+              <View style={styles.locationChipsWrap}>
+                <TouchableOpacity
+                  style={[styles.filterChip, !selectedSuburb && styles.filterChipActive]}
+                  onPress={() => setSelectedSuburb('')}
+                >
+                  <Text style={[styles.filterChipText, !selectedSuburb && styles.filterChipTextActive]}>
+                    All Areas
+                  </Text>
+                </TouchableOpacity>
+                {suburbOptions.map(sub => {
+                  const isActive = selectedSuburb === sub;
+                  return (
+                    <TouchableOpacity
+                      key={sub}
+                      style={[styles.filterChip, isActive && styles.filterChipActive]}
+                      onPress={() => setSelectedSuburb(isActive ? '' : sub)}
+                    >
+                      <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                        {sub}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+          {selectedLocation && suburbOptions.length === 0 && (
+            <Text style={[styles.sheetSubHeading, { marginTop: 20, fontStyle: 'italic', color: '#94A3B8' }]}>
+              No specific areas listed for this city — showing everything in {GHANA_LOCATIONS[selectedLocation]?.label}.
+            </Text>
+          )}
         </ScrollView>
+
+        <TouchableOpacity
+          style={styles.applyBtn}
+          onPress={() => setLocationSheetVisible(false)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="checkmark" size={16} color="#fff" />
+          <Text style={styles.applyBtnText}>Done</Text>
+        </TouchableOpacity>
       </BottomSheet>
 
       {/* ── ADVANCED FILTER SHEET ── */}
@@ -1243,12 +1306,7 @@ const ProductsScreen = ({ navigation, route }) => {
         </ScrollView>
       </BottomSheet>
 
-      {/* ── MAIN LIST ──
-          Two FlatLists share the exact same `listHeader`. While a filter/
-          category/sort fetch is in flight we mount the skeleton list so the
-          header, tabs and filter bar stay interactive but the results body
-          is replaced by a clean loading state. Otherwise we mount the real
-          list with the fetched products. */}
+      {/* ── MAIN LIST ── */}
       {filterLoading ? (
         <FlatList
           data={[]}

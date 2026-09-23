@@ -2,180 +2,318 @@
 import { Ionicons } from '@expo/vector-icons';
 
 export const VALID_CATEGORIES = [
-  { key: 'electronics', icon: 'hardware-chip-outline' },
-  { key: 'phones and tablets', icon: 'phone-portrait-outline' },
-  { key: 'computers and laptops', icon: 'laptop-outline' },
-  { key: 'gaming', icon: 'game-controller-outline' },
-  { key: 'fashion', icon: 'shirt-outline' },
-  { key: 'books-course-materials', icon: 'book-outline' },
-  { key: 'hostel-items', icon: 'bed-outline' },
-  { key: 'appliances', icon: 'flash-outline' },
-  { key: 'furniture', icon: 'cube-outline' },
-  { key: 'beauty and grooming', icon: 'sparkles-outline' },
-  { key: 'sports and fitness', icon: 'basketball-outline' },
-  { key: 'accessories', icon: 'watch-outline' },
-  { key: 'food and drinks', icon: 'fast-food-outline' },
-  { key: 'tickets and events', icon: 'ticket-outline' },
+  { key: 'electronics',             icon: 'hardware-chip-outline' },
+  { key: 'phones and tablets',      icon: 'phone-portrait-outline' },
+  { key: 'computers and laptops',   icon: 'laptop-outline' },
+  { key: 'gaming',                  icon: 'game-controller-outline' },
+
+  { key: 'fashion',                 icon: 'shirt-outline' },
+  { key: 'accessories',             icon: 'watch-outline' },
+  { key: 'beauty and grooming',     icon: 'sparkles-outline' },
+
+  { key: 'books-course-materials',  icon: 'book-outline' },
+  { key: 'tutoring and education',      icon: 'school-outline' },
+
+  { key: 'hostel-items',            icon: 'bed-outline' },
+  { key: 'furniture',               icon: 'cube-outline' },
+  { key: 'appliances',              icon: 'flash-outline' },
+
+  { key: 'food and drinks',         icon: 'fast-food-outline' },
+  { key: 'events and catering',         icon: 'restaurant-outline' },
+
+  { key: 'tickets and events',      icon: 'ticket-outline' },
+  { key: 'photography and media',       icon: 'camera-outline' },
+  { key: 'graphic-design-printing', icon: 'color-palette-outline' },
+
+  { key: 'repair and services',         icon: 'build-outline' },
   { key: 'transport and logistics', icon: 'car-outline' },
-  { key: 'services', icon: 'construct-outline' },
-  { key: 'other', icon: 'grid-outline' },
+  { key: 'accommodation and housing',   icon: 'home-outline' },
+
+  { key: 'sports and fitness',      icon: 'basketball-outline' },
+  { key: 'services',                icon: 'construct-outline' },
+  { key: 'other',                   icon: 'grid-outline' },
 ];
+// src/data/General.js  (excerpt)
 
 export const SUBCATEGORIES_MAP = {
   'electronics': [
-    { key: 'headphones-earbuds', label: 'Headphones & Earbuds' },
-    { key: 'speakers', label: 'Bluetooth & Home Speakers' },
-    { key: 'chargers-cables', label: 'Chargers, Cables & Adapters' },
-    { key: 'power-banks', label: 'Power Banks' },
-    { key: 'smartwatches', label: 'Smartwatches & Fitness Bands' },
-    { key: 'cameras', label: 'Cameras & Vlogging Gear' },
-    { key: 'projectors', label: 'Projectors & Screens' },
-    { key: 'calculators-scientific', label: 'Scientific & Financial Calculators' },
-    { key: 'extensions-plugs', label: 'Extension Boards & Adapters' },
-    { key: 'trimmers-clippers', label: 'Hair Trimmers & Clippers' },
-    { key: 'other-electronics', label: 'Other Electronics' },
+    { key: 'headphones-earbuds',     label: 'Headphones & Earbuds' },
+    { key: 'speakers',               label: 'Bluetooth & Home Speakers' },
+    { key: 'chargers-cables',        label: 'Chargers, Cables & Adapters' },
+    { key: 'power-banks',            label: 'Power Banks & Portable Chargers' },
+    { key: 'smartwatches',           label: 'Smartwatches & Fitness Bands' },
+    { key: 'cameras',                label: 'Cameras & Vlogging Gear' },
+    { key: 'projectors',             label: 'Projectors & Screens' },
+    { key: 'calculators-scientific', label: 'Calculators' },
+    { key: 'extensions-plugs',       label: 'Extension Boards & Adapters' },
+    { key: 'trimmers-clippers',      label: 'Trimmers & Clippers' },
+    { key: 'tv-video',               label: 'TVs & Video Equipment' },
+    { key: 'audio-systems',          label: 'Audio Systems & Mixers' },
+    { key: 'networking',             label: 'Routers, Modems & Networking' },
+    { key: 'drones',                 label: 'Drones & Aerial Gear' },
+    { key: 'other-electronics',      label: 'Other Electronics' },
   ],
+
   'phones and tablets': [
-    { key: 'smartphones', label: 'Smartphones' },
-    { key: 'tablets', label: 'Android Tablets' },
-    { key: 'ipads', label: 'iPads' },
-    { key: 'phone-cases', label: 'Phone Cases & Covers' },
-    { key: 'screen-protectors', label: 'Screen Protectors' },
-    { key: 'tripods-gimbals', label: 'Tripods & Phone Gimbals' },
-    { key: 'memory-cards', label: 'MicroSD & Memory Cards' },
+    { key: 'smartphones',             label: 'Smartphones' },
+    { key: 'tablets',                 label: 'Tablets' },
+    { key: 'ipads',                   label: 'iPads' },
+    { key: 'phone-cases',             label: 'Phone Cases & Covers' },
+    { key: 'screen-protectors',       label: 'Screen Protectors' },
+    { key: 'tripods-gimbals',         label: 'Tripods & Phone Gimbals' },
+    { key: 'memory-cards',            label: 'MicroSD & Memory Cards' },
+    { key: 'phone-repair-parts',      label: 'Phone Spare Parts & Repair Kits' },
+    { key: 'phone-stands-mounts',     label: 'Phone Stands & Car Mounts' },
     { key: 'other-phone-accessories', label: 'Other Mobile Accessories' },
   ],
+
   'computers and laptops': [
-    { key: 'laptops', label: 'Laptops' },
-    { key: 'desktops', label: 'Desktop Towers & iMacs' },
-    { key: 'monitors', label: 'Monitors & Displays' },
-    { key: 'keyboards', label: 'Keyboards (Mechanical & Wireless)' },
-    { key: 'mouse', label: 'Computer Mice' },
-    { key: 'laptop-bags', label: 'Laptop Bags & Sleeves' },
-    { key: 'hard-drives-ssds', label: 'External Hard Drives & SSDs' },
-    { key: 'usb-flash-drives', label: 'USB Flash Drives (Pen Drives)' },
-    { key: 'software', label: 'Operating Systems & Software Activation' },
+    { key: 'laptops',                    label: 'Laptops' },
+    { key: 'desktops',                   label: 'Desktop Towers & All-in-Ones' },
+    { key: 'monitors',                   label: 'Monitors & Displays' },
+    { key: 'keyboards',                  label: 'Keyboards' },
+    { key: 'mouse',                      label: 'Computer Mice' },
+    { key: 'laptop-bags',                label: 'Laptop Bags & Sleeves' },
+    { key: 'hard-drives-ssds',           label: 'External Hard Drives & SSDs' },
+    { key: 'usb-flash-drives',           label: 'USB Flash Drives' },
+    { key: 'software',                   label: 'Operating Systems & Software' },
+    { key: 'computer-repair-parts',      label: 'Computer Parts & Repair Components' },
+    { key: 'printers-scanners',          label: 'Printers & Scanners' },
+    { key: 'networking-equipment',       label: 'Networking & Server Equipment' },
+    { key: 'webcams-streaming',          label: 'Webcams & Streaming Gear' },
     { key: 'other-computer-accessories', label: 'Other Computer Accessories' },
   ],
+
   'gaming': [
-    { key: 'consoles', label: 'Gaming Consoles (PlayStation, Xbox, Switch)' },
-    { key: 'games', label: 'Video Game Discs & Digital Codes' },
-    { key: 'controllers', label: 'Gamepads & Controllers' },
-    { key: 'gaming-headsets', label: 'Gaming Headsets' },
-    { key: 'gaming-accessories', label: 'Gaming Accessories & VR Gear' },
+    { key: 'consoles',           label: 'Gaming Consoles (PlayStation, Xbox, Switch)' },
+    { key: 'games',              label: 'Video Games & Digital Codes' },
+    { key: 'controllers',        label: 'Gamepads & Controllers' },
+    { key: 'gaming-headsets',    label: 'Gaming Headsets' },
+    { key: 'gaming-chairs',      label: 'Gaming Chairs & Desks' },
+    { key: 'vr-gear',            label: 'VR Headsets & Accessories' },
+    { key: 'gaming-accessories', label: 'Other Gaming Accessories' },
   ],
+
   'fashion': [
-    { key: 'men-clothing', label: 'Men Clothing' },
-    { key: 'women-clothing', label: 'Women Clothing' },
-    { key: 'unisex-clothing', label: 'Unisex Clothing (Hoodies, Tees)' },
-    { key: 'sneakers-footwear', label: 'Sneakers, Crocs & Footwear' },
+    { key: 'men-clothing',     label: "Men's Clothing" },
+    { key: 'women-clothing',   label: "Women's Clothing" },
+    { key: 'unisex-clothing',  label: 'Unisex Clothing' },
+    { key: 'sneakers-footwear',label: 'Sneakers, Crocs & Footwear' },
+    { key: 'formal-wear',      label: 'Formal Wear & Suits' },
     { key: 'traditional-wear', label: 'Traditional & Custom Wear' },
-    { key: 'thrift-bend-down', label: 'Thrift / Selection Items' },
-    { key: 'bags', label: 'Backpacks & Handbags' },
-    { key: 'watches-jewelry', label: 'Watches, Chains & Rings' },
-    { key: 'caps-hats', label: 'Caps, Bucket Hats & Beanies' },
-    { key: 'other-fashion', label: 'Other Fashion & Apparel' },
+    { key: 'thrift-bend-down', label: 'Thrift / Bend-Down Items' },
+    { key: 'bags',             label: 'Backpacks, Handbags & Luggage' },
+    { key: 'watches-jewelry',  label: 'Watches, Chains & Rings' },
+    { key: 'caps-hats',        label: 'Caps, Hats & Beanies' },
+    { key: 'underwear-loungewear', label: 'Underwear & Loungewear' },
+    { key: 'kids-clothing',    label: "Kids' & Baby Clothing" },
+    { key: 'other-fashion',    label: 'Other Fashion & Apparel' },
   ],
+
   'books-course-materials': [
-    { key: 'textbooks', label: 'Academic Textbooks' },
-    { key: 'course-notes', label: 'Printed Course Notes & Slides' },
-    { key: 'past-questions', label: 'Past Questions & Pamphlets' },
-    { key: 'stationery', label: 'Stationery (Notebooks, Pens, Files)' },
-    { key: 'lab-coats-equipment', label: 'Lab Coats, Goggles & Science Kits' },
-    { key: 'drawing-instruments', label: 'Drawing Boards & T-Squares' },
-    { key: 'novels-literature', label: 'Novels & Fiction Literature' },
-    { key: 'other-books', label: 'Other Educational Materials' },
+    { key: 'textbooks',              label: 'Academic Textbooks' },
+    { key: 'course-notes',           label: 'Printed Course Notes & Slides' },
+    { key: 'past-questions',         label: 'Past Questions & Exam Papers' },
+    { key: 'stationery',             label: 'Stationery (Notebooks, Pens, Files)' },
+    { key: 'lab-coats-equipment',    label: 'Lab Coats, Goggles & Science Kits' },
+    { key: 'drawing-instruments',    label: 'Drawing Boards & T-Squares' },
+    { key: 'novels-literature',      label: 'Novels, Fiction & Non-Fiction' },
+    { key: 'religious-books',        label: 'Religious & Inspirational Books' },
+    { key: 'kids-educational',       label: "Kids' Books & Learning Materials" },
+    { key: 'office-supplies',        label: 'Office Supplies & Filing' },
+    { key: 'other-books',            label: 'Other Books & Materials' },
   ],
+
   'hostel-items': [
-    { key: 'bedding-mattresses', label: 'Bedsheets, Pillows & Mattresses' },
-    { key: 'gas-cylinders-stoves', label: 'Gas Cylinders, Stoves & Regulators' },
-    { key: 'kitchenware', label: 'Pots, Plates, Spoons & Bowls' },
-    { key: 'buckets-containers', label: 'Buckets, Barrels & Water Storage' },
-    { key: 'cleaning-supplies', label: 'Mops, Brooms & Detergents' },
-    { key: 'storage-wardrobes', label: 'Plastic Wardrobes, Boxes & Hangers' },
-    { key: 'lighting-lamps', label: 'Desk Lamps & Rechargeable Bulbs' },
-    { key: 'mirrors', label: 'Body & Wall Mirrors' },
-    { key: 'curtains-mats', label: 'Curtains & Door Mats' },
-    { key: 'other-hostel', label: 'Other Hostel Room Items' },
+    { key: 'bedding-mattresses',  label: 'Bedsheets, Pillows & Mattresses' },
+    { key: 'gas-cylinders-stoves',label: 'Gas Cylinders, Stoves & Regulators' },
+    { key: 'kitchenware',         label: 'Pots, Plates, Spoons & Bowls' },
+    { key: 'buckets-containers',  label: 'Buckets, Barrels & Water Storage' },
+    { key: 'cleaning-supplies',   label: 'Mops, Brooms & Detergents' },
+    { key: 'storage-wardrobes',   label: 'Wardrobes, Storage Boxes & Hangers' },
+    { key: 'lighting-lamps',      label: 'Desk Lamps & Rechargeable Bulbs' },
+    { key: 'mirrors',             label: 'Body & Wall Mirrors' },
+    { key: 'curtains-mats',       label: 'Curtains & Door Mats' },
+    { key: 'room-decor',          label: 'Room Décor, Posters & Wall Art' },
+    { key: 'other-hostel',        label: 'Other Room & Home Items' },
   ],
+
   'appliances': [
-    { key: 'fans', label: 'Standing, Desk & Orbit Fans' },
-    { key: 'refrigerators', label: 'Mini Fridges & Tabletop Fridges' },
-    { key: 'kettles', label: 'Electric Kettles' },
-    { key: 'blenders', label: 'Blenders & Food Processors' },
-    { key: 'irons', label: 'Pressing Irons' },
-    { key: 'microwaves', label: 'Microwaves & Hot Plates' },
-    { key: 'rice-cookers', label: 'Rice Cookers & Air Fryers' },
-    { key: 'other-appliances', label: 'Other Home & Room Appliances' },
+    { key: 'fans',           label: 'Standing, Desk & Ceiling Fans' },
+    { key: 'refrigerators',  label: 'Fridges & Freezers' },
+    { key: 'kettles',        label: 'Electric Kettles' },
+    { key: 'blenders',       label: 'Blenders & Food Processors' },
+    { key: 'irons',          label: 'Pressing Irons & Steamers' },
+    { key: 'microwaves',     label: 'Microwaves & Hot Plates' },
+    { key: 'rice-cookers',   label: 'Rice Cookers & Air Fryers' },
+    { key: 'washing-machines', label: 'Washing Machines & Dryers' },
+    { key: 'water-heaters',  label: 'Water Heaters & Dispensers' },
+    { key: 'home-security',  label: 'CCTV, Locks & Home Security' },
+    { key: 'other-appliances', label: 'Other Home & Kitchen Appliances' },
   ],
+
   'furniture': [
-    { key: 'chairs-stools', label: 'Plastic Chairs, Study Chairs & Stools' },
-    { key: 'tables-desks', label: 'Study Desks & Center Tables' },
-    { key: 'beds-frames', label: 'Wooden & Metal Bed Frames' },
-    { key: 'shelves-racks', label: 'Book Shelves & Shoe Racks' },
+    { key: 'chairs-stools',   label: 'Chairs, Study Seats & Stools' },
+    { key: 'tables-desks',    label: 'Desks, Dining & Center Tables' },
+    { key: 'beds-frames',     label: 'Beds & Bed Frames' },
+    { key: 'shelves-racks',   label: 'Shelves, Bookcases & Shoe Racks' },
+    { key: 'sofas-couches',   label: 'Sofas, Couches & Recliners' },
+    { key: 'wardrobes-cabinets', label: 'Wardrobes & Cabinets' },
+    { key: 'outdoor-furniture', label: 'Outdoor & Patio Furniture' },
     { key: 'other-furniture', label: 'Other Furniture' },
   ],
+
   'beauty and grooming': [
-    { key: 'skincare', label: 'Body Lotions, Oils & Serums' },
-    { key: 'makeup', label: 'Makeup Kits & Cosmetics' },
-    { key: 'hair-care-wigs', label: 'Hair Extensions, Wigs & Oils' },
-    { key: 'perfumes-sprays', label: 'Perfumes, Colognes & Body Sprays' },
-    { key: 'nail-care', label: 'Nail Polish & Manicure Tools' },
-    { key: 'clippers-shavers', label: 'Personal Shavers & Grooming Tools' },
-    { key: 'other-beauty', label: 'Other Beauty & Grooming' },
+    { key: 'skincare',              label: 'Body Lotions, Oils & Serums' },
+    { key: 'makeup',                label: 'Makeup Kits & Cosmetics' },
+    { key: 'hair-care-wigs',        label: 'Hair Extensions, Wigs & Oils' },
+    { key: 'perfumes-sprays',       label: 'Perfumes, Colognes & Body Sprays' },
+    { key: 'nail-care',             label: 'Nail Polish & Manicure Tools' },
+    { key: 'clippers-shavers',      label: 'Shavers & Grooming Tools' },
+    { key: 'hair-styling-tools',    label: 'Dryers, Straighteners & Curlers' },
+    { key: 'mens-grooming',         label: "Men's Grooming & Beard Care" },
+    { key: 'bath-body',             label: 'Soaps, Scrubs & Bath Essentials' },
+    { key: 'other-beauty',          label: 'Other Beauty & Grooming' },
   ],
+
   'sports and fitness': [
-    { key: 'sports-equipment', label: 'Football, Basketball & Tennis Gear' },
-    { key: 'gym-gear', label: 'Dumbbells, Resistance Bands & Yoga Mats' },
-    { key: 'activewear', label: 'Jerseys, Gym Shorts & Tracksuits' },
-    { key: 'water-bottles', label: 'Sports Water Bottles & Shakers' },
-    { key: 'other-sports', label: 'Other Sports & Fitness' },
+    { key: 'sports-equipment',  label: 'Football, Basketball & Tennis Gear' },
+    { key: 'gym-gear',          label: 'Dumbbells, Bands & Yoga Mats' },
+    { key: 'activewear',        label: 'Jerseys, Shorts & Tracksuits' },
+    { key: 'water-bottles',     label: 'Sports Bottles & Shakers' },
+    { key: 'cycling-skating',   label: 'Cycling & Skating Gear' },
+    { key: 'outdoor-camping',   label: 'Outdoor & Camping Gear' },
+    { key: 'supplements',       label: 'Fitness Supplements & Nutrition' },
+    { key: 'other-sports',      label: 'Other Sports & Fitness' },
   ],
+
   'accessories': [
     { key: 'wallets-cardholders', label: 'Wallets & Cardholders' },
-    { key: 'belts', label: 'Leather & Casual Belts' },
-    { key: 'sunglasses', label: 'Sunglasses & Clear Frames' },
-    { key: 'keychains-lanyards', label: 'Keychains & Student Lanyards' },
-    { key: 'other-accessories', label: 'Other General Accessories' },
+    { key: 'belts',               label: 'Belts' },
+    { key: 'sunglasses',          label: 'Sunglasses & Frames' },
+    { key: 'keychains-lanyards',  label: 'Keychains & Lanyards' },
+    { key: 'umbrellas',           label: 'Umbrellas & Rain Gear' },
+    { key: 'ties-bowties',        label: 'Ties & Bow Ties' },
+    { key: 'other-accessories',   label: 'Other Accessories' },
   ],
+
   'food and drinks': [
-    { key: 'provisions', label: 'Provisions (Milk, Milo, Sugar, Gari)' },
-    { key: 'snacks', label: 'Chips, Cookies & Plantain Chips' },
-    { key: 'drinks', label: 'Water, Soft Drinks & Juices' },
-    { key: 'breakfast-packs', label: 'Breakfast Packs & Oatmeal' },
-    { key: 'homemade-meals', label: 'Cooked Food & Standard Meals' },
-    { key: 'baked-goods', label: 'Cakes, Bread & Pastries' },
-    { key: 'night-bites', label: 'Late Night Fast Food' },
-    { key: 'spices-raw-food', label: 'Rice, Eggs, Spices & Raw Ingredients' },
-    { key: 'other-food', label: 'Other Food & Beverage Items' },
+    { key: 'provisions',       label: 'Provisions (Milk, Milo, Sugar, Gari)' },
+    { key: 'snacks',           label: 'Chips, Cookies & Plantain Chips' },
+    { key: 'drinks',           label: 'Water, Soft Drinks & Juices' },
+    { key: 'breakfast-packs',  label: 'Breakfast Packs & Oatmeal' },
+    { key: 'homemade-meals',   label: 'Cooked Food & Meals' },
+    { key: 'baked-goods',      label: 'Cakes, Bread & Pastries' },
+    { key: 'night-bites',      label: 'Late-Night Fast Food' },
+    { key: 'spices-raw-food',  label: 'Rice, Eggs, Spices & Raw Ingredients' },
+    { key: 'fresh-produce',    label: 'Fresh Vegetables, Fruits & Meat' },
+    { key: 'frozen-foods',     label: 'Frozen Foods & Ice' },
+    { key: 'catering-bulk',    label: 'Bulk Orders & Event Catering' },
+    { key: 'other-food',       label: 'Other Food & Beverage Items' },
   ],
+
   'tickets and events': [
-    { key: 'concerts-shows', label: 'Concerts, Raves & Art Shows' },
-    { key: 'campus-dinners', label: 'Hall, Faculty & Department Dinners' },
-    { key: 'bus-trips', label: 'Excursions, Weekend Trips & Bus Tickets' },
-    { key: 'seminars-webinars', label: 'Student Seminars & Masterclasses' },
-    { key: 'other-tickets', label: 'Other Event Tickets' },
+    { key: 'concerts-shows',     label: 'Concerts, Raves & Art Shows' },
+    { key: 'seminars-webinars',  label: 'Seminars, Workshops & Masterclasses' },
+    { key: 'sports-tickets',     label: 'Sports Match Tickets' },
+    { key: 'bus-trips',          label: 'Excursions, Trips & Bus Tickets' },
+    { key: 'conferences',        label: 'Conferences & Networking Events' },
+    { key: 'other-tickets',      label: 'Other Event Tickets' },
   ],
+
   'transport and logistics': [
-    { key: 'bicycles', label: 'Bicycles' },
-    { key: 'scooters', label: 'Electric Scooters & Skateboards' },
-    { key: 'campus-delivery', label: 'On-Campus Errands & Delivery Services' },
-    { key: 'luggage-moving', label: 'Hostel Moving & Luggage Services' },
-    { key: 'other-transport', label: 'Other Transport Options' },
+    { key: 'bicycles',          label: 'Bicycles' },
+    { key: 'scooters',          label: 'Scooters & Skateboards' },
+    { key: 'car-parts',         label: 'Car Parts & Accessories' },
+    { key: 'motorbike-parts',   label: 'Motorbike & Okada Parts' },
+    { key: 'delivery-services', label: 'Delivery & Errand Services' },
+    { key: 'moving-logistics',  label: 'Moving, Luggage & Logistics' },
+    { key: 'other-transport',   label: 'Other Transport Options' },
   ],
+
+  // ─── New top-level categories the vendor schema enum already allows ───
+  'tutoring and education': [
+    { key: 'academic-tutoring',    label: 'Academic Tutoring' },
+    { key: 'language-lessons',     label: 'Language Lessons' },
+    { key: 'music-lessons',        label: 'Music & Instrument Lessons' },
+    { key: 'coding-tech-lessons',  label: 'Coding & Tech Lessons' },
+    { key: 'exam-prep',            label: 'Exam Preparation (WASSCE, SAT, IELTS)' },
+    { key: 'professional-training',label: 'Professional Skills Training' },
+    { key: 'other-education',      label: 'Other Educational Services' },
+  ],
+
+  'photography and media': [
+    { key: 'photoshoots',         label: 'Photoshoots & Portraits' },
+    { key: 'videography',         label: 'Videography & Event Coverage' },
+    { key: 'video-editing',       label: 'Video Editing & Post-Production' },
+    { key: 'drone-services',      label: 'Drone Photography & Videography' },
+    { key: 'podcast-audio',       label: 'Podcast & Audio Production' },
+    { key: 'social-media-mgmt',   label: 'Social Media Content & Management' },
+    { key: 'other-photography',   label: 'Other Photography & Media' },
+  ],
+
+  'graphic-design-printing': [
+    { key: 'logo-branding',       label: 'Logo & Brand Design' },
+    { key: 'flyers-posters',      label: 'Flyers, Posters & Banners' },
+    { key: 'business-cards',      label: 'Business Cards & Letterheads' },
+    { key: 'printing-binding',    label: 'Bulk Printing & Binding' },
+    { key: 'signage-stickers',    label: 'Signage, Stickers & Labels' },
+    { key: 'packaging-design',    label: 'Packaging & Label Design' },
+    { key: 'ui-ux-design',        label: 'UI / UX & Website Design' },
+    { key: 'other-design',        label: 'Other Design & Print Services' },
+  ],
+
+  'repair and services': [
+    { key: 'phone-repairs',       label: 'Phone Repairs' },
+    { key: 'laptop-computer-repairs', label: 'Laptop & Computer Repairs' },
+    { key: 'tv-appliance-repairs',label: 'TV & Appliance Repairs' },
+    { key: 'car-motorbike-repairs', label: 'Car & Motorbike Repairs' },
+    { key: 'furniture-repairs',   label: 'Furniture & Woodwork Repairs' },
+    { key: 'shoe-cobbler',        label: 'Shoe Repair & Cobbler Services' },
+    { key: 'tailoring-alterations', label: 'Tailoring & Clothing Alterations' },
+    { key: 'home-services',       label: 'Plumbing, Electrical & Home Repairs' },
+    { key: 'other-repairs',       label: 'Other Repair Services' },
+  ],
+
+  'events and catering': [
+    { key: 'event-planning',      label: 'Event Planning & Coordination' },
+    { key: 'catering',            label: 'Catering & Food Service' },
+    { key: 'decoration-setup',    label: 'Decoration & Setup' },
+    { key: 'dj-music',            label: 'DJ & Live Music' },
+    { key: 'mc-hosting',          label: 'MC & Event Hosting' },
+    { key: 'rentals-equipment',   label: 'Chair, Tent & Equipment Rentals' },
+    { key: 'other-events',        label: 'Other Events & Catering' },
+  ],
+
+  'accommodation and housing': [
+    { key: 'short-term-rentals',  label: 'Short-Term Rentals (Airbnb-style)' },
+    { key: 'long-term-rentals',   label: 'Long-Term Rentals' },
+    { key: 'hostel-rooms',        label: 'Hostel & Student Rooms' },
+    { key: 'roommate-listings',   label: 'Roommate & Shared Space Listings' },
+    { key: 'furnished-apartments',label: 'Furnished Apartments' },
+    { key: 'other-housing',       label: 'Other Accommodation' },
+  ],
+
   'services': [
-    { key: 'tutoring', label: 'Academic Tutoring & Coding Lessons' },
-    { key: 'graphic-design', label: 'Flyer Design, Branding & UI/UX' },
-    { key: 'photography', label: 'Photoshoots & Video Editing' },
-    { key: 'printing-photocopy', label: 'Bulk Printing, Binding & Photocopying' },
-    { key: 'laundry', label: 'Washing & Ironing Services' },
-    { key: 'barbering-hairdressing', label: 'Haircuts, Braiding & Wig Styling' },
-    { key: 'tech-repairs', label: 'Phone, Laptop & Software Repairs' },
-    { key: 'tailoring-alterations', label: 'Clothing Alterations & Tailoring' },
-    { key: 'other-services', label: 'Other Student Services' },
+    { key: 'cleaning-services',     label: 'Cleaning Services (Home & Office)' },
+    { key: 'laundry',               label: 'Laundry & Ironing' },
+    { key: 'barbering-hairdressing',label: 'Barbering, Braiding & Styling' },
+    { key: 'makeup-artistry',       label: 'Makeup Artistry & Beauty Services' },
+    { key: 'spa-massage',           label: 'Spa, Massage & Wellness' },
+    { key: 'personal-training',     label: 'Personal Training & Coaching' },
+    { key: 'tutoring',              label: 'Tutoring & Lessons' },
+    { key: 'tech-repairs',          label: 'Tech & Device Repairs' },
+    { key: 'tailoring-alterations', label: 'Tailoring & Alterations' },
+    { key: 'car-wash-detailing',    label: 'Car Wash & Detailing' },
+    { key: 'landscaping-gardening', label: 'Landscaping & Gardening' },
+    { key: 'pet-services',          label: 'Pet Grooming & Sitting' },
+    { key: 'other-services',        label: 'Other Services' },
   ],
+
   'other': [
-    { key: 'miscellaneous', label: 'Miscellaneous Items' },
+    { key: 'miscellaneous',  label: 'Miscellaneous Items' },
+    { key: 'free-items',     label: 'Free / Giveaway Items' },
+    { key: 'wanted-requests',label: 'Wanted / Requests' },
   ],
 };
 
@@ -236,6 +374,45 @@ export const CATEGORY_CONFIG = {
   accessories:   { icon: 'watch-outline', label: 'Accessories',     color: '#FFF9C4', accent: '#827717' },
   food:          { icon: 'fast-food-outline', label: 'Food',            color: '#FBE9E7', accent: '#BF360C' },
   services:      { icon: 'construct-outline', label: 'Services',        color: '#E3F2FD', accent: '#01579B' },
+
+  // ─── New top-level categories ───────────────────────────────────────
+  'tutoring and education': {
+    icon: 'school-outline',
+    label: 'Tutoring & Education',
+    color: '#E8EAF6',
+    accent: '#3949AB',
+  },
+  'photography and media': {
+    icon: 'camera-outline',
+    label: 'Photography & Media',
+    color: '#E0F7FA',
+    accent: '#00838F',
+  },
+  'graphic-design-printing': {
+    icon: 'color-palette-outline',
+    label: 'Design & Printing',
+    color: '#F3E5F5',
+    accent: '#6A1B9A',
+  },
+  'repair and services': {
+    icon: 'build-outline',
+    label: 'Repairs',
+    color: '#F1F8E9',
+    accent: '#558B2F',
+  },
+  'events and catering': {
+    icon: 'restaurant-outline',
+    label: 'Events & Catering',
+    color: '#FFF8E1',
+    accent: '#EF6C00',
+  },
+  'accommodation and housing': {
+    icon: 'home-outline',
+    label: 'Housing',
+    color: '#E0F2F1',
+    accent: '#00695C',
+  },
+
   other:         { icon: 'grid-outline', label: 'Other',           color: '#F5F5F5', accent: '#616161' },
 };
 
@@ -323,6 +500,7 @@ export const CATEGORIES = [
   { id: 'gaming',                 label: 'Gaming',                icon: 'game-controller-outline', color: '#FCE4EC', accent: '#880E4F' },
   { id: 'fashion',                label: 'Fashion',               icon: 'shirt-outline',          color: '#FFF3E0', accent: '#E65100' },
   { id: 'books-course-materials', label: 'Books & Notes',         icon: 'book-outline',           color: '#FFF9C4', accent: '#F57F17' },
+  { id: 'tutoring and education',     label: 'Tutoring & Education',  icon: 'school-outline',         color: '#E8EAF6', accent: '#3949AB' },
   { id: 'hostel-items',           label: 'Hostel Items',          icon: 'bed-outline',            color: '#E8F5E9', accent: '#2E7D32' },
   { id: 'appliances',             label: 'Appliances',            icon: 'flash-outline',          color: '#EFEBE9', accent: '#4E342E' },
   { id: 'furniture',              label: 'Furniture',             icon: 'cube-outline',           color: '#F1F8E9', accent: '#33691E' },
@@ -331,8 +509,13 @@ export const CATEGORIES = [
   { id: 'accessories',            label: 'Accessories',           icon: 'watch-outline',          color: '#FFF9C4', accent: '#827717' },
   { id: 'food and drinks',        label: 'Food & Drinks',         icon: 'fast-food-outline',      color: '#FBE9E7', accent: '#BF360C' },
   { id: 'groceries',              label: 'Groceries',             icon: 'basket-outline',         color: '#E8F8F5', accent: '#117A65' },
+  { id: 'events and catering',        label: 'Events & Catering',     icon: 'restaurant-outline',     color: '#FFF8E1', accent: '#EF6C00' },
   { id: 'tickets and events',     label: 'Tickets & Events',      icon: 'ticket-outline',         color: '#FFF3E0', accent: '#D35400' },
+  { id: 'photography and media',      label: 'Photography & Media',   icon: 'camera-outline',         color: '#E0F7FA', accent: '#00838F' },
+  { id: 'graphic-design-printing',label: 'Design & Printing',     icon: 'color-palette-outline',  color: '#F3E5F5', accent: '#6A1B9A' },
+  { id: 'repair and services',        label: 'Repairs',               icon: 'build-outline',          color: '#F1F8E9', accent: '#558B2F' },
   { id: 'transport and logistics',label: 'Transport & Delivery',  icon: 'car-outline',            color: '#E0F7FA', accent: '#00838F' },
+  { id: 'accommodation and housing',  label: 'Housing',               icon: 'home-outline',           color: '#E0F2F1', accent: '#00695C' },
   { id: 'services',               label: 'Services',              icon: 'construct-outline',      color: '#E3F2FD', accent: '#01579B' },
   { id: 'other',                  label: 'Other',                 icon: 'grid-outline',           color: '#F5F5F5', accent: '#616161' },
 ];
@@ -403,6 +586,18 @@ export const SUBCATEGORIES = {
     { id: 'novels-literature', label: 'Novels & Fiction Literature' },
     { id: 'other-books', label: 'Other Educational Materials' },
   ],
+
+  // ─── New top-level: tutoring-education ──────────────────────────────
+  'tutoring and education': [
+    { id: 'academic-tutoring',      label: 'Academic Tutoring' },
+    { id: 'language-lessons',       label: 'Language Lessons' },
+    { id: 'music-lessons',          label: 'Music & Instrument Lessons' },
+    { id: 'coding-tech-lessons',    label: 'Coding & Tech Lessons' },
+    { id: 'exam-prep',              label: 'Exam Preparation (WASSCE, SAT, IELTS)' },
+    { id: 'professional-training',  label: 'Professional Skills Training' },
+    { id: 'other-education',        label: 'Other Educational Services' },
+  ],
+
   'hostel-items': [
     { id: 'bedding-mattresses', label: 'Bedsheets, Pillows & Mattresses' },
     { id: 'gas-cylinders-stoves', label: 'Gas Cylinders, Stoves & Regulators' },
@@ -474,6 +669,18 @@ export const SUBCATEGORIES = {
     { id: 'meat-fish-eggs', label: 'Eggs, Fresh Meat & Fish' },
     { id: 'other-groceries', label: 'Other Market Groceries' },
   ],
+
+  // ─── New top-level: events-catering ─────────────────────────────────
+  'events and catering': [
+    { id: 'event-planning',    label: 'Event Planning & Coordination' },
+    { id: 'catering',          label: 'Catering & Food Service' },
+    { id: 'decoration-setup',  label: 'Decoration & Setup' },
+    { id: 'dj-music',          label: 'DJ & Live Music' },
+    { id: 'mc-hosting',        label: 'MC & Event Hosting' },
+    { id: 'rentals-equipment', label: 'Chair, Tent & Equipment Rentals' },
+    { id: 'other-events',      label: 'Other Events & Catering' },
+  ],
+
   'tickets and events': [
     { id: 'concerts-shows', label: 'Concerts, Raves & Art Shows' },
     { id: 'campus-dinners', label: 'Hall, Faculty & Department Dinners' },
@@ -481,6 +688,43 @@ export const SUBCATEGORIES = {
     { id: 'seminars-webinars', label: 'Student Seminars & Masterclasses' },
     { id: 'other-tickets', label: 'Other Event Tickets' },
   ],
+
+  // ─── New top-level: photography-media ───────────────────────────────
+  'photography and media': [
+    { id: 'photoshoots',       label: 'Photoshoots & Portraits' },
+    { id: 'videography',       label: 'Videography & Event Coverage' },
+    { id: 'video-editing',     label: 'Video Editing & Post-Production' },
+    { id: 'drone-services',    label: 'Drone Photography & Videography' },
+    { id: 'podcast-audio',     label: 'Podcast & Audio Production' },
+    { id: 'social-media-mgmt', label: 'Social Media Content & Management' },
+    { id: 'other-photography', label: 'Other Photography & Media' },
+  ],
+
+  // ─── New top-level: graphic-design-printing ─────────────────────────
+  'graphic-design-printing': [
+    { id: 'logo-branding',     label: 'Logo & Brand Design' },
+    { id: 'flyers-posters',    label: 'Flyers, Posters & Banners' },
+    { id: 'business-cards',    label: 'Business Cards & Letterheads' },
+    { id: 'printing-binding',  label: 'Bulk Printing & Binding' },
+    { id: 'signage-stickers',  label: 'Signage, Stickers & Labels' },
+    { id: 'packaging-design',  label: 'Packaging & Label Design' },
+    { id: 'ui-ux-design',      label: 'UI / UX & Website Design' },
+    { id: 'other-design',      label: 'Other Design & Print Services' },
+  ],
+
+  // ─── New top-level: repair-services ─────────────────────────────────
+  'repair and services': [
+    { id: 'phone-repairs',           label: 'Phone Repairs' },
+    { id: 'laptop-computer-repairs', label: 'Laptop & Computer Repairs' },
+    { id: 'tv-appliance-repairs',    label: 'TV & Appliance Repairs' },
+    { id: 'car-motorbike-repairs',   label: 'Car & Motorbike Repairs' },
+    { id: 'furniture-repairs',       label: 'Furniture & Woodwork Repairs' },
+    { id: 'shoe-cobbler',            label: 'Shoe Repair & Cobbler Services' },
+    { id: 'tailoring-alterations',   label: 'Tailoring & Clothing Alterations' },
+    { id: 'home-services',           label: 'Plumbing, Electrical & Home Repairs' },
+    { id: 'other-repairs',           label: 'Other Repair Services' },
+  ],
+
   'transport and logistics': [
     { id: 'bicycles', label: 'Bicycles' },
     { id: 'scooters', label: 'Electric Scooters & Skateboards' },
@@ -488,6 +732,17 @@ export const SUBCATEGORIES = {
     { id: 'luggage-moving', label: 'Hostel Moving & Luggage Services' },
     { id: 'other-transport', label: 'Other Transport Options' },
   ],
+
+  // ─── New top-level: accommodation-housing ───────────────────────────
+  'accommodation and housing': [
+    { id: 'short-term-rentals',   label: 'Short-Term Rentals (Airbnb-style)' },
+    { id: 'long-term-rentals',    label: 'Long-Term Rentals' },
+    { id: 'hostel-rooms',         label: 'Hostel & Student Rooms' },
+    { id: 'roommate-listings',    label: 'Roommate & Shared Space Listings' },
+    { id: 'furnished-apartments', label: 'Furnished Apartments' },
+    { id: 'other-housing',        label: 'Other Accommodation' },
+  ],
+
   'services': [
     { id: 'tutoring', label: 'Academic Tutoring & Coding Lessons' },
     { id: 'graphic-design', label: 'Flyer Design, Branding & UI/UX' },
@@ -512,4 +767,121 @@ export const CONDITION_CONFIG = {
   'fair':         { label: 'Fair',         textColor: '#827717', bg: '#F9FBE7' },
   'slightly-used':{ label: 'Slight Used',  textColor: '#4E342E', bg: '#EFEBE9' },
   'for-parts':    { label: 'For Parts',    textColor: '#B71C1C', bg: '#FFEBEE' },
+};
+
+
+export const GHANA_LOCATIONS = {
+  'Accra': {
+    label: 'Accra',
+    region: 'Greater Accra',
+    suburbs: [
+      'Madina', 'Adenta', 'East Legon', 'West Legon','Legon','Haatso','Kaneshie',
+      'Dome', 'Achimota', 'Dansoman', 'Osu','Ablekuma',
+      'Labone', 'Cantonments', 'Airport Residential', 'Spintex','Pokuase',
+      'Teshie', 'Nungua', 'Tema Community 1', 'Tema Community 25','Amasaman',
+      'Ashaiman', 'Lapaz', 'Tesano', 'Awoshie', 'Weija',
+      'Mallam', 'Kasoa', 'Other (Accra)',
+    ],
+  },
+  'Kumasi': {
+    label: 'Kumasi',
+    region: 'Ashanti',
+    suburbs: [
+      'Adum', 'Asokwa', 'Bantama', 'Suame', 'Tafo',
+      'Ayeduase', 'Bomso', 'Kotei', 'Ahodwo', 'Nhyiaeso',
+      'Buokrom', 'Manhyia', 'Atonsu', 'Santasi', 'Other (Kumasi)',
+    ],
+  },
+  'Tamale': {
+    label: 'Tamale',
+    region: 'Northern',
+    suburbs: [
+      'Tamale Central', 'Sagnarigu', 'Kalpohin', 'Nyohini',
+      'Vittin', 'Lamashegu', 'Other (Tamale)',
+    ],
+  },
+  'Takoradi': {
+    label: 'Takoradi',
+    region: 'Western',
+    suburbs: [
+      'Takoradi Central', 'Effia-Nkwanta', 'Kwesimintsim', 'Airport Ridge',
+      'Anaji', 'Beach Road', 'Other (Takoradi)',
+    ],
+  },
+  'Cape Coast': {
+    label: 'Cape Coast',
+    region: 'Central',
+    suburbs: [
+      'Cape Coast Central', 'Abura', 'Pedu', 'Amamoma',
+      'Kwaprow', 'Apewosika', 'Other (Cape Coast)',
+    ],
+  },
+  'Tema': {
+    label: 'Tema',
+    region: 'Greater Accra',
+    suburbs: [
+      'Tema Community 1', 'Tema Community 2', 'Tema Community 4',
+      'Tema Community 7', 'Tema Community 9', 'Tema Community 25',
+      'Ashaiman', 'Other (Tema)',
+    ],
+  },
+  'Koforidua': {
+    label: 'Koforidua',
+    region: 'Eastern',
+    suburbs: [
+      'Koforidua Central', 'Effiduase', 'Adweso', 'Betom',
+      'Nsukwao', 'Other (Koforidua)',
+    ],
+  },
+  'Sunyani': {
+    label: 'Sunyani',
+    region: 'Bono',
+    suburbs: [
+      'Sunyani Central', 'Fiapre', 'Area 4', 'Penkwase',
+      'Other (Sunyani)',
+    ],
+  },
+  'Ho': {
+    label: 'Ho',
+    region: 'Volta',
+    suburbs: [
+      'Ho Central', 'Bankoe', 'Ahoe', 'Dome',
+      'Other (Ho)',
+    ],
+  },
+  'Wa': {
+    label: 'Wa',
+    region: 'Upper West',
+    suburbs: [
+      'Wa Central', 'Kpaguri', 'Bamahu',
+      'Other (Wa)',
+    ],
+  },
+  'Bolgatanga': {
+    label: 'Bolgatanga',
+    region: 'Upper East',
+    suburbs: [
+      'Bolgatanga Central', 'Zuarungu', 'Other (Bolgatanga)',
+    ],
+  },
+  'Other': {
+    label: 'Other Location',
+    region: '',
+    suburbs: [],
+  },
+};
+
+
+export const CITY_OPTIONS = Object.entries(GHANA_LOCATIONS)
+  .map(([id, { label, region }]) => ({ id, label, region }));
+
+//  Suburbs for a given city id — always returns an array.
+export const getSuburbs = (cityId) => GHANA_LOCATIONS[cityId]?.suburbs || [];
+
+//  Human-readable location string.
+export const formatLocation = ({ city, area, suburb } = {}) => {
+  const sub = suburb || area;
+  if (sub && city) return `${sub}, ${GHANA_LOCATIONS[city]?.label || city}`;
+  if (city) return GHANA_LOCATIONS[city]?.label || city;
+  return '';
 };

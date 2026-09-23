@@ -24,11 +24,13 @@ import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { createProduct } from '../apis/vendorApi';
 import { aiProductDetailsGenerator } from '../apis/aiApi';
 import Toast from 'react-native-toast-message';
-import {CONDITION_OPTIONS,SUBCATEGORIES_MAP,VALID_CATEGORIES,CAMPUS_OPTIONS,AVAILABLE_TAGS } from '../data/General'
+import {CONDITION_OPTIONS,SUBCATEGORIES_MAP,VALID_CATEGORIES,CAMPUS_OPTIONS,AVAILABLE_TAGS, CITY_OPTIONS, getSuburbs, GHANA_LOCATIONS, } from '../data/General'
 import AIProductGeneratorFAB from '../components/AIProductGeneratorFAB';
 const { width, height } = Dimensions.get('window');
 import CommissionNotice from '../components/Referralprogramnotice'
+import {formatDisplayName,DropdownSelector, ComboLocationPicker} from '../components/vendor/AddProduct'
 import { useVendor } from '../context/VendorContext';
+import {styles} from '../styles/addproduct'
 
 
 // ─── Teal + Coral Palette (matches UpdateProductScreen) ────────────────────
@@ -55,8 +57,7 @@ const C = {
   t3:           '#94A3B8',
 };
 
-const formatDisplayName = (str) =>
-  str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ').replace(/-/g, ' ');
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AI AUTOFILL MATCHING HELPERS
@@ -124,155 +125,6 @@ const AiDraftBadge = () => (
   </View>
 );
 
-// ─── DropdownSelector ───────────────────────────────────────────────────────
-const DropdownSelector = ({
-  label, placeholder, items, selectedValue, onSelect, required, renderItem, style, disabled, error, badge,
-}) => {
-  const [visible, setVisible] = useState(false);
-  const slideAnim    = useRef(new Animated.Value(0)).current;
-  const backdropAnim = useRef(new Animated.Value(0)).current;
-
-  const openSheet = () => {
-    if (disabled) return;
-    setVisible(true);
-    Animated.parallel([
-      Animated.spring(slideAnim,    { toValue: 1, tension: 68, friction: 13, useNativeDriver: true }),
-      Animated.timing(backdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
-    ]).start();
-  };
-
-  const closeSheet = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim,    { toValue: 0, duration: 240, useNativeDriver: true }),
-      Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => setVisible(false));
-  };
-
-  const handleSelect = (key) => { onSelect(key); closeSheet(); };
-
-  const translateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [height, 0],
-  });
-
-  const selectedItem = items.find(
-    (item) => (typeof item === 'string' ? item : item.key) === selectedValue,
-  );
-
-  const triggerLabel = selectedItem
-    ? typeof selectedItem === 'string'
-      ? selectedItem
-      : (selectedItem.label || formatDisplayName(selectedItem.key))
-    : placeholder;
-
-  return (
-    <View style={style}>
-      {label && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <Text style={[styles.dropdownLabel, { marginBottom: 0 }]}>
-            {label}
-            {required && <Text style={styles.required}> *</Text>}
-          </Text>
-          {badge}
-        </View>
-      )}
-      <TouchableOpacity
-        style={[
-          styles.dropdownButton,
-          visible && styles.dropdownButtonFocused,
-          disabled && styles.dropdownButtonDisabled,
-          error && styles.dropdownButtonError,
-        ]}
-        activeOpacity={0.8}
-        onPress={openSheet}
-        disabled={disabled}
-      >
-        <Text style={[styles.dropdownButtonText, !selectedValue && styles.dropdownPlaceholder, disabled && styles.dropdownButtonTextDisabled]} numberOfLines={1}>
-          {triggerLabel}
-        </Text>
-        <Ionicons name={visible ? 'chevron-up' : 'chevron-down'} size={18} color={disabled ? C.t3 : visible ? C.brand : error ? C.danger : C.t3} />
-      </TouchableOpacity>
-      {!!error && <FieldError>{error}</FieldError>}
-
-      <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={closeSheet}>
-        <Animated.View style={[bsStyles.backdrop, { opacity: backdropAnim }]}>
-          <Pressable style={{ flex: 1 }} onPress={closeSheet} />
-        </Animated.View>
-        <Animated.View style={[bsStyles.sheet, { transform: [{ translateY }] }]}>
-          <View style={bsStyles.handle} />
-          <View style={bsStyles.sheetHeader}>
-            <Text style={bsStyles.sheetTitle}>{label || placeholder}</Text>
-            <TouchableOpacity style={bsStyles.closeBtn} onPress={closeSheet}>
-              <Ionicons name="close" size={18} color={C.t2} />
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={items}
-            keyExtractor={(item) => (typeof item === 'string' ? item : item.key)}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 32 }}
-            renderItem={({ item }) => {
-              const key = typeof item === 'string' ? item : item.key;
-              const isSelected = selectedValue === key;
-              return (
-                <TouchableOpacity
-                  style={[bsStyles.item, isSelected && bsStyles.itemActive]}
-                  onPress={() => handleSelect(key)}
-                  activeOpacity={0.75}
-                >
-                  {renderItem ? (
-                    renderItem({ item, isSelected })
-                  ) : (
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        {item.icon && (
-                          <Ionicons 
-                            name={item.icon} 
-                            size={22} 
-                            color={isSelected ? C.brand : C.t2}
-                            style={{ width: 32, textAlign: 'center' }}
-                          />
-                        )}
-                        <Text style={[bsStyles.itemText, isSelected && bsStyles.itemTextActive]}>
-                          {item.label || formatDisplayName(item.key)}
-                        </Text>
-                      </View>
-                      {item.hint && (
-                        <Text style={bsStyles.itemHint}>{item.hint}</Text>
-                      )}
-                    </View>
-                  )}
-                  {isSelected && <Ionicons name="checkmark-circle" size={20} color={C.brand} style={{ marginLeft: 'auto' }} />}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </Animated.View>
-      </Modal>
-    </View>
-  );
-};
-
-const bsStyles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.48)' },
-  sheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: C.white, borderTopLeftRadius: 26, borderTopRightRadius: 26,
-    maxHeight: height * 0.62, paddingHorizontal: 16, paddingTop: 10,
-    shadowColor: C.black, shadowOffset: { width: 0, height: -5 },
-    shadowOpacity: 0.1, shadowRadius: 18, elevation: 16,
-  },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E0E0E0', alignSelf: 'center', marginBottom: 14 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', marginBottom: 4 },
-  sheetTitle: { fontSize: 17, fontWeight: '800', color: C.t1 },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 8, borderRadius: 12, borderBottomWidth: 1, borderBottomColor: '#F8F8F8' },
-  itemActive: { backgroundColor: C.brandBg, borderBottomColor: 'transparent' },
-  itemEmoji: { fontSize: 22, width: 32, textAlign: 'center' },
-  itemText: { fontSize: 15, color: C.t2, fontWeight: '500', flex: 1 },
-  itemTextActive: { color: C.brand, fontWeight: '700' },
-  itemHint: { fontSize: 11.5, color: C.t3, marginTop: 2, marginLeft: 44 },
-});
 
 const FloatingInput = ({ label, icon, value, onChangeText, placeholder, keyboardType, multiline, required, error, maxLength, badge }) => {
   const [focused, setFocused] = useState(false);
@@ -372,6 +224,14 @@ const AddProductScreen = ({ navigation }) => {
   const scrollRef = useRef(null);
 
   const subcategoryOptions = useMemo(() => SUBCATEGORIES_MAP[category] || [], [category]);
+  const cityOptions = useMemo(
+  () => CITY_OPTIONS.map((c) => ({ key: c.id, label: c.label })),
+  []
+);
+const suburbOptions = useMemo(
+  () => getSuburbs(city).map((s) => ({ key: s, label: s })),
+  [city]
+);
 
   const handleCategoryChange = (cat) => {
     setCategory(cat);
@@ -529,21 +389,8 @@ const AddProductScreen = ({ navigation }) => {
     return next;
   };
 
-  //  Location is now fully optional. Campus and city/area are all skippable
-  //  so off-campus sellers (market traders, online resellers, etc.) can list
-  //  without pretending to be on a campus. We only sanity-check the free
-  //  text fields if the user actually typed something.
-  const validateLocation = () => {
-    const next = {};
-    if (city.trim() && /^\d+$/.test(city.trim())) {
-      next.city = 'Enter a city name, not just numbers.';
-    }
-    if (area.trim() && /^\d+$/.test(area.trim())) {
-      next.area = 'Enter an area or address, not just numbers.';
-    }
-    return next;
-  };
 
+  const validateLocation = () => ({});
   const validateAll = () => ({
     ...validatePhotos(),
     ...validateDetails(),
@@ -557,10 +404,7 @@ const AddProductScreen = ({ navigation }) => {
   const photosComplete   = images.length > 0;
   const detailsComplete  = !!name.trim() && !!category && !!condition;
   const pricingComplete  = !!price && !isNaN(parseFloat(price)) && parseFloat(price) >= 0;
-  //  Location counts as complete once the seller has given us ANY hint of
-  //  where they are — a campus, a city, or an area. All three are optional,
-  //  so a seller who skips this whole section still lands at 75% and can
-  //  still publish — the badge is a nudge, not a gate.
+  
   const locationComplete = !!campus || !!city.trim() || !!area.trim();
 
   const completedCount = [photosComplete, detailsComplete, pricingComplete, locationComplete].filter(Boolean).length;
@@ -831,7 +675,7 @@ const AddProductScreen = ({ navigation }) => {
           <SectionCard
             title="Campus & Location"
             accent={C.brandL}
-            subtitle="All optional — add whatever helps buyers find you or plan a meet-up."
+            subtitle="All optional — pick from the list or type your own."
           >
             <DropdownSelector
               label="Campus (optional)"
@@ -839,29 +683,42 @@ const AddProductScreen = ({ navigation }) => {
               items={CAMPUS_OPTIONS}
               selectedValue={campus}
               onSelect={(v) => { setCampus(v); setErrors(prev => ({ ...prev, campus: null })); }}
+              style={{ marginBottom: 14 }}
             />
-            <FloatingInput
-              label="City" icon="location-outline"
-              placeholder="e.g. Accra, Kumasi"
-              value={city}
-              onChangeText={(v) => {
+
+            <ComboLocationPicker
+              label="City (optional)"
+              placeholder="Select a city"
+              items={cityOptions}
+              selectedValue={city}
+              onSelect={(v) => {
                 setCity(v);
+                setArea('');     // reset the suburb when the city changes
                 if (errors.city) setErrors(p => ({ ...p, city: null }));
               }}
+              customPlaceholder="Type a city that isn't listed"
+              icon="location-outline"
               error={errors.city}
+              style={{ marginBottom: 14 }}
             />
-            <FloatingInput
-              label="Area / Address" icon="home-outline"
-              placeholder="e.g. Rawlings circle, Madina"
-              value={area}
-              onChangeText={(v) => {
+
+            <ComboLocationPicker
+              label="Area / Suburb (optional)"
+              placeholder={city ? 'Select an area' : 'Pick a city first'}
+              items={suburbOptions}
+              selectedValue={area}
+              onSelect={(v) => {
                 setArea(v);
                 if (errors.area) setErrors(p => ({ ...p, area: null }));
               }}
+              customPlaceholder="Type your area or street"
+              icon="home-outline"
               error={errors.area}
+              style={{ marginBottom: 4 }}
             />
+
             <HelperText icon="shield-checkmark-outline">
-              Where the product is selling from. Skip it if you'd rather not say.
+              Where the product is shipping from. Skip it if you'd rather not say.
             </HelperText>
           </SectionCard>
 
@@ -943,146 +800,5 @@ const AddProductScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-
-  // ── Header ──────────────────────────────────────────────────────────────────
-  header: {
-    backgroundColor: C.white,
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 14, gap: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
-  },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
-  headerCenter: { flex: 1 },
-  headerTitle: { fontSize: 19, fontWeight: '800', color: C.t1, letterSpacing: -0.3 },
-  headerSub: { fontSize: 12, color: '#888', marginTop: 1 },
-  headerCompletionBadge: { backgroundColor: C.brandBg, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  headerCompletionBadgeDone: { backgroundColor: C.brand },
-  headerCompletionText: { fontSize: 13, fontWeight: '800', color: C.brand },
-  headerCompletionTextDone: { color: '#fff' },
-
-  // ── Scroll & cards ────────────────────────────────────────────────────────
-  scrollContent: { paddingHorizontal: 14, paddingTop: 16, paddingBottom: 20 },
-  sectionHint: { fontSize: 12, color: '#999', marginBottom: 12, fontWeight: '500' },
-  card: { backgroundColor: C.white, borderRadius: 20, marginBottom: 14, flexDirection: 'row', overflow: 'hidden', shadowColor: C.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
-  cardAccent: { width: 4 },
-  cardInner: { flex: 1, padding: 18 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: C.t1 },
-
-  // ── Helper / error text ──────────────────────────────────────────────────
-  helperRow: { flexDirection: 'row', gap: 6, marginTop: 6, marginBottom: 4, paddingRight: 6 },
-  helperText: { flex: 1, fontSize: 11.5, color: C.t3, lineHeight: 16 },
-  fieldErrorRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 2 },
-  fieldErrorText: { fontSize: 12, color: C.danger, fontWeight: '600', flex: 1 },
-
-  // ── AI draft badge ────────────────────────────────────────────────────────
-  aiDraftBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#F5F0FC', borderRadius: 20,
-    paddingHorizontal: 7, paddingVertical: 2,
-  },
-  aiDraftBadgeText: { fontSize: 9.5, fontWeight: '700', color: '#8E5FD9' },
-
-  floatWrap: { borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, backgroundColor: '#FAFAFA' },
-  floatWrapFocused: { borderColor: C.brand, backgroundColor: C.white },
-  floatWrapError: { borderColor: C.danger, backgroundColor: C.dangerBg },
-  floatWrapMulti: { paddingBottom: 16 },
-  floatHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
-  floatLabel: { fontSize: 11, fontWeight: '700', color: C.t3, letterSpacing: 0.3, textTransform: 'uppercase', flex: 1 },
-  floatLabelFocused: { color: C.brand },
-  floatLabelError: { color: C.danger },
-  charCount: { fontSize: 10, color: '#C5C5C5', fontWeight: '600' },
-  floatInput: { fontSize: 15.5, color: C.t1, padding: 0 },
-  floatInputMulti: { height: 90, textAlignVertical: 'top' },
-
-  imageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  imageThumbWrap: { width: (width - 68) / 3, height: (width - 68) / 3, borderRadius: 12, overflow: 'hidden', position: 'relative' },
-  imageThumb: { width: '100%', height: '100%' },
-  imageRemoveBtn: { position: 'absolute', top: 4, right: 4 },
-  coverBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  coverBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  imageAddBtn: { width: (width - 68) / 3, height: (width - 68) / 3, borderRadius: 12, borderWidth: 1.5, borderColor: C.brandBorder, borderStyle: 'dashed', backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center', gap: 4 },
-  imageAddBtnError: { borderColor: C.danger, backgroundColor: C.dangerBg },
-  imageAddText: { fontSize: 11, color: C.brand, fontWeight: '600' },
-
-  dropdownLabel: { fontSize: 12, fontWeight: '700', color: '#616161', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
-  dropdownButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, backgroundColor: '#FAFAFA' },
-  dropdownButtonFocused: { borderColor: C.brand, backgroundColor: C.white },
-  dropdownButtonDisabled: { backgroundColor: '#F5F5F5', borderColor: '#E8E8E8' },
-  dropdownButtonError: { borderColor: C.danger, backgroundColor: C.dangerBg },
-  dropdownButtonText: { fontSize: 15.5, color: C.t1, flex: 1 },
-  dropdownButtonTextDisabled: { color: C.t3 },
-  dropdownPlaceholder: { color: '#C5C5C5' },
-
-  quickLabel: { fontSize: 12, fontWeight: '700', color: '#616161', letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 8, marginTop: 4 },
-  required: { color: C.danger },
-  optional: { color: C.t3, fontWeight: '500', textTransform: 'none', fontSize: 12 },
-
-  priceInputFull: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAFAFA', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, overflow: 'hidden', marginBottom: 4 },
-  priceInputFullError: { borderColor: C.danger, backgroundColor: C.dangerBg },
-  currencyTag: { backgroundColor: C.brandBg, paddingHorizontal: 14, height: 52, justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E0E0E0' },
-  currencyText: { fontSize: 15, fontWeight: '800', color: C.brand },
-  priceInputField: { flex: 1, paddingHorizontal: 14, fontSize: 17, fontWeight: '700', color: C.t1 },
-  negotiableBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: '#E0E0E0', marginTop: 14, marginBottom: 0 },
-  negotiableBtnActive: { backgroundColor: C.brand, borderColor: C.brand },
-  negotiableText: { fontSize: 13, fontWeight: '600', color: '#666' },
-  negotiableTextActive: { color: '#fff' },
-  simpleInput: { backgroundColor: '#FAFAFA', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, color: C.t1, fontWeight: '600' },
-
-  discountToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12,
-    backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: '#E0E0E0',
-    marginBottom: 4,
-  },
-  discountToggleActive: { backgroundColor: C.accent, borderColor: C.accent },
-  discountToggleText: { fontSize: 13, fontWeight: '600', color: C.brand, flex: 1 },
-  discountToggleTextActive: { color: '#fff' },
-  discountFields: { paddingTop: 8, paddingHorizontal: 4 },
-  dateRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  tagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  tagChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 22, backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: 'transparent' },
-  tagChipActive: { backgroundColor: C.brandBg, borderColor: C.brandBorder },
-  tagEmoji: { fontSize: 13 },
-  tagLabel: { fontSize: 12.5, color: '#555', fontWeight: '500' },
-  tagLabelActive: { color: C.brand, fontWeight: '700' },
-  tagCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-  tagCountText: { fontSize: 12, color: C.brand, fontWeight: '600', flex: 1 },
-  tagClearText: { fontSize: 12, color: C.danger, fontWeight: '600' },
-
-  // ── Fixed Bottom Bar ─────────────────────────────────────────────────────
-  bottomBar: {
-    backgroundColor: C.white,
-    bottom:32,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    shadowColor: C.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  publishBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: C.brandD,
-    paddingVertical: 18,
-    borderRadius: 18,
-    shadowColor: C.brandD,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  publishBtnDisabled: { backgroundColor: C.brandBorder, shadowOpacity: 0 },
-  publishBtnText: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
-});
 
 export default AddProductScreen;

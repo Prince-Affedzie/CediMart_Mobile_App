@@ -10,7 +10,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { getProductById, updateProduct, deleteProduct } from '../apis/vendorApi';
 import Toast from 'react-native-toast-message';
-import { CONDITION_OPTIONS, SUBCATEGORIES_MAP, VALID_CATEGORIES, CAMPUS_OPTIONS, AVAILABLE_TAGS } from '../data/General';
+import {
+  CONDITION_OPTIONS, SUBCATEGORIES_MAP, VALID_CATEGORIES,
+  CAMPUS_OPTIONS, AVAILABLE_TAGS,
+  CITY_OPTIONS, getSuburbs,
+} from '../data/General';
+import { formatDisplayName, DropdownSelector, ComboLocationPicker } from '../components/vendor/AddProduct';
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,18 +43,12 @@ const C = {
   t3:           '#94A3B8',
 };
 
-const formatDisplayName = (str) =>
-  str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ').replace(/-/g, ' ');
-
-//  Safe, non-mutating compare for tag arrays used in `hasChanges` and the
-//  `changed` badge props. `.sort()` on state arrays mutates them in place,
-//  so we always clone first.
+//  Safe, non-mutating compare for tag arrays.
 const tagsEqual = (a = [], b = []) =>
   JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
 
 //  Same idea for specifications: order shouldn't matter, only the
-//  key/value pairs. Sort by key so reordering the rows in the UI doesn't
-//  falsely flag the section as "edited".
+//  key/value pairs.
 const specsEqual = (a = [], b = []) => {
   const norm = (arr) =>
     [...arr]
@@ -59,110 +58,7 @@ const specsEqual = (a = [], b = []) => {
   return JSON.stringify(norm(a)) === JSON.stringify(norm(b));
 };
 
-// ─── DropdownSelector ───────────────────────────────────────────────────────
-const DropdownSelector = ({
-  label, placeholder, items, selectedValue, onSelect, required, renderItem, style, disabled,
-}) => {
-  const [visible, setVisible] = useState(false);
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const backdropAnim = useRef(new Animated.Value(0)).current;
-
-  const openSheet = () => {
-    if (disabled) return;
-    setVisible(true);
-    Animated.parallel([
-      Animated.spring(slideAnim, { toValue: 1, tension: 68, friction: 13, useNativeDriver: true }),
-      Animated.timing(backdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
-    ]).start();
-  };
-
-  const closeSheet = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, { toValue: 0, duration: 240, useNativeDriver: true }),
-      Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => setVisible(false));
-  };
-
-  const handleSelect = (key) => { onSelect(key); closeSheet(); };
-
-  const translateY = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [height, 0] });
-
-  const selectedItem = items.find((item) => (typeof item === 'string' ? item : item.key) === selectedValue);
-
-  const triggerLabel = selectedItem
-    ? typeof selectedItem === 'string'
-      ? selectedItem
-      : (selectedItem.label || formatDisplayName(selectedItem.key))
-    : placeholder;
-
-  return (
-    <View style={style}>
-      {label && <Text style={styles.dropdownLabel}>{label}{required && <Text style={styles.required}> *</Text>}</Text>}
-      <TouchableOpacity
-        style={[styles.dropdownButton, visible && styles.dropdownButtonFocused, disabled && styles.dropdownButtonDisabled]}
-        activeOpacity={0.8} onPress={openSheet} disabled={disabled}
-      >
-        <Text style={[styles.dropdownButtonText, !selectedValue && styles.dropdownPlaceholder, disabled && styles.dropdownButtonTextDisabled]} numberOfLines={1}>{triggerLabel}</Text>
-        <Ionicons name={visible ? 'chevron-up' : 'chevron-down'} size={18} color={disabled ? '#D0D0D0' : visible ? C.brand : C.t3} />
-      </TouchableOpacity>
-      <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={closeSheet}>
-        <Animated.View style={[bsStyles.backdrop, { opacity: backdropAnim }]}><Pressable style={{ flex: 1 }} onPress={closeSheet} /></Animated.View>
-        <Animated.View style={[bsStyles.sheet, { transform: [{ translateY }] }]}>
-          <View style={bsStyles.handle} />
-          <View style={bsStyles.sheetHeader}>
-            <Text style={bsStyles.sheetTitle}>{label || placeholder}</Text>
-            <TouchableOpacity style={bsStyles.closeBtn} onPress={closeSheet}><Ionicons name="close" size={18} color="#616161" /></TouchableOpacity>
-          </View>
-          <FlatList
-            data={items}
-            keyExtractor={(item) => (typeof item === 'string' ? item : item.key)}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 32 }}
-            renderItem={({ item }) => {
-              const key = typeof item === 'string' ? item : item.key;
-              const isSelected = selectedValue === key;
-              return (
-                <TouchableOpacity style={[bsStyles.item, isSelected && bsStyles.itemActive]} onPress={() => handleSelect(key)} activeOpacity={0.75}>
-                  {renderItem ? renderItem({ item, isSelected }) : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                      {item.icon && (
-                        <Ionicons 
-                          name={item.icon} 
-                          size={22} 
-                          color={isSelected ? C.brand : C.t2}
-                          style={{ width: 32, textAlign: 'center' }}
-                        />
-                      )}
-                      <Text style={[bsStyles.itemText, isSelected && bsStyles.itemTextActive]}>
-                        {item.label || formatDisplayName(item.key)}
-                      </Text>
-                    </View>
-                  )}
-                  {isSelected && <Ionicons name="checkmark-circle" size={20} color={C.brand} style={{ marginLeft: 'auto' }} />}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </Animated.View>
-      </Modal>
-    </View>
-  );
-};
-
-const bsStyles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.48)' },
-  sheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: C.white, borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: height * 0.62, paddingHorizontal: 16, paddingTop: 10, shadowColor: C.black, shadowOffset: { width: 0, height: -5 }, shadowOpacity: 0.1, shadowRadius: 18, elevation: 16 },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E0E0E0', alignSelf: 'center', marginBottom: 14 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', marginBottom: 4 },
-  sheetTitle: { fontSize: 17, fontWeight: '800', color: C.t1 },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 15, paddingHorizontal: 8, borderRadius: 12, borderBottomWidth: 1, borderBottomColor: '#F8F8F8' },
-  itemActive: { backgroundColor: C.brandBg, borderBottomColor: 'transparent' },
-  itemEmoji: { fontSize: 22, width: 32, textAlign: 'center' },
-  itemText: { fontSize: 15, color: C.t2, fontWeight: '500', flex: 1 },
-  itemTextActive: { color: C.brand, fontWeight: '700' },
-});
-
+// ─── FloatingInput (this file's own version — matches UpdateProduct styling) ─
 const FloatingInput = ({ label, icon, value, onChangeText, placeholder, keyboardType, multiline, required }) => {
   const [focused, setFocused] = useState(false);
   return (
@@ -171,7 +67,18 @@ const FloatingInput = ({ label, icon, value, onChangeText, placeholder, keyboard
         <Ionicons name={icon} size={14} color={focused ? C.brand : C.t3} />
         <Text style={[styles.floatLabel, focused && styles.floatLabelFocused]}>{label}{required ? ' *' : ''}</Text>
       </View>
-      <TextInput style={[styles.floatInput, multiline && styles.floatInputMulti]} placeholder={placeholder} placeholderTextColor="#C5C5C5" value={value} onChangeText={onChangeText} keyboardType={keyboardType || 'default'} multiline={multiline} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} textAlignVertical={multiline ? 'top' : 'center'} />
+      <TextInput
+        style={[styles.floatInput, multiline && styles.floatInputMulti]}
+        placeholder={placeholder}
+        placeholderTextColor="#C5C5C5"
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType || 'default'}
+        multiline={multiline}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        textAlignVertical={multiline ? 'top' : 'center'}
+      />
     </View>
   );
 };
@@ -227,6 +134,14 @@ const UpdateProductScreen = ({ route, navigation }) => {
   const [specifications, setSpecifications] = useState([{ key: '', value: '' }]);
 
   const subcategoryOptions = useMemo(() => SUBCATEGORIES_MAP[category] || [], [category]);
+  const cityOptions = useMemo(
+    () => CITY_OPTIONS.map((c) => ({ key: c.id, label: c.label })),
+    []
+  );
+  const suburbOptions = useMemo(
+    () => getSuburbs(city).map((s) => ({ key: s, label: s })),
+    [city]
+  );
 
   useEffect(() => { fetchProduct(); }, [productId]);
 
@@ -290,9 +205,6 @@ const UpdateProductScreen = ({ route, navigation }) => {
     return [];
   };
 
-  //  `hasChanges` now uses non-mutating equality helpers for tags and specs.
-  //  Campus and location fields remain compared as before, but city is no
-  //  longer treated as a required edit.
   const hasChanges = originalProduct && (
     name !== (originalProduct.name || '') || category !== (originalProduct.category || '') ||
     subcategory !== (originalProduct.subcategory || '') || brand !== (originalProduct.brand || '') ||
@@ -335,9 +247,7 @@ const UpdateProductScreen = ({ route, navigation }) => {
     if (!name.trim()) return Alert.alert('Missing Info', 'Product name is required');
     if (!category) return Alert.alert('Missing Info', 'Please select a category');
     if (!price || isNaN(parseFloat(price)) || parseFloat(price) < 0) return Alert.alert('Missing Info', 'Please enter a valid price');
-    //  Campus and location (city / area) are now both fully optional — no
-    //  gating. Off-campus sellers can update a listing without pretending
-    //  to be on a campus, and campus sellers can leave city blank.
+    //  Campus and location (city / area) are both fully optional — no gating.
     const totalImages = existingImages.length + newImages.length;
     if (totalImages === 0) return Alert.alert('Missing Info', 'At least one product image is required');
 
@@ -357,8 +267,6 @@ const UpdateProductScreen = ({ route, navigation }) => {
       formData.append('negotiable', negotiable.toString());
       formData.append('condition', condition);
       formData.append('description', description.trim() || '');
-      //  Send empty string when campus is unset so the backend stores null
-      //  cleanly (matches the schema's `default: null`).
       formData.append('campus', campus || '');
       if (city.trim()) formData.append('location[city]', city.trim());
       if (area.trim()) formData.append('location[area]', area.trim());
@@ -457,36 +365,52 @@ const UpdateProductScreen = ({ route, navigation }) => {
             )}
           </SectionCard>
 
-          <SectionCard title="Item Details" accent={C.brand} changed={name !== (originalProduct?.name || '') || category !== (originalProduct?.category || '') || subcategory !== (originalProduct?.subcategory || '') || brand !== (originalProduct?.brand || '') || condition !== (originalProduct?.condition || 'good')}>
+          <SectionCard
+            title="Item Details"
+            accent={C.brand}
+            changed={
+              name !== (originalProduct?.name || '') ||
+              category !== (originalProduct?.category || '') ||
+              subcategory !== (originalProduct?.subcategory || '') ||
+              brand !== (originalProduct?.brand || '') ||
+              condition !== (originalProduct?.condition || 'good')
+            }
+          >
             <FloatingInput label="Product Name" icon="pricetag-outline" placeholder="e.g. iPhone 13 Pro Max 256GB" value={name} onChangeText={setName} required />
-            <DropdownSelector 
-              label="Category" 
-              placeholder="Select category" 
-              items={VALID_CATEGORIES} 
-              selectedValue={category} 
-              onSelect={handleCategoryChange} 
-              required 
-              style={{ marginBottom: 14 }} 
-              renderItem={({ item, isSelected }) => (
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <Ionicons 
-                    name={item.icon} 
-                    size={22} 
-                    color={isSelected ? C.brand : C.t2}
-                    style={{ width: 32, textAlign: 'center' }}
-                  />
-                  <Text style={[bsStyles.itemText, { marginLeft: 12 }, isSelected && bsStyles.itemTextActive]}>
-                    {formatDisplayName(item.key)}
-                  </Text>
-                </View>
-              )} 
+            <DropdownSelector
+              label="Category"
+              placeholder="Select category"
+              items={VALID_CATEGORIES}
+              selectedValue={category}
+              onSelect={handleCategoryChange}
+              required
+              style={{ marginBottom: 14 }}
             />
-            <DropdownSelector label="Subcategory (optional)" placeholder="Select subcategory" items={subcategoryOptions} selectedValue={subcategory} onSelect={setSubcategory} style={{ marginBottom: 14 }} disabled={!category || subcategoryOptions.length === 0} />
+            <DropdownSelector
+              label="Subcategory (optional)"
+              placeholder="Select subcategory"
+              items={subcategoryOptions}
+              selectedValue={subcategory}
+              onSelect={setSubcategory}
+              style={{ marginBottom: 14 }}
+              disabled={!category || subcategoryOptions.length === 0}
+            />
             <FloatingInput label="Brand (optional)" icon="bookmark-outline" placeholder="e.g. Apple, Samsung, Nike" value={brand} onChangeText={setBrand} />
             <DropdownSelector label="Condition" placeholder="Select condition" items={CONDITION_OPTIONS} selectedValue={condition} onSelect={setCondition} required style={{ marginBottom: 4 }} />
           </SectionCard>
 
-          <SectionCard title="Pricing & Availability" accent={C.brand} changed={price !== (originalProduct?.price?.toString() || '') || negotiable !== (originalProduct?.negotiable || false) || countInStock !== (originalProduct?.countInStock?.toString() || '1') || isAvailable !== (originalProduct?.isAvailable !== undefined ? originalProduct.isAvailable : true) || originalPrice !== (originalProduct?.discountInfo?.originalPrice?.toString() || '') || discountPercent !== (originalProduct?.discountInfo?.discountPercentage?.toString() || '')}>
+          <SectionCard
+            title="Pricing & Availability"
+            accent={C.brand}
+            changed={
+              price !== (originalProduct?.price?.toString() || '') ||
+              negotiable !== (originalProduct?.negotiable || false) ||
+              countInStock !== (originalProduct?.countInStock?.toString() || '1') ||
+              isAvailable !== (originalProduct?.isAvailable !== undefined ? originalProduct.isAvailable : true) ||
+              originalPrice !== (originalProduct?.discountInfo?.originalPrice?.toString() || '') ||
+              discountPercent !== (originalProduct?.discountInfo?.discountPercentage?.toString() || '')
+            }
+          >
             <Text style={styles.quickLabel}>Price (GH₵) <Text style={styles.required}>*</Text></Text>
             <View style={styles.priceInputFull}><View style={styles.currencyTag}><Text style={styles.currencyText}>GH₵</Text></View><TextInput style={styles.priceInputField} placeholder="0.00" placeholderTextColor="#C5C5C5" keyboardType="decimal-pad" value={price} onChangeText={setPrice} /></View>
             <TouchableOpacity style={[styles.negotiableBtn, negotiable && styles.negotiableBtnActive]} onPress={() => setNegotiable(!negotiable)}><Ionicons name={negotiable ? 'pricetag' : 'pricetag-outline'} size={18} color={negotiable ? '#fff' : C.brand} /><Text style={[styles.negotiableText, negotiable && styles.negotiableTextActive]}>Price is negotiable</Text></TouchableOpacity>
@@ -529,10 +453,48 @@ const UpdateProductScreen = ({ route, navigation }) => {
             <TouchableOpacity style={styles.addSpecBtn} onPress={addSpecField} activeOpacity={0.8}><Ionicons name="add-circle-outline" size={20} color={C.brand} /><Text style={styles.addSpecBtnText}>Add Specification</Text></TouchableOpacity>
           </SectionCard>
 
-          <SectionCard title="Campus & Location (Optional)" accent={C.brandL} changed={campus !== (originalProduct?.campus || '') || city !== (originalProduct?.location?.city || '') || area !== (originalProduct?.location?.area || '')}>
-            <DropdownSelector label="Campus (optional)" placeholder="Select your campus" items={CAMPUS_OPTIONS} selectedValue={campus} onSelect={setCampus} />
-            <FloatingInput label="City" icon="location-outline" placeholder="e.g. Accra, Kumasi" value={city} onChangeText={setCity} />
-            <FloatingInput label="Area / Address" icon="home-outline" placeholder="e.g. Rawlings Circle, Madina" value={area} onChangeText={setArea} />
+          <SectionCard
+            title="Campus & Location (Optional)"
+            accent={C.brandL}
+            changed={
+              campus !== (originalProduct?.campus || '') ||
+              city !== (originalProduct?.location?.city || '') ||
+              area !== (originalProduct?.location?.area || '')
+            }
+          >
+            <DropdownSelector
+              label="Campus (optional)"
+              placeholder="Select your campus"
+              items={CAMPUS_OPTIONS}
+              selectedValue={campus}
+              onSelect={setCampus}
+              style={{ marginBottom: 14 }}
+            />
+
+            <ComboLocationPicker
+              label="City (optional)"
+              placeholder="Select a city"
+              items={cityOptions}
+              selectedValue={city}
+              onSelect={(v) => {
+                setCity(v);
+                setArea('');  // reset the suburb when the city changes
+              }}
+              customPlaceholder="Type a city that isn't listed"
+              icon="location-outline"
+              style={{ marginBottom: 14 }}
+            />
+
+            <ComboLocationPicker
+              label="Area / Suburb (optional)"
+              placeholder={city ? 'Select an area' : 'Pick a city first'}
+              items={suburbOptions}
+              selectedValue={area}
+              onSelect={setArea}
+              customPlaceholder="Type your area or street"
+              icon="home-outline"
+              style={{ marginBottom: 4 }}
+            />
           </SectionCard>
 
           <SectionCard title="Description & Tags" accent={C.brandBorder} changed={description !== (originalProduct?.description || '') || !tagsEqual(selectedTags, originalProduct?.tags || [])}>
@@ -617,13 +579,6 @@ const styles = StyleSheet.create({
   imageAddText: { fontSize: 11, color: C.brand, fontWeight: '600' },
   removedImagesBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: C.accentBg, borderRadius: 10, borderWidth: 1, borderColor: C.accentBorder },
   removedImagesText: { fontSize: 12, fontWeight: '600', color: C.accent, flex: 1 },
-  dropdownLabel: { fontSize: 12, fontWeight: '700', color: '#616161', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
-  dropdownButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, backgroundColor: '#FAFAFA' },
-  dropdownButtonFocused: { borderColor: C.brand, backgroundColor: C.white },
-  dropdownButtonDisabled: { backgroundColor: '#F5F5F5', borderColor: '#E8E8E8' },
-  dropdownButtonText: { fontSize: 15.5, color: C.t1, flex: 1 },
-  dropdownButtonTextDisabled: { color: C.t3 },
-  dropdownPlaceholder: { color: '#C5C5C5' },
   quickLabel: { fontSize: 12, fontWeight: '700', color: '#616161', letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 8, marginTop: 4 },
   required: { color: C.danger },
   optional: { color: C.t3, fontWeight: '500', textTransform: 'none', fontSize: 12 },
@@ -668,6 +623,5 @@ const styles = StyleSheet.create({
   updateBtnText: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
   deleteListingBtn: { width: 56, height: 56, borderRadius: 18, backgroundColor: C.white, borderWidth: 1.5, borderColor: C.dangerBorder, justifyContent: 'center', alignItems: 'center' },
 });
-
 
 export default UpdateProductScreen;

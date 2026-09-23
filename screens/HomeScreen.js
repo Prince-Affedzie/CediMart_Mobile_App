@@ -52,7 +52,7 @@ const FEATURED_CATEGORIES = [
 // than that chain keeps up.
 const LAZY_LOAD_THRESHOLD = 700;
 
-// 🔥 NEW: how many queued sections load together per batch, and how long
+//  NEW: how many queued sections load together per batch, and how long
 // to wait after a batch finishes before automatically starting the next
 // one. This is what makes sections keep loading in the background even if
 // the user never scrolls — previously nothing past the first section ever

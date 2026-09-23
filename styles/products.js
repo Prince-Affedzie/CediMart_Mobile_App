@@ -740,4 +740,10 @@ export const styles = StyleSheet.create({
     color: C.brand,
     fontWeight: '800',
   },
+  locationChipsWrap: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: 8,
+  marginBottom: 4,
+},
 });

@@ -15,6 +15,7 @@ import AIFAB from '../components/AIFAB';
 import VisualSearchFab from '../components/VisualSearchFab';
 import { ProductGridSkeleton } from '../components/SkeletonLoader';
 import { styles, Colors as C } from '../styles/category';
+import { SUBCATEGORIES_MAP, VALID_CATEGORIES } from '../data/General';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -31,113 +32,17 @@ const CAMPUS_OPTIONS = [
   { value: 'OTHER',  label: 'Other' },
 ];
 
-const SUBCATEGORY_MAP = {
-  'electronics': [
-    { value: 'headphones-earbuds', label: 'Headphones & Earbuds' },
-    { value: 'speakers',           label: 'Speakers' },
-    { value: 'chargers-cables',    label: 'Chargers & Cables' },
-    { value: 'power-banks',        label: 'Power Banks' },
-    { value: 'smartwatches',       label: 'Smartwatches' },
-    { value: 'cameras',            label: 'Cameras' },
-    { value: 'other-electronics',  label: 'Other' },
-  ],
-  'phones and tablets': [
-    { value: 'smartphones',             label: 'Smartphones' },
-    { value: 'tablets',                 label: 'Tablets' },
-    { value: 'ipads',                   label: 'iPads' },
-    { value: 'phone-cases',             label: 'Phone Cases' },
-    { value: 'screen-protectors',       label: 'Screen Protectors' },
-    { value: 'other-phone-accessories', label: 'Other' },
-  ],
-  'computers and laptops': [
-    { value: 'laptops',                   label: 'Laptops' },
-    { value: 'desktops',                  label: 'Desktops' },
-    { value: 'monitors',                  label: 'Monitors' },
-    { value: 'keyboards',                 label: 'Keyboards' },
-    { value: 'mouse',                     label: 'Mouse' },
-    { value: 'laptop-bags',               label: 'Laptop Bags' },
-    { value: 'software',                  label: 'Software' },
-    { value: 'other-computer-accessories',label: 'Other' },
-  ],
-  'gaming': [
-    { value: 'consoles',           label: 'Consoles' },
-    { value: 'games',              label: 'Games' },
-    { value: 'controllers',        label: 'Controllers' },
-    { value: 'gaming-accessories', label: 'Accessories' },
-  ],
-  'fashion': [
-    { value: 'men-clothing',    label: "Men's Clothing" },
-    { value: 'women-clothing',  label: "Women's Clothing" },
-    { value: 'unisex-clothing', label: 'Unisex' },
-    { value: 'shoes',           label: 'Shoes' },
-    { value: 'bags',            label: 'Bags' },
-    { value: 'watches',         label: 'Watches' },
-    { value: 'jewelry',         label: 'Jewelry' },
-    { value: 'other-fashion',   label: 'Other' },
-  ],
-  'books-course-materials': [
-    { value: 'textbooks',     label: 'Textbooks' },
-    { value: 'course-notes',  label: 'Course Notes' },
-    { value: 'past-questions',label: 'Past Questions' },
-    { value: 'stationery',    label: 'Stationery' },
-    { value: 'novels',        label: 'Novels' },
-    { value: 'other-books',   label: 'Other' },
-  ],
-  'hostel-items': [
-    { value: 'bedding',          label: 'Bedding' },
-    { value: 'kitchenware',      label: 'Kitchenware' },
-    { value: 'cleaning-supplies',label: 'Cleaning' },
-    { value: 'storage',          label: 'Storage' },
-    { value: 'lighting',         label: 'Lighting' },
-    { value: 'other-hostel',     label: 'Other' },
-  ],
-  'appliances': [
-    { value: 'fans',             label: 'Fans' },
-    { value: 'irons',            label: 'Irons' },
-    { value: 'kettles',          label: 'Kettles' },
-    { value: 'blenders',         label: 'Blenders' },
-    { value: 'microwaves',       label: 'Microwaves' },
-    { value: 'other-appliances', label: 'Other' },
-  ],
-  'furniture': [
-    { value: 'chairs',          label: 'Chairs' },
-    { value: 'tables-desks',    label: 'Tables & Desks' },
-    { value: 'beds-mattresses', label: 'Beds & Mattresses' },
-    { value: 'shelves',         label: 'Shelves' },
-    { value: 'other-furniture', label: 'Other' },
-  ],
-  'beauty and grooming': [
-    { value: 'skincare',     label: 'Skincare' },
-    { value: 'makeup',       label: 'Makeup' },
-    { value: 'hair-care',    label: 'Hair Care' },
-    { value: 'perfumes',     label: 'Perfumes' },
-    { value: 'nail-care',    label: 'Nail Care' },
-    { value: 'other-beauty', label: 'Other' },
-  ],
-  'sports and fitness': [
-    { value: 'sports-equipment', label: 'Equipment' },
-    { value: 'gym-gear',         label: 'Gym Gear' },
-    { value: 'activewear',       label: 'Activewear' },
-    { value: 'other-sports',     label: 'Other' },
-  ],
-  'food and drinks': [
-    { value: 'snacks',        label: 'Snacks' },
-    { value: 'drinks',        label: 'Drinks' },
-    { value: 'homemade-meals',label: 'Homemade Meals' },
-    { value: 'baked-goods',   label: 'Baked Goods' },
-    { value: 'other-food',    label: 'Other' },
-  ],
-  'services': [
-    { value: 'tutoring',            label: 'Tutoring' },
-    { value: 'graphic-design',      label: 'Graphic Design' },
-    { value: 'photography',         label: 'Photography' },
-    { value: 'printing-photocopy',  label: 'Printing' },
-    { value: 'laundry',             label: 'Laundry' },
-    { value: 'barbering-hairdressing', label: 'Barbering/Hair' },
-    { value: 'tech-repairs',        label: 'Tech Repairs' },
-    { value: 'other-services',      label: 'Other' },
-  ],
-};
+//  Adapter: canonical subcategories use `key`; this screen's chips
+//  reference `.value`. Rather than rewrite every JSX site, adapt once.
+const adaptSubcategories = (map) =>
+  Object.fromEntries(
+    Object.entries(map || {}).map(([catKey, subs]) => [
+      catKey,
+      (subs || []).map(({ key, label }) => ({ value: key, label })),
+    ])
+  );
+
+const SUBCATEGORY_MAP = adaptSubcategories(SUBCATEGORIES_MAP);
 
 const SORT_OPTIONS = [
   { id: 'newest',     label: 'Newest First',       icon: 'time-outline'         },
@@ -422,10 +327,6 @@ const ListHeader = React.memo(({
         </TouchableOpacity>
       </SafeAreaView>
 
-      {/* ── SEARCH BAR — persistent, same interaction as the Products screen:
-          clear (x) + an explicit "go" arrow, instead of an expand/collapse
-          toggle. This also removes the "add every keystroke to recent
-          searches" behaviour that was the real cause of the typing lag. ── */}
       <View style={styles.heroSearchWrap}>
         <View style={[styles.heroSearchBar, searchFocused && styles.heroSearchBarFocused]}>
           <Ionicons name="search-outline" size={17} color={C.brand} style={{ marginLeft: 14 }} />
@@ -549,8 +450,6 @@ const ListHeader = React.memo(({
       </ScrollView>
     )}
 
-    {/* ── RESULTS META + SORT/FILTER BAR — same standard layout as the
-        Products screen, instead of two small floating pill buttons. ── */}
     <View style={styles.resultsMetaRow}>
       <View style={styles.resultsMetaLeft}>
         <Text style={styles.toolbarCount}>
@@ -679,6 +578,8 @@ const CategoryScreen = () => {
   const fetchIdRef = useRef(0);
   const isMountedRef = useRef(true);
 
+  //  Subcategories come straight from the canonical map in ../data/General,
+  //  adapted once at module load so the shape matches this screen's UI.
   const subcategories = SUBCATEGORY_MAP[category] || [];
   const displayName = categoryName || category?.replace(/-/g, ' ') || '';
 
@@ -692,17 +593,6 @@ const CategoryScreen = () => {
   }, []);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
-  //  `searchOverride` gives callers a way to force a specific term for THIS
-  //  fetch without relying on the async state update (fixes "clearing the
-  //  search doesn't clear the results").
-  //
-  //  NOTE: this now goes through the generic `productService.getProducts`
-  //  endpoint (passing `category` as a filter) instead of the dedicated
-  //  `getProductsByCategory` API — that endpoint doesn't appear to apply the
-  //  search/condition/negotiable/price params, which was why the list never
-  //  actually updated when searching or filtering. `productService.getProducts`
-  //  is the same call the live-search dropdown (below) and the Products
-  //  screen already use successfully.
   const fetchProducts = useCallback(async (pageNum = 1, append = false, searchOverride) => {
     if (!category) return;
     const myId = ++fetchIdRef.current;
@@ -711,9 +601,6 @@ const CategoryScreen = () => {
         setLoadingMore(true);
       } else {
         setLoading(true);
-        // Clear stale results immediately so the skeleton (not old items)
-        // is what shows while this fetch — initial or a new search/filter —
-        // is in flight.
         setProducts([]);
       }
 
@@ -749,12 +636,6 @@ const CategoryScreen = () => {
     }
   }, [category, sort, selectedSubcategory, selectedCampus, selectedCondition, negotiableOnly, minPrice, maxPrice, searchQuery]);
 
-  //  Reload when any filter changes. `fetchProducts` is deliberately left out
-  //  of this dependency list: it's recreated on every keystroke (since it
-  //  reads `searchQuery`), and including it here would re-run this effect —
-  //  and fire a brand-new full-list fetch — on every single keystroke
-  //  instead of only when an actual filter changes. Search has its own
-  //  debounced flow via handleSearchSubmit / clearSearch / onRecentChipPress.
   useEffect(() => {
     setPage(1);
     fetchProducts(1, false);
@@ -801,13 +682,6 @@ const CategoryScreen = () => {
   }, []);
 
   // ── Search handlers ─────────────────────────────────────────────────────
-  // `onChangeSearch` ONLY updates the text as the person types — it no
-  // longer touches `recentSearches` on every keystroke. Previously, every
-  // partial keystroke ("i", "ip", "iph"…) that wasn't already in the recent
-  // list got pushed into it, which meant a brand-new `recentSearches` array
-  // on almost every keystroke — forcing the whole (memoized) header to
-  // re-render each time and making typing feel sluggish. Recording a term
-  // now only happens once, on submit.
   const onChangeSearch = useCallback((text) => {
     setSearchQuery(text);
   }, []);
@@ -972,9 +846,6 @@ const CategoryScreen = () => {
     );
   };
 
-  //  Stable header element. Every dependency of ListHeader is either a
-  //  useCallback-wrapped function or primitive/simple state, so this only
-  //  changes when something the header actually displays changes.
   const listHeaderElement = useMemo(() => (
     <ListHeader
       navigation={navigation}
@@ -1042,8 +913,7 @@ const CategoryScreen = () => {
         </View>
       </Modal>
 
-      {/* Filter Sheet — now also includes Condition, Price Range and
-          Negotiable Only, matching the Products screen's filter set. */}
+      {/* Filter Sheet */}
       <Modal visible={showFilterSheet} transparent animationType="slide" onRequestClose={() => setShowFilterSheet(false)} statusBarTranslucent>
         <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowFilterSheet(false)} />
         <View style={[styles.bottomSheet, { maxHeight: '85%' }]}>

@@ -1,0 +1,230 @@
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Image,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Dimensions,
+  Modal,
+  FlatList,
+  Pressable,
+  Animated,
+} from 'react-native';
+const { width, height } = Dimensions.get('window');
+
+// ─── Teal + Coral Palette (matches UpdateProductScreen) ────────────────────
+const C = {
+  brand:        '#0D9488',
+  brandL:       '#14B8A6',
+  brandD:       '#0F766E',
+  brandBg:      '#F0FDFA',
+  brandBorder:  '#99F6E4',
+  accent:       '#F97316',
+  accentBg:     '#FFF7ED',
+  accentBorder: '#FED7AA',
+  success:      '#059669',
+  successBg:    '#ECFDF5',
+  danger:       '#DC2626',
+  dangerBg:     '#FEF2F2',
+  dangerBorder: '#FECACA',
+  info:         '#0284C7',
+  infoBg:       '#F0F9FF',
+  white:        '#FFFFFF',
+  black:        '#000000',
+  t1:           '#0F172A',
+  t2:           '#475569',
+  t3:           '#94A3B8',
+};
+
+
+
+export const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+
+  // ── Header ──────────────────────────────────────────────────────────────────
+  header: {
+    backgroundColor: C.white,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 14, gap: 12,
+    borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
+  },
+  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
+  headerCenter: { flex: 1 },
+  headerTitle: { fontSize: 19, fontWeight: '800', color: C.t1, letterSpacing: -0.3 },
+  headerSub: { fontSize: 12, color: '#888', marginTop: 1 },
+  headerCompletionBadge: { backgroundColor: C.brandBg, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  headerCompletionBadgeDone: { backgroundColor: C.brand },
+  headerCompletionText: { fontSize: 13, fontWeight: '800', color: C.brand },
+  headerCompletionTextDone: { color: '#fff' },
+
+  // ── Scroll & cards ────────────────────────────────────────────────────────
+  scrollContent: { paddingHorizontal: 14, paddingTop: 16, paddingBottom: 20 },
+  sectionHint: { fontSize: 12, color: '#999', marginBottom: 12, fontWeight: '500' },
+  card: { backgroundColor: C.white, borderRadius: 20, marginBottom: 14, flexDirection: 'row', overflow: 'hidden', shadowColor: C.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 3 },
+  cardAccent: { width: 4 },
+  cardInner: { flex: 1, padding: 18 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: C.t1 },
+
+  // ── Helper / error text ──────────────────────────────────────────────────
+  helperRow: { flexDirection: 'row', gap: 6, marginTop: 6, marginBottom: 4, paddingRight: 6 },
+  helperText: { flex: 1, fontSize: 11.5, color: C.t3, lineHeight: 16 },
+  fieldErrorRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 2 },
+  fieldErrorText: { fontSize: 12, color: C.danger, fontWeight: '600', flex: 1 },
+
+  // ── AI draft badge ────────────────────────────────────────────────────────
+  aiDraftBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#F5F0FC', borderRadius: 20,
+    paddingHorizontal: 7, paddingVertical: 2,
+  },
+  aiDraftBadgeText: { fontSize: 9.5, fontWeight: '700', color: '#8E5FD9' },
+
+  floatWrap: { borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, backgroundColor: '#FAFAFA' },
+  floatWrapFocused: { borderColor: C.brand, backgroundColor: C.white },
+  floatWrapError: { borderColor: C.danger, backgroundColor: C.dangerBg },
+  floatWrapMulti: { paddingBottom: 16 },
+  floatHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
+  floatLabel: { fontSize: 11, fontWeight: '700', color: C.t3, letterSpacing: 0.3, textTransform: 'uppercase', flex: 1 },
+  floatLabelFocused: { color: C.brand },
+  floatLabelError: { color: C.danger },
+  charCount: { fontSize: 10, color: '#C5C5C5', fontWeight: '600' },
+  floatInput: { fontSize: 15.5, color: C.t1, padding: 0 },
+  floatInputMulti: { height: 90, textAlignVertical: 'top' },
+
+  imageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  imageThumbWrap: { width: (width - 68) / 3, height: (width - 68) / 3, borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  imageThumb: { width: '100%', height: '100%' },
+  imageRemoveBtn: { position: 'absolute', top: 4, right: 4 },
+  coverBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  coverBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  imageAddBtn: { width: (width - 68) / 3, height: (width - 68) / 3, borderRadius: 12, borderWidth: 1.5, borderColor: C.brandBorder, borderStyle: 'dashed', backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center', gap: 4 },
+  imageAddBtnError: { borderColor: C.danger, backgroundColor: C.dangerBg },
+  imageAddText: { fontSize: 11, color: C.brand, fontWeight: '600' },
+
+  dropdownLabel: { fontSize: 12, fontWeight: '700', color: '#616161', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
+  dropdownButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, backgroundColor: '#FAFAFA' },
+  dropdownButtonFocused: { borderColor: C.brand, backgroundColor: C.white },
+  dropdownButtonDisabled: { backgroundColor: '#F5F5F5', borderColor: '#E8E8E8' },
+  dropdownButtonError: { borderColor: C.danger, backgroundColor: C.dangerBg },
+  dropdownButtonText: { fontSize: 15.5, color: C.t1, flex: 1 },
+  dropdownButtonTextDisabled: { color: C.t3 },
+  dropdownPlaceholder: { color: '#C5C5C5' },
+
+  quickLabel: { fontSize: 12, fontWeight: '700', color: '#616161', letterSpacing: 0.3, textTransform: 'uppercase', marginBottom: 8, marginTop: 4 },
+  required: { color: C.danger },
+  optional: { color: C.t3, fontWeight: '500', textTransform: 'none', fontSize: 12 },
+
+  priceInputFull: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAFAFA', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, overflow: 'hidden', marginBottom: 4 },
+  priceInputFullError: { borderColor: C.danger, backgroundColor: C.dangerBg },
+  currencyTag: { backgroundColor: C.brandBg, paddingHorizontal: 14, height: 52, justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#E0E0E0' },
+  currencyText: { fontSize: 15, fontWeight: '800', color: C.brand },
+  priceInputField: { flex: 1, paddingHorizontal: 14, fontSize: 17, fontWeight: '700', color: C.t1 },
+  negotiableBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12, backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: '#E0E0E0', marginTop: 14, marginBottom: 0 },
+  negotiableBtnActive: { backgroundColor: C.brand, borderColor: C.brand },
+  negotiableText: { fontSize: 13, fontWeight: '600', color: '#666' },
+  negotiableTextActive: { color: '#fff' },
+  simpleInput: { backgroundColor: '#FAFAFA', borderWidth: 1.5, borderColor: '#E8E8E8', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, color: C.t1, fontWeight: '600' },
+
+  discountToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: '#E0E0E0',
+    marginBottom: 4,
+  },
+  discountToggleActive: { backgroundColor: C.accent, borderColor: C.accent },
+  discountToggleText: { fontSize: 13, fontWeight: '600', color: C.brand, flex: 1 },
+  discountToggleTextActive: { color: '#fff' },
+  discountFields: { paddingTop: 8, paddingHorizontal: 4 },
+  dateRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  tagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  tagChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 22, backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: 'transparent' },
+  tagChipActive: { backgroundColor: C.brandBg, borderColor: C.brandBorder },
+  tagEmoji: { fontSize: 13 },
+  tagLabel: { fontSize: 12.5, color: '#555', fontWeight: '500' },
+  tagLabelActive: { color: C.brand, fontWeight: '700' },
+  tagCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
+  tagCountText: { fontSize: 12, color: C.brand, fontWeight: '600', flex: 1 },
+  tagClearText: { fontSize: 12, color: C.danger, fontWeight: '600' },
+
+  // ── Fixed Bottom Bar ─────────────────────────────────────────────────────
+  bottomBar: {
+    backgroundColor: C.white,
+    bottom:32,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    shadowColor: C.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  publishBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: C.brandD,
+    paddingVertical: 18,
+    borderRadius: 18,
+    shadowColor: C.brandD,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  publishBtnDisabled: { backgroundColor: C.brandBorder, shadowOpacity: 0 },
+  publishBtnText: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
+  // ── ComboLocationPicker extras ──────────────────────────────────────────
+customRow: {
+  flexDirection: 'row', alignItems: 'center', gap: 12,
+  paddingVertical: 14, paddingHorizontal: 8,
+  borderRadius: 12, backgroundColor: C.brandBg,
+  marginBottom: 6,
+},
+customRowIcon: {
+  width: 32, height: 32, borderRadius: 16,
+  backgroundColor: C.white, justifyContent: 'center', alignItems: 'center',
+},
+customRowText: { flex: 1, fontSize: 14.5, fontWeight: '700', color: C.brand },
+
+customInputWrap: {
+  flexDirection: 'row', alignItems: 'center',
+  borderWidth: 1.5, borderColor: C.brandBorder, borderRadius: 14,
+  backgroundColor: '#FAFAFA', paddingRight: 10,
+},
+customInput: {
+  flex: 1, fontSize: 15.5, color: C.t1,
+  paddingVertical: 14, paddingHorizontal: 10,
+},
+
+customCancelBtn: {
+  flex: 1, paddingVertical: 14, borderRadius: 12,
+  backgroundColor: '#F5F5F5', alignItems: 'center',
+},
+customCancelBtnText: { fontSize: 14, fontWeight: '700', color: C.t2 },
+
+customSubmitBtn: {
+  flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+  gap: 6, paddingVertical: 14, borderRadius: 12,
+  backgroundColor: C.brand,
+},
+customSubmitBtnDisabled: { backgroundColor: C.brandBorder },
+customSubmitBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
+
+customTag: {
+  backgroundColor: C.brandBg, borderRadius: 8,
+  paddingHorizontal: 6, paddingVertical: 2,
+  borderWidth: 1, borderColor: C.brandBorder,
+},
+customTagText: { fontSize: 9, fontWeight: '800', color: C.brand, letterSpacing: 0.3 },
+});

@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   updateIndicator: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.brandBg, paddingVertical: 8, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: C.brandBorder },
   updateIndicatorText: { fontSize: 13, fontWeight: '600', color: C.brand },
-  hero: { backgroundColor: C.brand, paddingHorizontal: 16, paddingBottom: 20, overflow: 'hidden', position: 'relative', marginTop: 18, borderTopLeftRadius: 18, borderTopRightRadius: 18 },
+  hero: { backgroundColor: C.brand, paddingHorizontal: 16, paddingBottom: 20, overflow: 'hidden', position: 'relative', marginTop: 18, borderRadius: 18,},
   heroDecor1: { position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.05)', right: -40, top: -50 },
   heroDecor2: { position: 'absolute', width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.04)', right: 80, bottom: -10 },
   heroInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: 14, marginBottom: 2 },
