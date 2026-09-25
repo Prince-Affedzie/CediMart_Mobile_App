@@ -1,19 +1,9 @@
 // src/screens/discover/DiscoverScreen.js
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Image,
-  ActivityIndicator,
-  RefreshControl,
-  Modal,
-  Pressable,
-  Animated,
+  View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity,
+  TextInput, Image, ActivityIndicator, RefreshControl, Modal,
+  Pressable, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,8 +11,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { getVendors } from '../apis/vendorApi';
+import { CITY_OPTIONS, GHANA_LOCATIONS } from '../data/General';
 
-// ─── Design Tokens ───────────────────────────────────────────────────────────
+// ─── Design Tokens (unchanged) ─────────────────────────────────────────────
 const C = {
   bg: '#F8FAFC',
   surface: '#FFFFFF',
@@ -44,7 +35,7 @@ const C = {
   skeleton: '#EEF2F6',
 };
 
-// ─── Category meta ───────────────────────────────────────────────────────────
+// ─── Category meta ──────────────────────────────────────────────────────────
 const CATEGORY_META = {
   '':                          { label: 'All',                  icon: 'grid-outline',                       color: C.brand },
   'electronics':                { label: 'Electronics',          icon: 'hardware-chip-outline',              color: '#2563EB' },
@@ -53,52 +44,46 @@ const CATEGORY_META = {
   'gaming':                     { label: 'Gaming',                icon: 'game-controller-outline',            color: '#DB2777' },
   'fashion':                    { label: 'Fashion',               icon: 'shirt-outline',                      color: '#DC2626' },
   'books-course-materials':     { label: 'Books',                 icon: 'book-outline',                       color: '#B45309' },
-  'hostel-items':               { label: 'Hostel Items',          icon: 'bed-outline',                        color: '#0D9488' },
-  'appliances':                  { label: 'Appliances',           icon: 'tv-outline',                         color: '#475569' },
+  'hostel-items':               { label: 'Home & Living',         icon: 'bed-outline',                        color: '#0D9488' },
+  'appliances':                 { label: 'Appliances',           icon: 'tv-outline',                         color: '#475569' },
   'furniture':                  { label: 'Furniture',             icon: 'cube-outline',                       color: '#92400E' },
   'beauty and grooming':        { label: 'Beauty',                icon: 'sparkles-outline',                   color: '#EC4899' },
   'sports and fitness':         { label: 'Sports',                icon: 'basketball-outline',                 color: '#16A34A' },
-  'accessories':                 { label: 'Accessories',          icon: 'watch-outline',                      color: '#CA8A04' },
+  'accessories':                { label: 'Accessories',          icon: 'watch-outline',                      color: '#CA8A04' },
   'food and drinks':            { label: 'Food & Drinks',         icon: 'fast-food-outline',                  color: '#EA580C' },
-  'services':                    { label: 'Services',             icon: 'construct-outline',                  color: '#0284C7' },
+  'services':                   { label: 'Services',             icon: 'construct-outline',                  color: '#0284C7' },
   'tutoring-education':         { label: 'Tutoring',              icon: 'school-outline',                     color: '#4F46E5' },
   'photography-media':          { label: 'Photography',           icon: 'camera-outline',                     color: '#0EA5E9' },
   'graphic-design-printing':    { label: 'Design & Print',        icon: 'color-palette-outline',              color: '#9333EA' },
   'repair-services':            { label: 'Repairs',               icon: 'build-outline',                      color: '#65A30D' },
   'events-catering':            { label: 'Events & Catering',     icon: 'restaurant-outline',                 color: '#F59E0B' },
   'accommodation-housing':      { label: 'Housing',               icon: 'home-outline',                       color: '#0F766E' },
-  'other':                       { label: 'Other',                icon: 'ellipsis-horizontal-circle-outline', color: '#64748B' },
+  'other':                      { label: 'Other',                icon: 'ellipsis-horizontal-circle-outline', color: '#64748B' },
 };
 const CATEGORIES = Object.keys(CATEGORY_META).map((key) => ({ key, ...CATEGORY_META[key] }));
 
 const BUSINESS_TYPE_FILTERS = [
-  { key: '', label: 'All', icon: 'apps-outline' },
-  { key: 'product', label: 'Shops', icon: 'storefront-outline' },
+  { key: '',        label: 'All',      icon: 'apps-outline' },
+  { key: 'product', label: 'Shops',    icon: 'storefront-outline' },
   { key: 'service', label: 'Services', icon: 'construct-outline' },
 ];
 
-const CAMPUSES = [
-  { key: '', label: 'All campuses' },
-  { key: 'UG', label: 'University of Ghana' },
-  { key: 'KNUST', label: 'KNUST' },
-  { key: 'UCC', label: 'Univ. of Cape Coast' },
-  { key: 'UEW', label: 'Univ. of Ed., Winneba' },
-  { key: 'UPSA', label: 'UPSA' },
-  { key: 'GIMPA', label: 'GIMPA' },
-  { key: 'ASHESI', label: 'Ashesi University' },
-  { key: 'ATU', label: 'Accra Technical Univ.' },
-  { key: 'OTHER', label: 'Other' },
+//  Locations come from the shared data source so the filter list stays
+//  in sync with the rest of the app (listings, signup, product form).
+const LOCATIONS = [
+  { key: '', label: 'All locations' },
+  ...CITY_OPTIONS.map((c) => ({ key: c.id, label: c.label })),
 ];
 
 const SORT_OPTIONS = [
-  { key: 'createdAt', order: 'desc', label: 'Newest first', icon: 'time-outline' },
-  { key: 'rating', order: 'desc', label: 'Top rated', icon: 'star-outline' },
-  { key: 'totalSales', order: 'desc', label: 'Most sales', icon: 'trending-up-outline' },
+  { key: 'createdAt',  order: 'desc', label: 'Newest first', icon: 'time-outline' },
+  { key: 'rating',     order: 'desc', label: 'Top rated',    icon: 'star-outline' },
+  { key: 'totalSales', order: 'desc', label: 'Most sales',   icon: 'trending-up-outline' },
 ];
 
 const PAGE_LIMIT = 16;
 const SEARCH_DEBOUNCE_MS = 400;
-const THUMB_SIZE = 64; // Fixed thumbnail size
+const THUMB_SIZE = 64;
 
 const isRealImageUrl = (val) => !!val && /^https?:\/\//i.test(val);
 
@@ -111,7 +96,25 @@ const shade = (hex, percent) => {
   return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
 };
 
-// ─── Press-scale wrapper ────────────────────────────────────────────────────
+//  Display label for a vendor's location. Prefers the new { city, area }
+//  shape, falls back to legacy { campusArea, hostel } for old listings,
+//  and finally falls back to the campus code.
+function getVendorLocationLine(vendor) {
+  const loc = vendor?.location || {};
+
+  if (loc.city) {
+    const cityLabel = GHANA_LOCATIONS[loc.city]?.label || loc.city;
+    return loc.area ? `${loc.area}, ${cityLabel}` : cityLabel;
+  }
+
+  if (loc.campusArea) {
+    return loc.hostel ? `${loc.hostel}, ${loc.campusArea}` : loc.campusArea;
+  }
+
+  return vendor?.campus || 'Location not set';
+}
+
+// ─── Press-scale wrapper ──────────────────────────────────────────────────
 const Pressy = ({ onPress, style, children, scaleTo = 0.97 }) => {
   const scale = useRef(new Animated.Value(1)).current;
   const onPressIn = () => Animated.spring(scale, { toValue: scaleTo, useNativeDriver: true, speed: 40, bounciness: 4 }).start();
@@ -133,30 +136,32 @@ const DiscoverHero = () => (
   >
     <View style={styles.heroBadge}>
       <Ionicons name="shield-checkmark" size={12} color="#fff" />
-      <Text style={styles.heroBadgeText}>Verified vendors</Text>
+      <Text style={styles.heroBadgeText}>Verified vendors · Nationwide</Text>
     </View>
-    <Text style={styles.heroTitle}>Trusted shops,{'\n'}run by students like you</Text>
-    <Text style={styles.heroSub}>Buy and book from vendors on your own campus</Text>
+    <Text style={styles.heroTitle}>Trusted shops,{'\n'}across Ghana</Text>
+    <Text style={styles.heroSub}>
+      Discover verified vendors in your city — or order from anywhere and get it shipped to you.
+    </Text>
     <Ionicons name="bag-handle" size={84} color="rgba(255,255,255,0.14)" style={styles.heroIconDecor} />
   </LinearGradient>
 );
 
-// ─── Business type dropdown button ─────────────────────────────────────────
+// ─── Business type dropdown button ──────────────────────────────────────────
 const BusinessTypeDropdown = ({ value, onChange }) => {
   const [visible, setVisible] = useState(false);
   const selectedLabel = BUSINESS_TYPE_FILTERS.find(f => f.key === value)?.label || 'All';
-  
+
   return (
     <>
-      <TouchableOpacity 
-        style={styles.businessTypeDropdownBtn} 
+      <TouchableOpacity
+        style={styles.businessTypeDropdownBtn}
         onPress={() => { Haptics.selectionAsync().catch(() => {}); setVisible(true); }}
         activeOpacity={0.8}
       >
         <Text style={styles.businessTypeDropdownText}>{selectedLabel}</Text>
         <Ionicons name="chevron-down" size={14} color={C.brand} />
       </TouchableOpacity>
-      
+
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
         <Pressable style={sheetStyles.backdrop} onPress={() => setVisible(false)}>
           <Pressable style={sheetStyles.sheet} onPress={() => {}}>
@@ -196,7 +201,7 @@ const CategoryTile = ({ item, active, onPress }) => (
   </TouchableOpacity>
 );
 
-// ─── Bottom-sheet style option picker ───────────────────────────────────────
+// ─── Bottom-sheet style option picker ──────────────────────────────────────
 const OptionSheet = ({ visible, title, options, selectedKey, onSelect, onClose }) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <Pressable style={sheetStyles.backdrop} onPress={onClose}>
@@ -239,9 +244,7 @@ const ProductThumb = ({ uri }) =>
 const VendorListCard = ({ vendor, onPress }) => {
   const hasAvatar = isRealImageUrl(vendor.profileImage);
   const displayName = vendor.storeName || vendor.name;
-  const campusLabel = CAMPUSES.find((c) => c.key === vendor.campus)?.label || vendor.campus;
-  const areaLabel = vendor.location?.campusArea;
-  const locationLine = [areaLabel, campusLabel].filter(Boolean).join(', ') || 'Campus not set';
+  const locationLine = getVendorLocationLine(vendor);
   const primaryCategory = vendor.categories?.[0];
   const categoryMeta = CATEGORY_META[primaryCategory] || CATEGORY_META.other;
   const categoryLine = (vendor.categories || [])
@@ -253,8 +256,6 @@ const VendorListCard = ({ vendor, onPress }) => {
   const products = vendor.products || [];
   const shownProducts = products.slice(0, 3);
   const extraCount = Math.max(0, (vendor.productCount ?? products.length) - shownProducts.length);
-  
-  // Calculate how many slots are needed (always 3 for consistency)
   const totalSlots = shownProducts.length + (extraCount > 0 ? 1 : 0);
 
   return (
@@ -311,7 +312,6 @@ const VendorListCard = ({ vendor, onPress }) => {
               <Text style={styles.thumbMoreText}>+{extraCount}</Text>
             </View>
           )}
-          {/* Fill remaining slots with subtle placeholders for consistent layout */}
           {totalSlots < 3 && Array.from({ length: 3 - totalSlots }).map((_, i) => (
             <View key={`empty-${i}`} style={[styles.thumbImg, styles.thumbEmpty]} />
           ))}
@@ -321,7 +321,7 @@ const VendorListCard = ({ vendor, onPress }) => {
   );
 };
 
-// ─── Skeleton list card ─────────────────────────────────────────────────────
+// ─── Skeleton list card (unchanged) ────────────────────────────────────────
 const SkeletonListCard = ({ delay = 0 }) => {
   const shimmer = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -366,7 +366,9 @@ const BecomeVendorCTA = ({ onPress }) => (
     </View>
     <View style={styles.vendorCtaText}>
       <Text style={styles.vendorCtaTitle}>Have a business?</Text>
-      <Text style={styles.vendorCtaSub}>Join CediMart and reach students on your campus</Text>
+      <Text style={styles.vendorCtaSub}>
+        Join CediMart and reach buyers across Ghana — campus and beyond.
+      </Text>
     </View>
     <View style={styles.vendorCtaBtn}>
       <Text style={styles.vendorCtaBtnText}>Start</Text>
@@ -389,11 +391,13 @@ const DiscoverScreen = () => {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [activeBusinessType, setActiveBusinessType] = useState('');
-  const [activeCampus, setActiveCampus] = useState('');
+  //  Renamed from activeCampus — now a city id, but the filter UI and the
+  //  API call still accept legacy campus values for old vendors.
+  const [activeCity, setActiveCity] = useState('');
   const [activeCategory, setActiveCategory] = useState('');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sort, setSort] = useState(SORT_OPTIONS[0]);
-  const [showCampusSheet, setShowCampusSheet] = useState(false);
+  const [showLocationSheet, setShowLocationSheet] = useState(false);
   const [showSortSheet, setShowSortSheet] = useState(false);
 
   const searchTimer = useRef(null);
@@ -415,7 +419,10 @@ const DiscoverScreen = () => {
 
         const res = await getVendors({
           search: search || undefined,
-          campus: activeCampus || undefined,
+          //  Send city under both keys for compatibility with older
+          //  backend versions that still expect `campus`.
+          campus: activeCity || undefined,
+          city: activeCity || undefined,
           category: activeCategory || undefined,
           businessType: activeBusinessType || undefined,
           isVerified: verifiedOnly ? true : undefined,
@@ -441,12 +448,12 @@ const DiscoverScreen = () => {
         setLoadingMore(false);
       }
     },
-    [search, activeCampus, activeCategory, activeBusinessType, verifiedOnly, sort]
+    [search, activeCity, activeCategory, activeBusinessType, verifiedOnly, sort]
   );
 
   useEffect(() => {
     fetchVendors(1);
-  }, [search, activeCampus, activeCategory, activeBusinessType, verifiedOnly, sort]);
+  }, [search, activeCity, activeCategory, activeBusinessType, verifiedOnly, sort]);
 
   const handleRefresh = () => fetchVendors(1, { refresh: true });
   const handleLoadMore = () => {
@@ -466,36 +473,33 @@ const DiscoverScreen = () => {
   };
   const resetAllFilters = () => {
     setActiveBusinessType('');
-    setActiveCampus('');
+    setActiveCity('');
     setActiveCategory('');
     setVerifiedOnly(false);
   };
 
   const activeFilterCount =
-    (activeCampus ? 1 : 0) + (activeCategory ? 1 : 0) + (verifiedOnly ? 1 : 0) + (activeBusinessType ? 1 : 0);
-  const selectedCampusLabel = CAMPUSES.find((c) => c.key === activeCampus)?.label || 'Campus';
+    (activeCity ? 1 : 0) + (activeCategory ? 1 : 0) + (verifiedOnly ? 1 : 0) + (activeBusinessType ? 1 : 0);
+  const selectedCityLabel = CITY_OPTIONS.find((c) => c.id === activeCity)?.label || 'All locations';
   const sectionLabel = activeBusinessType === 'service' ? 'Services' : activeBusinessType === 'product' ? 'Shops' : 'All vendors';
 
   const renderHeader = () => (
     <View>
-      {/* Title + Business type dropdown */}
       <View style={styles.titleRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.screenTitle}>Discover</Text>
-          <Text style={styles.screenSubtitle}>Shops and services across your campus</Text>
+          <Text style={styles.screenSubtitle}>Shops and services across Ghana</Text>
         </View>
         <BusinessTypeDropdown value={activeBusinessType} onChange={setActiveBusinessType} />
       </View>
 
-      {/* Trust hero */}
       <DiscoverHero />
 
-      {/* Search bar */}
       <View style={styles.searchBar}>
         <Ionicons name="search-outline" size={18} color={C.textMuted} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search vendors, tags, campus area..."
+          placeholder="Search vendors, tags, or city..."
           placeholderTextColor={C.textMuted}
           value={searchInput}
           onChangeText={setSearchInput}
@@ -508,7 +512,6 @@ const DiscoverScreen = () => {
         )}
       </View>
 
-      {/* Category quick tiles */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -524,18 +527,17 @@ const DiscoverScreen = () => {
         ))}
       </ScrollView>
 
-      {/* Campus / verified / sort row */}
       <View style={styles.filterRow}>
         <TouchableOpacity
-          style={[styles.filterPill, activeCampus && styles.filterPillActive]}
-          onPress={() => setShowCampusSheet(true)}
+          style={[styles.filterPill, activeCity && styles.filterPillActive]}
+          onPress={() => setShowLocationSheet(true)}
           activeOpacity={0.8}
         >
-          <Ionicons name="school-outline" size={14} color={activeCampus ? '#fff' : C.textOff} />
-          <Text style={[styles.filterPillText, activeCampus && styles.filterPillTextActive]} numberOfLines={1}>
-            {selectedCampusLabel}
+          <Ionicons name="location-outline" size={14} color={activeCity ? '#fff' : C.textOff} />
+          <Text style={[styles.filterPillText, activeCity && styles.filterPillTextActive]} numberOfLines={1}>
+            {selectedCityLabel}
           </Text>
-          <Ionicons name="chevron-down" size={13} color={activeCampus ? '#fff' : C.textMuted} />
+          <Ionicons name="chevron-down" size={13} color={activeCity ? '#fff' : C.textMuted} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -568,7 +570,7 @@ const DiscoverScreen = () => {
 
   const renderEmpty = () => {
     if (loading) return null;
-    const hasActiveFilters = search || activeCampus || activeCategory || verifiedOnly || activeBusinessType;
+    const hasActiveFilters = search || activeCity || activeCategory || verifiedOnly || activeBusinessType;
     return (
       <View style={styles.emptyState}>
         <View style={styles.emptyIconWrap}>
@@ -576,7 +578,9 @@ const DiscoverScreen = () => {
         </View>
         <Text style={styles.emptyTitle}>No vendors found</Text>
         <Text style={styles.emptySub}>
-          {hasActiveFilters ? 'Try adjusting your search or filters' : 'Check back soon as more vendors join CediMart'}
+          {hasActiveFilters
+            ? 'Try a different city, category, or search term'
+            : 'Check back soon as more vendors join CediMart'}
         </Text>
         {hasActiveFilters && (
           <TouchableOpacity
@@ -638,12 +642,12 @@ const DiscoverScreen = () => {
       />
 
       <OptionSheet
-        visible={showCampusSheet}
-        title="Filter by campus"
-        options={CAMPUSES}
-        selectedKey={activeCampus}
-        onSelect={(opt) => { setActiveCampus(opt.key); setShowCampusSheet(false); }}
-        onClose={() => setShowCampusSheet(false)}
+        visible={showLocationSheet}
+        title="Filter by location"
+        options={LOCATIONS}
+        selectedKey={activeCity}
+        onSelect={(opt) => { setActiveCity(opt.key); setShowLocationSheet(false); }}
+        onClose={() => setShowLocationSheet(false)}
       />
       <OptionSheet
         visible={showSortSheet}
@@ -657,7 +661,7 @@ const DiscoverScreen = () => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   listContent: { paddingHorizontal: 16, paddingBottom: 40 },
@@ -666,7 +670,6 @@ const styles = StyleSheet.create({
   screenTitle: { fontSize: 28, fontWeight: '900', color: C.text, letterSpacing: -0.6 },
   screenSubtitle: { fontSize: 13, color: C.textMuted, marginTop: 3 },
 
-  // Business type dropdown
   businessTypeDropdownBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: C.brandDim, paddingHorizontal: 12, paddingVertical: 8,
@@ -674,7 +677,6 @@ const styles = StyleSheet.create({
   },
   businessTypeDropdownText: { fontSize: 13, fontWeight: '700', color: C.brand },
 
-  // Hero
   hero: {
     borderRadius: 24,
     padding: 20,
@@ -690,7 +692,7 @@ const styles = StyleSheet.create({
   },
   heroBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   heroTitle: { color: '#fff', fontSize: 21, fontWeight: '900', lineHeight: 26, letterSpacing: -0.3, marginBottom: 6 },
-  heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, lineHeight: 18, maxWidth: '78%' },
+  heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, lineHeight: 18, maxWidth: '82%' },
   heroIconDecor: { position: 'absolute', right: -12, bottom: -12 },
 
   searchBar: {
@@ -701,7 +703,6 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, color: C.text, height: '100%' },
 
-  // Category tiles
   categoryRow: { gap: 10, paddingBottom: 16 },
   categoryTile: {
     width: 72, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4,
@@ -736,7 +737,6 @@ const styles = StyleSheet.create({
   sectionHeaderRow: { marginTop: 16, marginBottom: 10 },
   sectionLabel: { fontSize: 15.5, fontWeight: '800', color: C.text, letterSpacing: -0.2 },
 
-  // ─── Vendor list card ────────────────────────────────────────────────────
   listCard: {
     backgroundColor: C.surface,
     borderRadius: 18,
@@ -777,28 +777,27 @@ const styles = StyleSheet.create({
   serviceCueText: { fontSize: 11.5, color: C.info, fontWeight: '700', flexShrink: 1 },
 
   thumbRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  thumbImg: { 
-    width: THUMB_SIZE, 
-    height: THUMB_SIZE, 
-    borderRadius: 10, 
-    overflow: 'hidden', 
+  thumbImg: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: 10,
+    overflow: 'hidden',
     backgroundColor: C.skeleton,
   },
   thumbPlaceholder: { justifyContent: 'center', alignItems: 'center' },
-  thumbEmpty: { 
+  thumbEmpty: {
     backgroundColor: C.skeleton,
     opacity: 0.3,
   },
-  thumbMore: { 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: C.bg, 
-    borderWidth: 1, 
+  thumbMore: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: C.bg,
+    borderWidth: 1,
     borderColor: C.border,
   },
   thumbMoreText: { fontSize: 13, fontWeight: '800', color: C.textOff },
 
-  // Become-a-vendor CTA
   vendorCta: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: C.brandDim, borderRadius: 18, padding: 14, marginTop: 4, marginBottom: 8,
@@ -814,7 +813,6 @@ const styles = StyleSheet.create({
   vendorCtaBtn: { backgroundColor: C.brand, borderRadius: 11, paddingHorizontal: 16, paddingVertical: 10 },
   vendorCtaBtnText: { color: '#fff', fontSize: 12.5, fontWeight: '800' },
 
-  // Empty / loading
   emptyState: { alignItems: 'center', paddingVertical: 50, paddingHorizontal: 24 },
   emptyIconWrap: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: C.brandDim,

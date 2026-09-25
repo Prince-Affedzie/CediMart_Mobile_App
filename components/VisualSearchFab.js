@@ -18,6 +18,8 @@ const C = {
   surface: '#FFFFFF',
 };
 
+const FAB_HEIGHT = 52;
+
 const VisualSearchFab = ({ navigation, bottom = 24, right = 20 }) => {
   // Press scale
   const scale = useRef(new Animated.Value(1)).current;
@@ -41,7 +43,7 @@ const VisualSearchFab = ({ navigation, bottom = 24, right = 20 }) => {
 
   const onPressIn = () =>
     Animated.spring(scale, {
-      toValue: 0.9, useNativeDriver: true, speed: 40, bounciness: 4,
+      toValue: 0.95, useNativeDriver: true, speed: 40, bounciness: 4,
     }).start();
   const onPressOut = () =>
     Animated.spring(scale, {
@@ -54,9 +56,9 @@ const VisualSearchFab = ({ navigation, bottom = 24, right = 20 }) => {
   };
 
   const pulseStyle = {
-    opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
+    opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.4, 0] }),
     transform: [
-      { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.55] }) },
+      { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) },
     ],
   };
 
@@ -65,58 +67,65 @@ const VisualSearchFab = ({ navigation, bottom = 24, right = 20 }) => {
       pointerEvents="box-none"
       style={[styles.wrap, { bottom, right }]}
     >
-      {/* Pulsing halo */}
+      {/* Pulsing halo — pulses the same pill shape as the FAB */}
       <Animated.View pointerEvents="none" style={[styles.pulse, pulseStyle]} />
-
-      {/* Small sparkle accent */}
-      <View style={styles.sparkle} pointerEvents="none">
-        <Ionicons name="sparkles" size={11} color="#fff" />
-      </View>
 
       <Pressable
         onPress={handlePress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="Visual search — find products by photo"
       >
         <Animated.View style={[styles.fab, { transform: [{ scale }] }]}>
-          <Ionicons name="camera" size={24} color="#fff" />
+          {/* Camera icon on the left */}
+          <Ionicons name="camera" size={18} strokeWidth={2.4} color="#fff" />
+
+          {/* Label to the right */}
+          <Text style={styles.label} numberOfLines={1}>Visual Search</Text>
+
+          {/* Sparkle badge pinned to the top-right of the pill */}
+          <View style={styles.sparkle} pointerEvents="none">
+            <Ionicons name="sparkles" size={9} color="#fff" />
+          </View>
         </Animated.View>
       </Pressable>
     </View>
   );
 };
 
-const FAB_SIZE = 56;
-
 const styles = StyleSheet.create({
+  // Position wrapper — sized to content so the pill's width is auto
   wrap: {
     position: 'absolute',
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'center',
   },
 
-  // Pulsing halo behind the FAB
+  // Pulsing halo. Matches the pill's height and border radius, and
+  // stretches to match the pill's width via `inset: 0` on the wrap.
   pulse: {
-    position: 'absolute',
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    borderRadius: FAB_SIZE / 2,
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: FAB_HEIGHT / 2,
     backgroundColor: C.brand,
   },
 
-  // The button itself
+  // ── The single pill: icon + label ───────────────────────────────────────
   fab: {
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    borderRadius: FAB_SIZE / 2,
-    backgroundColor: C.brand,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
+
+    height: FAB_HEIGHT,
+    paddingLeft: 16,
+    paddingRight: 18,
+    borderRadius: FAB_HEIGHT / 2,
+
+    backgroundColor: C.brand,
     borderWidth: 2,
     borderColor: '#fff',
+
     // Shadow — iOS
     shadowColor: C.brandD,
     shadowOffset: { width: 0, height: 6 },
@@ -126,14 +135,21 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 
-  // Little sparkle badge on top-right of FAB
+  label: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.1,
+  },
+
+  // Sparkle badge on top-right of the pill
   sparkle: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    top: -4,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: C.brandL,
     alignItems: 'center',
     justifyContent: 'center',

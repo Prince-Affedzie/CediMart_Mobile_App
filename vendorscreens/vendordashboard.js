@@ -333,7 +333,7 @@ const VendorDashboardScreen = ({ navigation }) => {
         <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Quick actions</Text></View>
         <View style={styles.actionsRow}>
           <ActionCard label="Add product" iconName="add-circle-outline" iconBg={C.accentBg} iconColor={C.accent} onPress={() => navigation.navigate('AddProduct')} />
-          <ActionCard label="Campus feed" iconName="newspaper-outline" iconBg={C.infoBg} iconColor={C.info} onPress={() => navigation.navigate('CampusFeed')} />
+          <ActionCard label="Campus feed" iconName="newspaper-outline" iconBg={C.infoBg} iconColor={C.info} onPress={() => navigation.navigate('Feeds')} />
           <ActionCard label="My orders" iconName="receipt-outline" iconBg={C.successBg} iconColor={C.success} onPress={() => navigation.navigate('Orders')} />
           <ActionCard label="Messages" iconName="chatbubble-outline" iconBg={C.brandBg} iconColor={C.brand} onPress={() => navigation.navigate('Inbox')} />
         </View>

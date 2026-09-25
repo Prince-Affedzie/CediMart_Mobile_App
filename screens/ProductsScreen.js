@@ -27,7 +27,6 @@ import {
   CITY_OPTIONS, getSuburbs, GHANA_LOCATIONS,
 } from '../data/General';
 import { ProductGridSkeleton } from '../components/SkeletonLoader';
-import ShopFAB from '../components/ShopFAB'
 import VisualSearchFab from '../components/VisualSearchFab';
 import AIFAB from '../components/AIFAB';
 

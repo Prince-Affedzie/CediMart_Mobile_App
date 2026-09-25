@@ -1,5 +1,5 @@
 // src/navigation/AppNavigator.js
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -8,7 +8,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useChat } from '../context/ChatContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ── Customer screens ──
 import HomeScreen from '../screens/HomeScreen';
@@ -30,53 +29,48 @@ import AboutScreen from '../screens/AboutScreen';
 import NotificationScreen from '../screens/NotificationsScreen';
 import ForgotPasswordScreen from '../screens/ForgetPasswordScreen';
 import TermsOfServiceScreen from '../screens/TermsofServiceScreen';
-import WelcomeScreen from '../screens/WelcomeScreen';
-import { checkIfFirstLaunch } from '../hooks/checkIfFirstLaunch';
 import PaymentScreen from '../screens/PaymentScreen';
 import MarketDetailScreen from '../screens/MarketDetailScreen';
 import VendorDetailScreen from '../screens/VendorDetailScreen';
-import MarketsScreen from '../screens/MarketsScreen';
-import GuestProductDetailScreen from '../screens/GuestProductDetail'
+import GuestProductDetailScreen from '../screens/GuestProductDetail';
 import GuestMarketDetailScreen from '../screens/GuestMarketDetail';
-import CampusProductsScreen from '../screens/CampusProductsScreen'
-import TagProductsScreen from '../screens/TagProductsScreen'
-import ChatScreen from '../screens/ChatScreen'
-import InboxScreen from '../screens/InboxScreen'
-import AIShoppingScreen from '../screens/AIShoppingScreen'
-import VisualSearchScreen from '../screens/VisualSearchScreen'
-import EarningsScreen from '../screens/EarningsScreen'
+import CampusProductsScreen from '../screens/CampusProductsScreen';
+import TagProductsScreen from '../screens/TagProductsScreen';
+import ChatScreen from '../screens/ChatScreen';
+import InboxScreen from '../screens/InboxScreen';
+import AIShoppingScreen from '../screens/AIShoppingScreen';
+import VisualSearchScreen from '../screens/VisualSearchScreen';
+import EarningsScreen from '../screens/EarningsScreen';
 
 // Feed
-import CampusFeedScreen from '../screens/Feeds/CampusFeedScreen'
-import CreateFeedPostScreen from '../screens/Feeds/CreateFeedPostScreen'
-import MyFeedPostsScreen from '../screens/Feeds/MyFeedPostsScreen'
-import FollowersScreen from '../screens/Feeds/FollowersScreen'
-import FollowingScreen from '../screens/Feeds/FollowingScreen'
-import SavedPostsScreen from '../screens/Feeds/SavedPostsScreen'
-import FeedPostDetailScreen from '../screens/Feeds/FeedPostDetailScreen'
+import CampusFeedScreen from '../screens/Feeds/CampusFeedScreen';
+import CreateFeedPostScreen from '../screens/Feeds/CreateFeedPostScreen';
+import MyFeedPostsScreen from '../screens/Feeds/MyFeedPostsScreen';
+import FollowersScreen from '../screens/Feeds/FollowersScreen';
+import FollowingScreen from '../screens/Feeds/FollowingScreen';
+import SavedPostsScreen from '../screens/Feeds/SavedPostsScreen';
+import FeedPostDetailScreen from '../screens/Feeds/FeedPostDetailScreen';
 
-// Stories Screen
-import CreateStoryScreen from '../screens/Stories/CreateStoryScreen'
+// Stories
+import CreateStoryScreen from '../screens/Stories/CreateStoryScreen';
 
-// Opportunities
-import DiscoverScreen from '../screens/DiscoverScreen'
-
-
+// Discover
+import DiscoverScreen from '../screens/DiscoverScreen';
 
 // ── Vendor screens ──
-import VendorSignUpScreen from '../vendorscreens/VendorSignUp'
+import VendorSignUpScreen from '../vendorscreens/VendorSignUp';
 import VendorLoginScreen from '../vendorscreens/VendorLogin';
 import VendorDashboardScreen from '../vendorscreens/vendordashboard';
 import MyProductsScreen from '../vendorscreens/VendorProducts';
-import AddProductScreen from '../vendorscreens/AddProduct';  
+import AddProductScreen from '../vendorscreens/AddProduct';
 import VendorAccountScreen from '../vendorscreens/EditProfile';
-import VendorProductDetailScreen from '../vendorscreens/ProductDetail'; 
-import VendorOrdersScreen from '../vendorscreens/VendorOrders'
-import VendorOrderDetailScreen from '../vendorscreens/OrderDetail'
-import UpdateProductScreen from '../vendorscreens/EditProduct'
-import VendorSupportScreen from '../vendorscreens/VendorSupport'
-import VendorReferralStatsScreen from '../vendorscreens/Vendorreferralstatsscreen'
-import SelectProductScreen from '../vendorscreens/SelectProductScreen'
+import VendorProductDetailScreen from '../vendorscreens/ProductDetail';
+import VendorOrdersScreen from '../vendorscreens/VendorOrders';
+import VendorOrderDetailScreen from '../vendorscreens/OrderDetail';
+import UpdateProductScreen from '../vendorscreens/EditProduct';
+import VendorSupportScreen from '../vendorscreens/VendorSupport';
+import VendorReferralStatsScreen from '../vendorscreens/Vendorreferralstatsscreen';
+import SelectProductScreen from '../vendorscreens/SelectProductScreen';
 
 import * as Linking from 'expo-linking';
 import { DEEP_LINK_PREFIXES, DEEP_LINK_CONFIG } from '../config/deepLinks';
@@ -85,8 +79,7 @@ const linking = {
   prefixes: DEEP_LINK_PREFIXES,
   config: DEEP_LINK_CONFIG,
   async getInitialURL() {
-    const url = await Linking.getInitialURL();
-    return url;
+    return await Linking.getInitialURL();
   },
   subscribe(listener) {
     const subscription = Linking.addEventListener('url', ({ url }) => { listener(url); });
@@ -96,10 +89,8 @@ const linking = {
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-const AuthStack = createStackNavigator();
 export const navigationRef = createNavigationContainerRef();
 
-// ─── Tab Bar Color Constants ────────────────────────────────────────────────
 const TAB_ACTIVE_COLOR   = '#0D9488';
 const TAB_INACTIVE_COLOR = '#94A3B8';
 const TAB_BADGE_COLOR    = '#DC2626';
@@ -117,12 +108,12 @@ function GuestTabNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           switch (route.name) {
-            case 'GuestFeed':     iconName = focused ? 'newspaper'    : 'newspaper-outline';  break;
-            case 'GuestProducts': iconName = focused ? 'grid'         : 'grid-outline';       break;
-            case 'GuestShop':     iconName = focused ? 'storefront'   : 'storefront-outline'; break;
-            case 'GuestCart':     iconName = focused ? 'cart'         : 'cart-outline';       break;
-            case 'GuestProfile':  iconName = focused ? 'person'       : 'person-outline';     break;
-            case 'Inbox':         iconName = focused ? 'chatbubbles'  : 'chatbubbles-outline'; break;
+            case 'Feeds':         iconName = focused ? 'newspaper'     : 'newspaper-outline';  break;
+            case 'GuestProducts': iconName = focused ? 'grid'          : 'grid-outline';       break;
+            case 'GuestShop':     iconName = focused ? 'storefront'    : 'storefront-outline'; break;
+            case 'GuestCart':     iconName = focused ? 'cart'          : 'cart-outline';       break;
+            case 'GuestProfile':  iconName = focused ? 'person'        : 'person-outline';     break;
+            case 'Inbox':         iconName = focused ? 'chatbubbles'   : 'chatbubbles-outline'; break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -142,7 +133,7 @@ function GuestTabNavigator() {
     >
       <Tab.Screen name="GuestShop"     component={GuestHomeScreen}  options={{ title: 'Shop' }} />
       <Tab.Screen name="GuestProducts" component={ProductsScreen}   options={{ title: 'Products' }} />
-      <Tab.Screen name="GuestFeed"     component={CampusFeedScreen} options={{ title: 'Feed' }} />
+      <Tab.Screen name="Feeds"         component={CampusFeedScreen} options={{ title: 'Feed' }} />
       <Tab.Screen name="Inbox"         component={InboxScreen}      options={{ title: 'Inbox' }} />
       <Tab.Screen name="GuestProfile"  component={AccountScreen}    options={{ title: 'Profile' }} />
     </Tab.Navigator>
@@ -154,7 +145,6 @@ function GuestTabNavigator() {
 // ───────────────────────────────────────────────────
 function MainTabNavigator() {
   const { bottom } = useSafeAreaInsets();
-  const { cartCount } = useCart();
   const { totalUnread } = useChat();
 
   return (
@@ -163,12 +153,12 @@ function MainTabNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           switch (route.name) {
-            case 'CampusFeed': iconName = focused ? 'newspaper'   : 'newspaper-outline';  break;
-            case 'Products':   iconName = focused ? 'grid'        : 'grid-outline';       break;
-            case 'Shopping':   iconName = focused ? 'storefront'  : 'storefront-outline'; break;
-            case 'Cart':       iconName = focused ? 'cart'        : 'cart-outline';       break;
-            case 'Profile':    iconName = focused ? 'person'      : 'person-outline';     break;
-            case 'Inbox':      iconName = focused ? 'chatbubbles' : 'chatbubbles-outline'; break;
+            case 'Feeds':    iconName = focused ? 'newspaper'   : 'newspaper-outline';  break;
+            case 'Products': iconName = focused ? 'grid'        : 'grid-outline';       break;
+            case 'Shopping': iconName = focused ? 'storefront'  : 'storefront-outline'; break;
+            case 'Cart':     iconName = focused ? 'cart'        : 'cart-outline';       break;
+            case 'Profile':  iconName = focused ? 'person'      : 'person-outline';     break;
+            case 'Inbox':    iconName = focused ? 'chatbubbles' : 'chatbubbles-outline'; break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -186,9 +176,9 @@ function MainTabNavigator() {
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Shopping"   component={HomeScreen}       options={{ title: 'Shop' }} />
-      <Tab.Screen name="Products"   component={ProductsScreen}   options={{ title: 'Products' }} />
-      <Tab.Screen name="CampusFeed" component={CampusFeedScreen} options={{ title: 'Feed' }} />
+      <Tab.Screen name="Shopping" component={HomeScreen}       options={{ title: 'Shop' }} />
+      <Tab.Screen name="Products" component={ProductsScreen}   options={{ title: 'Products' }} />
+      <Tab.Screen name="Feeds"    component={CampusFeedScreen} options={{ title: 'Feed' }} />
       <Tab.Screen
         name="Inbox"
         component={InboxScreen}
@@ -198,7 +188,7 @@ function MainTabNavigator() {
           tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 },
         }}
       />
-      <Tab.Screen name="Profile"    component={AccountScreen}    options={{ title: 'Profile' }} />
+      <Tab.Screen name="Profile" component={AccountScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }
@@ -216,11 +206,11 @@ function VendorTabNavigator() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           switch (route.name) {
-            case 'Dashboard':   iconName = focused ? 'grid' : 'grid-outline'; break;
-            case 'MyProducts':  iconName = focused ? 'cube' : 'cube-outline'; break;
-            case 'Orders':      iconName = focused ? 'clipboard' : 'clipboard-outline'; break;
-            case 'Settings':    iconName = focused ? 'person-circle' : 'person-circle-outline'; break;
-            case 'Inbox':       iconName = focused ? 'chatbubbles' : 'chatbubbles-outline'; break;
+            case 'Dashboard':  iconName = focused ? 'grid'            : 'grid-outline';            break;
+            case 'MyProducts': iconName = focused ? 'cube'            : 'cube-outline';            break;
+            case 'Orders':     iconName = focused ? 'clipboard'       : 'clipboard-outline';       break;
+            case 'Settings':   iconName = focused ? 'person-circle'   : 'person-circle-outline';   break;
+            case 'Inbox':      iconName = focused ? 'chatbubbles'     : 'chatbubbles-outline';     break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -239,25 +229,33 @@ function VendorTabNavigator() {
       })}
     >
       <Tab.Screen name="Dashboard"  component={VendorDashboardScreen} options={{ title: 'Dashboard' }} />
-      <Tab.Screen name="MyProducts" component={MyProductsScreen} options={{ title: 'Products' }} />
-      <Tab.Screen name="Orders"     component={VendorOrdersScreen} options={{ title: 'Orders' }} />
-      <Tab.Screen name="Inbox"      component={InboxScreen} options={{ title: 'Inbox', tabBarBadge: totalUnread > 0 ? totalUnread : null, tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 } }} />
-      <Tab.Screen name="Settings"   component={VendorAccountScreen} options={{ title: 'Profile' }} />
+      <Tab.Screen name="MyProducts" component={MyProductsScreen}     options={{ title: 'Products' }} />
+      <Tab.Screen name="Orders"     component={VendorOrdersScreen}   options={{ title: 'Orders' }} />
+      <Tab.Screen
+        name="Inbox"
+        component={InboxScreen}
+        options={{
+          title: 'Inbox',
+          tabBarBadge: totalUnread > 0 ? totalUnread : null,
+          tabBarBadgeStyle: { backgroundColor: TAB_BADGE_COLOR, fontSize: 12, minWidth: 20, height: 20 },
+        }}
+      />
+      <Tab.Screen name="Settings" component={VendorAccountScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }
 
 // ───────────────────────────────────────────────────
-// MAIN STACK – role‑based routing
+// MAIN STACK
 // ───────────────────────────────────────────────────
 function MainStackNavigator() {
-  const { user, role, loading } = useAuth();
+  const { user } = useAuth();
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!user ? (
         <>
-          {/*  Guests get tabs */}
+          {/* Guests */}
           <Stack.Screen name="GuestTabs" component={GuestTabNavigator} />
           <Stack.Screen name="VisualSearch" component={VisualSearchScreen} />
           <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} />
@@ -275,11 +273,11 @@ function MainStackNavigator() {
           <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
           <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
           <Stack.Screen name="CediAi" component={AIShoppingScreen} />
-          <Stack.Screen name="CampusFeed" component={CampusFeedScreen} />
+          {/* Feeds is now a stack route too, for guests who deep-link in */}
+          <Stack.Screen name="Feeds" component={CampusFeedScreen} />
           <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
           <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="GuestMarketDetail" component={GuestMarketDetailScreen} />
-          {/*  Discover is now a stack screen (was a tab) */}
           <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
         </>
       ) : (
@@ -295,9 +293,8 @@ function MainStackNavigator() {
               <Stack.Screen name="VendorSupport" component={VendorSupportScreen} options={{ headerShown: false }} />
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
               <Stack.Screen name="ReferralStats" component={VendorReferralStatsScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="CampusFeed" component={CampusFeedScreen} options={{ title: 'Feed' }} />
+              <Stack.Screen name="Feeds" component={CampusFeedScreen} options={{ title: 'Feed' }} />
               <Stack.Screen name="SelectProduct" component={SelectProductScreen} options={{ headerShown: false }} />
-              {/*  Discover available to vendors too */}
               <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
             </>
           ) : (
@@ -322,10 +319,10 @@ function MainStackNavigator() {
               <Stack.Screen name="Inbox" component={InboxScreen} options={{ headerShown: false }} />
               <Stack.Screen name="Earnings" component={EarningsScreen} options={{ headerShown: false }} />
               <Stack.Screen name="CediAi" component={AIShoppingScreen} />
-              {/*  Discover is now a stack screen (was a tab) */}
               <Stack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Discover' }} />
             </>
           )}
+
           {/* Shared screens for both roles */}
           <Stack.Screen name="Products" component={ProductsScreen} />
           <Stack.Screen name="VisualSearch" component={VisualSearchScreen} />
@@ -337,7 +334,6 @@ function MainStackNavigator() {
           <Stack.Screen name="FeedPostDetail" component={FeedPostDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CreateFeedPost" component={CreateFeedPostScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CreateStory" component={CreateStoryScreen} options={{ headerShown: false }} />
-          {/*  NOTE: Discover is registered inside each role branch above, not here. */}
         </>
       )}
     </Stack.Navigator>

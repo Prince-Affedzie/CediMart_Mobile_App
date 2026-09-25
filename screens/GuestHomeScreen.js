@@ -27,7 +27,7 @@ import SupportFAB from '../components/SupportFAB';
 import AIFAB from '../components/AIFAB';
 import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES,HERO_SLIDES} from '../data/General'
 import RecommendEarnBanner from '../components/RecommendEarnNotice'
-import ProductHeroCarousel from '../components/ProductHeroCarousel';
+import HeroCarousel from '../components/HeroCarousel';
 import {ProductGridSkeleton} from '../components/SkeletonLoader'
 import ShopFAB from '../components/ShopFAB'
 import VisualSearchFab from '../components/VisualSearchFab';
@@ -143,60 +143,6 @@ const ConditionBadge = ({ condition }) => {
   );
 };
 
-const HeroCarousel = ({ onSlidePress }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const flatListRef = useRef(null);
-  const timerRef = useRef(null);
-  const SLIDE_W = width - 32;
-
-  const startAutoScroll = useCallback(() => {
-    timerRef.current = setInterval(() => {
-      setActiveIndex(prev => {
-        const next = (prev + 1) % HERO_SLIDES.length;
-        flatListRef.current?.scrollToIndex({ index: next, animated: true });
-        return next;
-      });
-    }, AUTO_SCROLL_INTERVAL);
-  }, []);
-
-  useEffect(() => { startAutoScroll(); return () => clearInterval(timerRef.current); }, [startAutoScroll]);
-
-  const handleMomentumScrollEnd = (e) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / SLIDE_W);
-    setActiveIndex(index);
-    clearInterval(timerRef.current);
-    startAutoScroll();
-  };
-
-  const renderSlide = ({ item }) => (
-    <TouchableOpacity activeOpacity={0.92} onPress={() => onSlidePress(item)} style={[styles.slideWrapper, { width: SLIDE_W }]}>
-      <Image source={{ uri: item.image }} style={styles.slideImage} resizeMode="cover" />
-      <View style={[styles.slideScrim, { backgroundColor: item.overlayColor }]} />
-      <View style={styles.slideContent}>
-        <Text style={styles.slideTitle}>{item.title}</Text>
-        <TouchableOpacity style={[styles.slideBtn, { borderColor: item.accentColor }]} onPress={() => onSlidePress(item)} activeOpacity={0.85}>
-          <Text style={[styles.slideBtnText, { color: item.accentColor }]}>{item.btnText}</Text>
-          <Ionicons name="arrow-forward" size={13} color={item.accentColor} />
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
-
-  return (
-    <View>
-      <View style={styles.carouselWrap}>
-        <FlatList ref={flatListRef} data={HERO_SLIDES} renderItem={renderSlide} keyExtractor={item => item.id} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={handleMomentumScrollEnd} scrollEventThrottle={16} getItemLayout={(_, index) => ({ length: SLIDE_W, offset: SLIDE_W * index, index })} />
-      </View>
-      <View style={styles.dotsRow}>
-        {HERO_SLIDES.map((_, i) => (
-          <TouchableOpacity key={i} onPress={() => { flatListRef.current?.scrollToIndex({ index: i, animated: true }); setActiveIndex(i); clearInterval(timerRef.current); startAutoScroll(); }}>
-            <View style={[styles.dot, i === activeIndex ? styles.dotActive : styles.dotInactive]} />
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-};
 
 const ProductCard = ({ product, onPress }) => {
   const imageUri = product.images?.[0];
@@ -692,16 +638,7 @@ const GuestHomeScreen = () => {
         <RecommendEarnBanner />
 
         {/* HERO CAROUSEL */}
-        {featuredProducts.length > 0 ? (
-          <View style={styles.carouselSection}>
-            <ProductHeroCarousel 
-              products={featuredProducts.slice(0, 6)} 
-              onProductPress={handleProductPress} 
-            />
-          </View>
-        ) : (
-          <ProductHeroCarousel products={[]} onProductPress={handleProductPress} />
-        )}
+        <HeroCarousel navigation={navigation} />
 
         {/* CATEGORIES */}
         <View style={styles.section}>

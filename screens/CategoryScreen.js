@@ -301,7 +301,7 @@ const ListHeader = React.memo(({
   <>
     <View style={styles.heroWrap}>
       <Animated.Image
-        source={{ uri: `https://res.cloudinary.com/duv3qvvjz/image/upload/v1780782982/flyer13_1_fyp0xj.png` }}
+        source={{ uri: `https://res.cloudinary.com/duv3qvvjz/image/upload/v1790250614/hero_flyer_1_ilzcr5.png` }}
         style={[styles.heroImage, { transform: [{ scale: heroScaleAnim }] }]}
         resizeMode="cover"
       />

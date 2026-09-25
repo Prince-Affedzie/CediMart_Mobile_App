@@ -27,8 +27,7 @@ import { NotificationContext } from '../context/NotificationContext';
 import { useNavigation } from '@react-navigation/native';
 import {styles} from '../styles/home'
 import AIFAB from '../components/AIFAB';
-import ShopFAB from '../components/ShopFAB'
-import ProductHeroCarousel from '../components/ProductHeroCarousel';
+import HeroCarousel from '../components/HeroCarousel'
 import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES} from '../data/General'
 import RecommendEarnBanner from '../components/RecommendEarnNotice'
 import {ProductGridSkeleton} from '../components/SkeletonLoader'
@@ -640,10 +639,7 @@ const HomeScreen = () => {
 
         {/* PRODUCT HERO CAROUSEL */}
         <View style={styles.carouselSection}>
-          <ProductHeroCarousel
-            products={featuredProducts.slice(0, 6)}
-            onProductPress={handleProductPress}
-          />
+          <HeroCarousel navigation={navigation} />
         </View>
 
         
@@ -799,10 +795,7 @@ const HomeScreen = () => {
 
         <View style={{ height: 100 }} />
       </ScrollView>
-       {/*<ShopFAB 
-        onPress={() => navigation.navigate('Products')} 
-        bottomOffset={30} // Push up if there's another FAB
-      />*/}
+       
       <VisualSearchFab navigation={navigation} bottom={118} right={20} />
       <AIFAB style={{ position: 'absolute', bottom: 24, right: 16 }} />
     </SafeAreaView>
