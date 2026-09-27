@@ -3,8 +3,8 @@ import { Platform } from 'react-native';
 
 export const DEEP_LINK_PREFIXES = [
   'cedimart://',
-  'https://cedi-mart-web.vercel.app',
-  'https://www.cedi-mart-web.vercel.app',
+  'https://cedimartgh.com',
+  'https://www.cedimartgh.com',
 ];
 
 export const DEEP_LINK_CONFIG = {
@@ -47,7 +47,7 @@ export const DEEP_LINK_CONFIG = {
 
 export const getDeepLink = (path) => `cedimart://${path}`;
 
-export const getWebLink = (path) => `https://cedi-mart-web.vercel.app/${path}`;
+export const getWebLink = (path) => `https://cedimartgh.com/${path}`;
 
 export const getProductLink = (productId, useWebLink = true) => {
   const path = `product/${productId}`;

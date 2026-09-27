@@ -70,7 +70,7 @@ const CONDITION_CONFIG = {
   'for-parts':     { label: 'For Parts',     bg: C.dangerBg,  text: C.danger },
 };
 
-const HERO_BACKGROUND_IMAGE = 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1780782982/flyer13_1_fyp0xj.png';
+const HERO_BACKGROUND_IMAGE = 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1790335121/hero_flyer_1_1_ney3mo.png';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRODUCT CARD
