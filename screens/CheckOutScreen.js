@@ -119,6 +119,7 @@ const OrderScreen = ({ route }) => {
   const [referralCode, setReferralCode] = useState(null);
   const [newAddress, setNewAddress] = useState({ address: '', city: '', region: '', nearestLandmark: '', phone: user?.phone || '' });
   const [bottomBarHeight, setBottomBarHeight] = useState(200);
+  const [paymentMethod, setPaymentMethod] = useState('virtual');
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -188,7 +189,7 @@ const OrderScreen = ({ route }) => {
     orderItems: prepareOrderItems(),
     shippingAddress: { address: selectedAddress.address, city: selectedAddress.city, region: selectedAddress.region || '', nearestLandmark: selectedAddress.nearestLandmark || '', phone: selectedAddress.phone || user?.phone },
     deliverySchedule: { preferredDay: deliveryDay, preferredTime: deliveryTime },
-    paymentMethod: 'paystack',
+    paymentMethod,
     paymentReference,
     paymentStatus,
     ...(referralCode && { referralCode }),
@@ -198,8 +199,11 @@ const OrderScreen = ({ route }) => {
     if (cartItems.length === 0) { Alert.alert('Cart Empty', 'Add items first.'); navigation.navigate('Products'); return false; }
     if (!selectedAddress) { Alert.alert('Address Required', 'Please select or add a delivery address.'); return false; }
     if (!deliveryDay || !deliveryTime) { Alert.alert('Schedule Required', 'Please choose delivery day and time.'); return false; }
-    if (!paymentEmail.trim()) { setPaymentEmailError('Email is required for payment'); return false; }
-    if (!validateEmail(paymentEmail)) { setPaymentEmailError('Please enter a valid email address'); return false; }
+    // CHANGED: email is only required when paying online
+    if (paymentMethod === 'virtual') {
+      if (!paymentEmail.trim()) { setPaymentEmailError('Email is required for payment'); return false; }
+      if (!validateEmail(paymentEmail)) { setPaymentEmailError('Please enter a valid email address'); return false; }
+    }
     const outOfStock = cartItems.filter(item => { const stock = item.product?.countInStock ?? item.product?.stock ?? 0; return stock < (item.quantity || 1); });
     if (outOfStock.length > 0) { Alert.alert('Stock Issue', `Not enough stock for: ${outOfStock.map(i => i.product?.name || i.name).join(', ')}`, [{ text: 'OK', onPress: () => navigation.navigate('Cart') }]); return false; }
     return true;
@@ -207,12 +211,18 @@ const OrderScreen = ({ route }) => {
 
   const createOrderAfterPayment = async (paymentReference, paymentStatus) => {
     const orderData = prepareOrderData(paymentReference, paymentStatus);
-    const authToken = token || (await AsyncStorage.getItem('@freshyfood_token'));
+    const authToken = token || (await AsyncStorage.getItem('@cedimart_token'));
     const res = await order(orderData, authToken);
     if (res.status === 200 || res.status === 201) {
       clearCart();
       const orderNumber = res.data.data?.orderNumber || res.data.data?._id || 'N/A';
-      Alert.alert('Order Confirmed! 🎉', `Order #${orderNumber} has been placed successfully.${paymentStatus === 'pending' ? '\n\nYour payment is being verified. We\'ll confirm once complete.' : ''}`, [
+      // CHANGED: follow-up copy now branches on payment method instead of assuming online payment
+      const followUp = paymentMethod === 'cash'
+        ? '\n\nPlease have the exact amount ready for cash payment on delivery.'
+        : paymentStatus === 'pending'
+          ? '\n\nYour payment is being verified. We\'ll confirm once complete.'
+          : '';
+      Alert.alert('Order Confirmed! 🎉', `Order #${orderNumber} has been placed successfully.${followUp}`, [
         { text: 'View Order', onPress: () => navigation.navigate('OrderDetail', { orderId: res.data.data?._id || res.data.data?.id }) },
         { text: 'Continue Shopping', onPress: () => navigation.navigate('MainTabs', { screen: 'Home' }) },
       ]);
@@ -220,7 +230,8 @@ const OrderScreen = ({ route }) => {
      await clearReferralCode();
      }
     } else {
-      Alert.alert('Order Failed', res.data?.message || 'Your payment was processed but we couldn\'t create your order. Please contact support.', [{ text: 'Contact Support', onPress: () => navigation.navigate('Support') }]);
+      // CHANGED: dropped the "your payment was processed but..." line — no longer universally true (cash orders haven't paid)
+      Alert.alert('Order Failed', res.data?.message || 'We couldn\'t create your order. Please contact support.', [{ text: 'Contact Support', onPress: () => navigation.navigate('Support') }]);
     }
   };
 
@@ -228,8 +239,15 @@ const OrderScreen = ({ route }) => {
     if (!isFormValid()) return;
     setPlacingOrder(true);
     try {
-      const authToken = token || (await AsyncStorage.getItem('@freshyfood_token'));
+      const authToken = token || (await AsyncStorage.getItem('@cedimart_token'));
       if (!authToken) { Alert.alert('Login Required', 'Please sign in to continue.'); navigation.navigate('Login'); setPlacingOrder(false); return; }
+
+      // NEW: cash-on-delivery skips Paystack entirely and creates the order as unpaid/pending
+      if (paymentMethod === 'cash') {
+        await createOrderAfterPayment(null, 'pending');
+        return;
+      }
+
       const paymentResult = await triggerPayment({ navigation, email: paymentEmail.trim(), phone: user?.phone || selectedAddress?.phone, amount: total });
       if (!paymentResult?.success) { if (paymentResult?.cancelled) { setPlacingOrder(false); return; } Alert.alert('Payment Failed', 'Your payment could not be processed. Please try again.'); setPlacingOrder(false); return; }
       const reference = paymentResult.reference;
@@ -251,7 +269,8 @@ const OrderScreen = ({ route }) => {
     } finally { setPlacingOrder(false); }
   };
 
-  const emailValid = paymentEmail && validateEmail(paymentEmail);
+  // CHANGED: email is irrelevant (and therefore always "valid") when paying cash on delivery
+  const emailValid = paymentMethod === 'cash' ? true : (paymentEmail && validateEmail(paymentEmail));
   const readyToPay = selectedAddress && emailValid;
 
   if (cartLoading) {
@@ -349,24 +368,59 @@ const OrderScreen = ({ route }) => {
             )}
           </View>
 
-          {/* Payment Email */}
-          <View style={[styles.card, !emailValid && styles.cardRequired]}>
-            <SectionHeader icon="mail" title="Payment Email" filled={emailValid} required pulseAnim={pulseAnim} />
-            <View style={styles.infoBanner}>
-              <Ionicons name="information-circle-outline" size={15} color={C.info} />
-              <Text style={styles.infoBannerText}>Your receipt and order confirmation will be sent here</Text>
-            </View>
-            <View style={[styles.emailFieldWrap, paymentEmailError ? styles.emailFieldError : emailValid ? styles.emailFieldSuccess : null]}>
-              <Ionicons name="mail-outline" size={18} color={paymentEmailError ? C.danger : emailValid ? C.success : C.t3} style={{ marginRight: 10 }} />
-              <TextInput style={styles.emailField} placeholder="yourname@example.com" placeholderTextColor={C.t3} value={paymentEmail} onChangeText={t => { setPaymentEmail(t.trim()); if (paymentEmailError && validateEmail(t.trim())) setPaymentEmailError(''); }} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
-              {emailValid && <Ionicons name="checkmark-circle" size={18} color={C.success} />}
-            </View>
-            {paymentEmailError ? (
-              <View style={styles.fieldMsg}><Ionicons name="close-circle" size={14} color={C.danger} /><Text style={styles.fieldMsgError}>{paymentEmailError}</Text></View>
-            ) : emailValid ? (
-              <View style={styles.fieldMsg}><Ionicons name="checkmark-circle" size={14} color={C.success} /><Text style={styles.fieldMsgSuccess}>Looks good!</Text></View>
-            ) : null}
+          {/* NEW: Payment Method */}
+          <View style={styles.card}>
+            <SectionHeader icon="wallet-outline" title="Payment Method" filled />
+            <TouchableOpacity
+              style={[styles.addrCard, paymentMethod === 'virtual' && styles.addrCardSelected]}
+              onPress={() => setPaymentMethod('virtual')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.radio, paymentMethod === 'virtual' && styles.radioActive]}>
+                {paymentMethod === 'virtual' && <View style={styles.radioFill} />}
+              </View>
+              <View style={styles.addrBody}>
+                <Text style={styles.addrMain}>Pay Now</Text>
+                <Text style={styles.addrSub}>Mobile Money, Card or Bank </Text>
+              </View>
+              {paymentMethod === 'virtual' && <Ionicons name="checkmark-circle" size={20} color={C.success} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.addrCard, paymentMethod === 'cash' && styles.addrCardSelected, { marginBottom: 0 }]}
+              onPress={() => setPaymentMethod('cash')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.radio, paymentMethod === 'cash' && styles.radioActive]}>
+                {paymentMethod === 'cash' && <View style={styles.radioFill} />}
+              </View>
+              <View style={styles.addrBody}>
+                <Text style={styles.addrMain}>Pay on Delivery</Text>
+                <Text style={styles.addrSub}>Pay cash when your order arrives</Text>
+              </View>
+              {paymentMethod === 'cash' && <Ionicons name="checkmark-circle" size={20} color={C.success} />}
+            </TouchableOpacity>
           </View>
+
+          {/* Payment Email — CHANGED: only shown when paying online */}
+          {paymentMethod === 'paystack' && (
+            <View style={[styles.card, !emailValid && styles.cardRequired]}>
+              <SectionHeader icon="mail" title="Payment Email" filled={emailValid} required pulseAnim={pulseAnim} />
+              <View style={styles.infoBanner}>
+                <Ionicons name="information-circle-outline" size={15} color={C.info} />
+                <Text style={styles.infoBannerText}>Your receipt and order confirmation will be sent here</Text>
+              </View>
+              <View style={[styles.emailFieldWrap, paymentEmailError ? styles.emailFieldError : emailValid ? styles.emailFieldSuccess : null]}>
+                <Ionicons name="mail-outline" size={18} color={paymentEmailError ? C.danger : emailValid ? C.success : C.t3} style={{ marginRight: 10 }} />
+                <TextInput style={styles.emailField} placeholder="yourname@example.com" placeholderTextColor={C.t3} value={paymentEmail} onChangeText={t => { setPaymentEmail(t.trim()); if (paymentEmailError && validateEmail(t.trim())) setPaymentEmailError(''); }} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+                {emailValid && <Ionicons name="checkmark-circle" size={18} color={C.success} />}
+              </View>
+              {paymentEmailError ? (
+                <View style={styles.fieldMsg}><Ionicons name="close-circle" size={14} color={C.danger} /><Text style={styles.fieldMsgError}>{paymentEmailError}</Text></View>
+              ) : emailValid ? (
+                <View style={styles.fieldMsg}><Ionicons name="checkmark-circle" size={14} color={C.success} /><Text style={styles.fieldMsgSuccess}>Looks good!</Text></View>
+              ) : null}
+            </View>
+          )}
 
           {/* Order Summary */}
           <View style={styles.card}>
@@ -389,7 +443,7 @@ const OrderScreen = ({ route }) => {
             <View style={styles.totalsBlock}>
               <View style={styles.totalsRow}><Text style={styles.totalsLabel}>Subtotal ({cartItems.length} item{cartItems.length !== 1 ? 's' : ''})</Text><Text style={styles.totalsValue}>GH₵ {cartTotal.toFixed(2)}</Text></View>
               <View style={styles.totalsDivider} />
-              <View style={styles.grandRow}><Text style={styles.grandLabel}>Total to pay now</Text><Text style={styles.grandAmount}>GH₵ {total.toFixed(2)}</Text></View>
+              <View style={styles.grandRow}><Text style={styles.grandLabel}>{paymentMethod === 'cash' ? 'Total (pay on delivery)' : 'Total to pay now'}</Text><Text style={styles.grandAmount}>GH₵ {total.toFixed(2)}</Text></View>
             </View>
           </View>
 
@@ -435,11 +489,11 @@ const OrderScreen = ({ route }) => {
             </React.Fragment>
           ))}
         </View>
-        <View style={styles.bottomAmountRow}><View><Text style={styles.bottomAmountLabel}>Total to pay now</Text></View><Text style={styles.bottomAmount}>GH₵ {total.toFixed(2)}</Text></View>
+        <View style={styles.bottomAmountRow}><View><Text style={styles.bottomAmountLabel}>{paymentMethod === 'cash' ? 'Total (pay on delivery)' : 'Total to pay now'}</Text></View><Text style={styles.bottomAmount}>GH₵ {total.toFixed(2)}</Text></View>
         <TouchableOpacity style={[styles.payBtn, placingOrder && styles.payBtnLoading, !readyToPay && !placingOrder && styles.payBtnIncomplete]} onPress={handlePlaceOrder} disabled={placingOrder} activeOpacity={0.88}>
-          {placingOrder ? <><ActivityIndicator color="#fff" size="small" /><Text style={styles.payBtnText}>Processing…</Text></> : <Text style={styles.payBtnText}>Pay GH₵ {total.toFixed(2)}</Text>}
+          {placingOrder ? <><ActivityIndicator color="#fff" size="small" /><Text style={styles.payBtnText}>Processing…</Text></> : <Text style={styles.payBtnText}>{paymentMethod === 'cash' ? 'Place Order' : `Pay GH₵ ${total.toFixed(2)}`}</Text>}
         </TouchableOpacity>
-        <Text style={styles.termsText}>🔒 Secured by Paystack · Continuing means you agree to our Terms</Text>
+        <Text style={styles.termsText}>{paymentMethod === 'cash' ? '📦 Pay cash on delivery · Continuing means you agree to our Terms' : '🔒 Secured by Paystack · Continuing means you agree to our Terms'}</Text>
       </View>
     </View>
   );
