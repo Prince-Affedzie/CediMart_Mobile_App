@@ -276,7 +276,7 @@ const OrdersScreen = () => {
                 <Text style={[styles.statusPillText, { color: meta.color }]}>{statusText}</Text>
               </View>
             </View>
-            <View style={styles.orderPreviewRow}>
+            <View style={[styles.orderPreviewRow, normalizedStatus !== 'delivered' && styles.orderPreviewRowLast]}>
               <View style={styles.previewImageWrap}>
                 <Image source={{ uri: firstImg }} style={styles.previewImage} />
                 {itemCount > 1 && <View style={styles.previewMore}><Text style={styles.previewMoreText}>+{itemCount - 1}</Text></View>}
@@ -298,25 +298,14 @@ const OrdersScreen = () => {
                 <Ionicons name={normalizedStatus === 'delivered' ? 'receipt-outline' : 'navigate-outline'} size={18} color={meta.color} />
               </TouchableOpacity>
             </View>
-            <View style={styles.orderActionsRow}>
-              {normalizedStatus === 'delivered' ? (
+            {normalizedStatus === 'delivered' && (
+              <View style={styles.orderActionsRow}>
                 <TouchableOpacity style={[styles.actionBtn, styles.actionBtnPrimary]} onPress={() => handleReorder(item)} activeOpacity={0.8}>
                   <Ionicons name="refresh-outline" size={14} color="#fff" />
                   <Text style={styles.actionBtnPrimaryText}>Reorder</Text>
                 </TouchableOpacity>
-              ) : normalizedStatus !== 'cancelled' ? (
-                <TouchableOpacity style={[styles.actionBtn, styles.actionBtnTrack]} onPress={() => navigation.navigate('OrderDetail', { orderId: item.id || item._id })} activeOpacity={0.8}>
-                  <Ionicons name="locate-outline" size={14} color={C.info} />
-                  <Text style={styles.actionBtnTrackText}>Track Order</Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.actionBtnPlaceholder} />
-              )}
-              <TouchableOpacity style={[styles.actionBtn, styles.actionBtnGhost]} onPress={() => navigation.navigate('OrderDetail', { orderId: item.id || item._id })} activeOpacity={0.8}>
-                <Text style={styles.actionBtnGhostText}>View Details</Text>
-                <Ionicons name="chevron-forward" size={13} color={C.t3} />
-              </TouchableOpacity>
-            </View>
+              </View>
+            )}
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -448,6 +437,7 @@ const styles = StyleSheet.create({
   statusPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, gap: 4 },
   statusPillText: { fontSize: 11, fontWeight: '700' },
   orderPreviewRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#F8F9FA' },
+  orderPreviewRowLast: { marginBottom: 0, paddingBottom: 0, borderBottomWidth: 0 },
   previewImageWrap: { position: 'relative' },
   previewImage: { width: 72, height: 72, borderRadius: 12, backgroundColor: C.elev },
   previewMore: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
@@ -463,11 +453,6 @@ const styles = StyleSheet.create({
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, gap: 5 },
   actionBtnPrimary: { backgroundColor: C.brand, shadowColor: C.brand, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 5, elevation: 3 },
   actionBtnPrimaryText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  actionBtnTrack: { backgroundColor: C.infoBg },
-  actionBtnTrackText: { color: C.info, fontSize: 13, fontWeight: '700' },
-  actionBtnGhost: { backgroundColor: C.elev, borderWidth: 1, borderColor: '#E9ECEF' },
-  actionBtnGhostText: { color: C.t2, fontSize: 13, fontWeight: '600' },
-  actionBtnPlaceholder: { flex: 1 },
   emptyContainer: { alignItems: 'center', paddingTop: 48, paddingHorizontal: 40, paddingBottom: 32 },
   emptyIconBg: { width: 90, height: 90, borderRadius: 45, backgroundColor: C.brandBg, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   emptyTitle: { fontSize: 20, fontWeight: '800', color: C.brand, marginBottom: 8, textAlign: 'center' },

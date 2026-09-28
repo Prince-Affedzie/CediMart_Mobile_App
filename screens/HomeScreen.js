@@ -572,14 +572,15 @@ const HomeScreen = () => {
               </View>
             </View>
             <View style={styles.headerActions}>
+               <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Cart')}>
+                <Ionicons name="cart-outline" size={24} color="#3a3b3a" />
+                {cartCount > 0 && <View style={styles.notifBadge}><Text style={styles.notifBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text></View>}
+              </TouchableOpacity>
               <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Notification')}>
                 <Ionicons name={unreadCount > 0 ? 'notifications' : 'notifications-outline'} size={24} color="#3a3b3a" />
                 {unreadCount > 0 && <View style={styles.notifBadge}><Text style={styles.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text></View>}
               </TouchableOpacity>
-              <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Inbox')}>
-                <Ionicons name="mail-outline" size={24} color="#3a3b3a" />
-                {totalUnread > 0 && <View style={styles.notifBadge}><Text style={styles.notifBadgeText}>{totalUnread > 9 ? '9+' : totalUnread}</Text></View>}
-              </TouchableOpacity>
+             
             </View>
           </View>
 

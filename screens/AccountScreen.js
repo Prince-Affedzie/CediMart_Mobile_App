@@ -248,7 +248,7 @@ const AccountScreen = ({ navigation }) => {
           {renderSectionTitle('Shopping')}
           <View style={styles.menuCard}>
             {renderMenuItem('My Cart', 'cart-outline', () => navigation.navigate('Cart'), C.accent)}
-            {renderMenuItem('Order History', 'receipt-outline', () => navigation.navigate('Orders'), C.info)}
+            {renderMenuItem(' My Orders', 'receipt-outline', () => navigation.navigate('Orders'), C.info)}
             {renderMenuItem('Earning & Rewards', 'gift-outline', () => navigation.navigate('Earnings'), C.success)}
             {renderMenuItem('Favorites', 'heart-outline', () => navigation.navigate('Favorites'), C.danger)}
           </View>
