@@ -39,12 +39,12 @@ const SLIDES = [
     alt: 'CediMart promotion',
     target: { stack: 'Products' },
   },
-  {
+  /*{
     key: 'hero-2',
     src: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1790335131/hero_flyer_2_1_av33wr.png',
     alt: 'CediMart promotion',
     target: { tab: 'Feeds', stack: 'Feeds' },
-  },
+  },*/
   {
     key: 'hero-3',
     src: 'https://res.cloudinary.com/duv3qvvjz/image/upload/v1790335211/hero_flyer_3_1_lrktad.png',

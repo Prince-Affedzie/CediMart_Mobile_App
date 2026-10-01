@@ -27,13 +27,10 @@ export default {
       usesAppleSignIn: true,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        
         NSAppTransportSecurity: {
           NSAllowsArbitraryLoads: true,
           NSAllowsArbitraryLoadsInWebContent: true,
-          NSPhotoLibraryUsageDescription:
-            "Cedimart uses your photo library to let you upload profile photos and product images.",
-          NSCameraUsageDescription:
-            "Cedimart uses your camera to let you take profile photos and product images.",
           NSExceptionDomains: {
             "paystack.com": {
               NSIncludesSubdomains: true,
@@ -52,6 +49,14 @@ export default {
             }
           }
         },
+        
+        // Permissions sitting at the root of infoPlist
+        NSPhotoLibraryUsageDescription:
+          "CediMart uses your photo library to let you upload profile photos and product images for your listings.",
+        NSCameraUsageDescription:
+          "CediMart needs camera access so you can take pictures of real-world items to visually search for matching products on our marketplace.",
+          
+        // URL Types restored to the root of infoPlist
         CFBundleURLTypes: [
           {
             CFBundleURLSchemes: [
