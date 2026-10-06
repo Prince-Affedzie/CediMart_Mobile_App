@@ -44,7 +44,7 @@ const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/300x300/F5F5F5/BDBDBD?tex
 const SUGGESTED_QUESTIONS = [
   { id: '1', text: 'Laptop under GHS 4,000', icon: 'laptop-outline' },
   { id: '2', text: 'Headphones under GHS 300', icon: 'headset-outline' },
-  { id: '3', text: 'Dresses for Hall Week', icon: 'shirt-outline' },
+  { id: '3', text: 'Dresses for a wedding', icon: 'shirt-outline' },
   { id: '4', text: 'Ingredients for Jollof', icon: 'restaurant-outline' },
   { id: '5', text: 'Recommend an iPhone', icon: 'phone-portrait-outline' },
   { id: '6', text: 'Find me a mattress', icon: 'bed-outline' },
@@ -127,7 +127,7 @@ const ProductCard = ({ product, onPress, onChatSeller }) => {
 
         <View style={styles.priceRow}>
           <Text style={styles.price}>GH₵ {product.price?.toLocaleString()}</Text>
-          {product.campus && <Text style={styles.campus}>{product.campus}</Text>}
+          {/* Removed: {product.campus && <Text style={styles.campus}>{product.campus}</Text>} */}
         </View>
 
         <View style={styles.cardActionsRow}>
@@ -266,7 +266,7 @@ const AIShoppingScreen = () => {
         </View>
         <Text style={styles.welcomeTitle}>Ask CediAI</Text>
         <Text style={styles.welcomeSubtitle}>
-          Your AI shopping assistant — find the best deals on campus instantly.
+          Your AI shopping assistant — find the best deals across Ghana instantly.
         </Text>
       </Animated.View>
 
@@ -468,10 +468,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginBottom: 12,
   },
   price: { fontSize: 18, fontWeight: '800', color: C.accent },
-  campus: {
-    fontSize: 11, color: C.t2, fontWeight: '600',
-    backgroundColor: C.elev, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
-  },
+  // Removed: campus style
   cardActionsRow: { flexDirection: 'row', gap: 8 },
   chatSellerBtn: {
     width: 42, height: 42, borderRadius: 12,

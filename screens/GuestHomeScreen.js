@@ -32,6 +32,8 @@ import {ProductGridSkeleton} from '../components/SkeletonLoader'
 import ShopFAB from '../components/ShopFAB'
 import VisualSearchFab from '../components/VisualSearchFab';
 import VendorSpotlight from '../components/VendorSpotlight';
+import WelcomeTipsSheet  from "../components/WelcomeTipsSheet"
+
 
 const { width } = Dimensions.get('window');
 
@@ -782,10 +784,7 @@ const GuestHomeScreen = () => {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/*<ShopFAB
-        onPress={() => navigation.navigate('Products')} 
-        bottomOffset={60}  
-      />*/}
+      <WelcomeTipsSheet />
       <VisualSearchFab navigation={navigation} bottom={128} right={20} />
       <AIFAB style={{ position: 'absolute', bottom: 34, right: 16 }} />
     </SafeAreaView>

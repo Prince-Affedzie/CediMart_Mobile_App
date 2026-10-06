@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image,
   ScrollView, TextInput, ActivityIndicator, Platform,
-  Animated, Pressable, Dimensions,
+  Animated, Pressable, Dimensions,PermissionsAndroid
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -119,7 +119,35 @@ const VisualSearchScreen = ({ navigation }) => {
     return onPicked;
   };
 
-  const openCamera = () => launchCamera({ mediaType: 'photo', quality: 0.85, maxWidth: 1000, maxHeight: 1000 }, pickImage());
+ const openCamera = async () => {
+    // 1. Request runtime permission specifically for Android
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+          {
+            title: "Camera Permission",
+            message: "CediMart needs access to your camera so you can snap photos of items to search.",
+            buttonNeutral: "Ask Me Later",
+            buttonNegative: "Cancel",
+            buttonPositive: "OK"
+          }
+        );
+        
+        // If the user denies the permission, stop here and show an error
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          setError('Camera permission is required to take photos.');
+          return;
+        }
+      } catch (err) {
+        console.warn(err);
+        setError('Failed to request camera permission.');
+        return;
+      }
+    }
+    
+    launchCamera({ mediaType: 'photo', quality: 0.85, maxWidth: 1000, maxHeight: 1000 }, pickImage());
+  };
   const openLibrary = () => launchImageLibrary({ mediaType: 'photo', quality: 0.85, maxWidth: 1000, maxHeight: 1000 }, pickImage());
 
   const clearImage = () => {

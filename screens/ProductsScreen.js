@@ -782,18 +782,23 @@ const ProductsScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.topBarRight}>
+            {/* CHANGED: added a trailing chevron so this reads as a tappable
+                "Deliver to … ▾" selector (Amazon/Jumia pattern) rather than a
+                static location label. Styling for the pill itself moved to a
+                white surface with a visible border — see styles/products.js. */}
             <TouchableOpacity
               style={styles.deliveryPill}
               onPress={() => setLocationSheetVisible(true)}
-              activeOpacity={0.8}
+              activeOpacity={0.75}
             >
-              <Ionicons name="location" size={13} color="#0D9488" />
+              <Ionicons name="location" size={13} color={C.brand} />
               <View style={styles.deliveryPillTextWrap}>
                 <Text style={styles.deliveryPillLabel}>Deliver to</Text>
                 <Text style={styles.deliveryPillValue} numberOfLines={1}>
                   {selectedSuburb ? `${selectedSuburb}, ${activeLocationLabel}` : activeLocationLabel}
                 </Text>
               </View>
+              <Ionicons name="chevron-down" size={12} color={C.t3} style={styles.deliveryPillChevron} />
             </TouchableOpacity>
 
             <TouchableOpacity

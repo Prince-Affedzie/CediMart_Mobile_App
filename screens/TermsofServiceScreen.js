@@ -76,7 +76,7 @@ You must be at least 18 years old, or have the consent of a parent or guardian, 
       { heading: 'No Misinformation', text: 'Deliberately false or misleading content that could cause harm is not allowed on our platform.' },
       { heading: 'No Scams or Fraud', text: 'Attempting to deceive users for financial gain, including fake listings, phishing, or impersonation, will result in permanent removal.' },
     ],
-    note: 'We reserve the right to remove any content and suspend any account that violates these policies. Serious violations may be reported to law enforcement or university authorities.',
+    note: 'We reserve the right to remove any content and suspend any account that violates these policies. Serious violations may be reported to law enforcement authorities.',
   },
   {
     id: 'reporting',
@@ -115,7 +115,7 @@ You must be at least 18 years old, or have the consent of a parent or guardian, 
       { heading: 'Escrow Protection', text: 'Your payment is held securely and NOT released to the seller until you confirm delivery and satisfaction.' },
       { heading: 'Inspection Period', text: 'You have 24 hours from delivery to inspect the item and report any issues.' },
       { heading: 'Dispute Resolution', text: 'If an item is significantly different from its description, damaged, or not delivered, file a dispute. Our team will investigate.' },
-      { heading: 'Meeting Safety', text: 'For in-person exchanges, always meet in public campus areas during daylight hours.' },
+      { heading: 'Meeting Safety', text: 'For in-person exchanges, always meet in public, well-lit places during daylight hours and bring someone along if possible.' },
     ],
   },
   {
@@ -126,7 +126,7 @@ You must be at least 18 years old, or have the consent of a parent or guardian, 
     title: 'Selling on CediMart',
     bullets: [
       { heading: 'Listing Requirements', text: 'All listings must include accurate descriptions, clear photos, correct condition, and fair pricing.' },
-      { heading: 'Prohibited Items', text: 'Counterfeit goods, stolen items, weapons, alcohol, drugs, and items violating university policies or Ghanaian law are strictly prohibited.' },
+      { heading: 'Prohibited Items', text: 'Counterfeit goods, stolen items, weapons, alcohol, drugs, and items violating Ghanaian law are strictly prohibited.' },
       { heading: 'Commission Fees', text: 'CediMart charges a 7% platform fee on each successful sale. If the sale came through a referral link, an additional 3% referrer reward applies.' },
       { heading: 'Payouts', text: 'Earnings are released to your mobile money or bank account within 24-48 hours after the buyer confirms delivery.' },
     ],
@@ -299,7 +299,7 @@ const TermsOfServiceScreen = () => {
           <View style={styles.abuseWarningContent}>
             <Text style={styles.abuseWarningTitle}>Zero Tolerance for Abuse & Harassment</Text>
             <Text style={styles.abuseWarningText}>
-              CediMart is a community built on respect. Abuse, harassment, hate speech, threats, or any form of harmful behavior will result in immediate action — including permanent account removal and reporting to university authorities where applicable.
+              CediMart is a community built on respect. Abuse, harassment, hate speech, threats, or any form of harmful behavior will result in immediate action — including permanent account removal and reporting to law enforcement authorities where applicable.
             </Text>
           </View>
         </View>
@@ -311,7 +311,7 @@ const TermsOfServiceScreen = () => {
             {[
               { icon: 'shield-checkmark', text: 'Zero tolerance for abuse, harassment, and hate speech' },
               { icon: 'flag', text: 'Report violations — we respond within 24 hours' },
-              { icon: 'people', text: 'Respect all campus community members at all times' },
+              { icon: 'people', text: 'Respect all community members at all times' },
               { icon: 'alert-circle', text: 'Violations may result in permanent account suspension' },
             ].map((item, i) => (
               <View key={i} style={styles.summaryItem}>

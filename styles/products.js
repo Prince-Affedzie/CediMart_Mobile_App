@@ -640,22 +640,33 @@ export const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // ─── Deliver-to location pill (Amazon-style "Deliver to …") ────────────────
+  // ─── Deliver-to location pill (Amazon/Jumia-style "Deliver to … ▾") ────────
+  // CHANGED: previously a flat, borderless-looking teal-on-teal wash — it
+  // read as a static label, not a button. Now a white chip with a visible
+  // teal border, a subtle shadow for depth, and a trailing chevron so it
+  // unmistakably reads as "tap to change", the same affordance pattern as
+  // the search bar and the sort/filter segments elsewhere on this screen.
   deliveryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: C.brandBg,
+    gap: 5,
+    backgroundColor: C.white,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 7,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: C.brandBorder,
-    maxWidth: 118,
+    maxWidth: 150,
+    shadowColor: C.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
   },
   deliveryPillTextWrap: { flexShrink: 1 },
   deliveryPillLabel: { fontSize: 8.5, color: C.t3, fontWeight: '600', lineHeight: 10 },
-  deliveryPillValue: { fontSize: 11.5, color: C.brandD, fontWeight: '800', lineHeight: 14 },
+  deliveryPillValue: { fontSize: 11.5, color: C.t1, fontWeight: '800', lineHeight: 14 },
+  deliveryPillChevron: { marginLeft: -1 },
 
   // ─── Search Bar ──────────────────────────────────────────
   searchBarWrap: {

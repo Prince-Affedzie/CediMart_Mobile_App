@@ -50,31 +50,19 @@ const C = {
 const POST_TYPES = [
   { key: 'product_reel', icon: 'pricetag-outline', label: 'Product', desc: 'Showcase a product', color: '#0D9488' },
   { key: 'service_reel', icon: 'construct-outline', label: 'Service', desc: 'Promote a service', color: '#7C3AED' },
-  { key: 'lifestyle', icon: 'camera-outline', label: 'Lifestyle', desc: 'Campus life moments', color: '#F97316' },
-  { key: 'campus_event', icon: 'calendar-outline', label: 'Event', desc: 'Campus events & programs', color: '#0284C7' },
-  { key: 'campus_hack', icon: 'bulb-outline', label: 'Campus Hack', desc: 'Tips & tricks', color: '#F59E0B' },
-  { key: 'achievement', icon: 'trophy-outline', label: 'Achievement', desc: 'Student wins', color: '#059669' },
-  { key: 'funny_moment', icon: 'happy-outline', label: 'Funny', desc: 'Campus memes & moments', color: '#EC4899' },
+  { key: 'lifestyle', icon: 'camera-outline', label: 'Lifestyle', desc: 'Everyday moments', color: '#F97316' },
+  { key: 'campus_event', icon: 'calendar-outline', label: 'Event', desc: 'Events & programs', color: '#0284C7' },
+  { key: 'campus_hack', icon: 'bulb-outline', label: 'Life Hack', desc: 'Tips & tricks', color: '#F59E0B' },
+  { key: 'achievement', icon: 'trophy-outline', label: 'Achievement', desc: 'Wins & milestones', color: '#059669' },
+  { key: 'funny_moment', icon: 'happy-outline', label: 'Funny', desc: 'Memes & funny moments', color: '#EC4899' },
 ];
 
-const CAMPUS_OPTIONS = [
-  { value: 'ALL', label: 'All Campuses' },
-  { value: 'UG', label: 'University of Ghana' },
-  { value: 'KNUST', label: 'KNUST' },
-  { value: 'UCC', label: 'UCC' },
-  { value: 'UPSA', label: 'UPSA' },
-  { value: 'GIMPA', label: 'GIMPA' },
-  { value: 'ASHESI', label: 'Ashesi' },
-  { value: 'UEW', label: 'UEW' },
-  { value: 'ATU', label: 'ATU' },
-];
-
-const INSPO_ITEMS = [ 
+const INSPO_ITEMS = [
   { type: 'product_reel', icon: 'pricetag-outline', label: 'Sell your brand', color: '#0D9488' },
   { type: 'service_reel', icon: 'construct-outline', label: 'Your Services', color: '#7C3AED' },
-  { type: 'campus_event', icon: 'calendar-outline', label: 'Campus Events', color: '#0284C7' },
-  { type: 'lifestyle', icon: 'camera-outline', label: 'Hostel Tour', color: '#F97316' },
-  { type: 'campus_hack', icon: 'bulb-outline', label: 'Campus Hacks', color: '#F59E0B' },
+  { type: 'campus_event', icon: 'calendar-outline', label: 'Events', color: '#0284C7' },
+  { type: 'lifestyle', icon: 'camera-outline', label: 'Home Tour', color: '#F97316' },
+  { type: 'campus_hack', icon: 'bulb-outline', label: 'Life Hacks', color: '#F59E0B' },
   { type: 'achievement', icon: 'trophy-outline', label: 'Your Wins', color: '#059669' },
   { type: 'funny_moment', icon: 'happy-outline', label: 'Funny Moments', color: '#EC4899' },
 ];
@@ -156,7 +144,6 @@ const CreateFeedPostScreen = () => {
   const [postType, setPostType] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [campus, setCampus] = useState('ALL');
   const [media, setMedia] = useState([]);
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
@@ -168,7 +155,6 @@ const CreateFeedPostScreen = () => {
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(0);
   const [showCategorySheet, setShowCategorySheet] = useState(false);
-  const [showCampusSheet, setShowCampusSheet] = useState(false);
 
   const selectedType = POST_TYPES.find((t) => t.key === postType);
 
@@ -381,7 +367,6 @@ const CreateFeedPostScreen = () => {
       const postData = {
         type: postType,
         title: title.trim(),
-        campus,
         description: description.trim() || undefined,
         linkedProduct: linkedProductId || undefined,
         tags,
@@ -395,7 +380,7 @@ const CreateFeedPostScreen = () => {
           'Posted! 🎉',
           response.data?.message || 'Your post is now live.',
           [
-            { text: 'View Feed', onPress: () => navigation.navigate('CampusFeed') },
+            { text: 'View Feed', onPress: () => navigation.navigate('Feeds') },
             { text: 'Done', onPress: () => navigation.goBack() },
           ]
         );
@@ -410,7 +395,6 @@ const CreateFeedPostScreen = () => {
     }
   };
 
-  const campusLabel = CAMPUS_OPTIONS.find((c) => c.value === campus)?.label || 'Select';
   const canPost = !!title.trim() && !!postType && !loading;
 
   // ── NOT AUTHENTICATED ──
@@ -432,9 +416,9 @@ const CreateFeedPostScreen = () => {
             </View>
           </View>
 
-          <Text style={styles.authTitle}>Share with the Campus</Text>
+          <Text style={styles.authTitle}>Share with the Community</Text>
           <Text style={styles.authSubtitle}>
-            Create an account or login to share videos, moments, and connect with students across campus.
+            Create an account or login to share videos, moments, and connect with people across Ghana.
           </Text>
 
           <View style={styles.authFeatures}>
@@ -448,7 +432,7 @@ const CreateFeedPostScreen = () => {
             </View>
             <View style={styles.authFeatureRow}>
               <Ionicons name="checkmark-circle" size={18} color={C.brand} />
-              <Text style={styles.authFeatureText}>Build your campus presence</Text>
+              <Text style={styles.authFeatureText}>Build your presence on CediMart</Text>
             </View>
           </View>
 
@@ -674,24 +658,6 @@ const CreateFeedPostScreen = () => {
 
               <View style={styles.settingsDivider} />
 
-              <TouchableOpacity style={styles.settingsRow} onPress={() => setShowCampusSheet(true)} activeOpacity={0.65}>
-                <View style={styles.settingsRowLeft}>
-                  <View style={[styles.settingsIconBadge, { backgroundColor: '#E0F2FE' }]}>
-                    <Ionicons name="school-outline" size={17} color="#0284C7" />
-                  </View>
-                  <View>
-                    <Text style={styles.settingsRowLabel}>Campus</Text>
-                    <Text style={styles.settingsRowSubtext}>Where this video appears</Text>
-                  </View>
-                </View>
-                <View style={styles.settingsRowRight}>
-                  <Text style={styles.settingsRowValue} numberOfLines={1}>{campusLabel}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.settingsDivider} />
-
               <TouchableOpacity
                 style={styles.settingsRow}
                 onPress={linkedProductId ? () => { setLinkedProductId(''); setLinkedProductName(''); } : handleLinkProduct}
@@ -748,25 +714,6 @@ const CreateFeedPostScreen = () => {
                   <Text style={styles.sheetOptionDesc}>{type.desc}</Text>
                 </View>
                 {isSelected && <Ionicons name="checkmark-circle" size={20} color={type.color} />}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </BottomSheet>
-
-      {/* Campus Bottom Sheet */}
-      <BottomSheet visible={showCampusSheet} onClose={() => setShowCampusSheet(false)} title="Select Campus">
-        <View style={styles.sheetBody}>
-          {CAMPUS_OPTIONS.map((opt) => {
-            const isSelected = campus === opt.value;
-            return (
-              <TouchableOpacity
-                key={opt.value}
-                style={[styles.sheetOption, isSelected && styles.sheetOptionActive]}
-                onPress={() => { setCampus(opt.value); setShowCampusSheet(false); }}
-              >
-                <Text style={[styles.sheetOptionLabel, { flex: 1 }, isSelected && { color: C.brand }]}>{opt.label}</Text>
-                {isSelected && <Ionicons name="checkmark-circle" size={20} color={C.brand} />}
               </TouchableOpacity>
             );
           })}

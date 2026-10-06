@@ -30,6 +30,7 @@ import AIFAB from '../components/AIFAB';
 import HeroCarousel from '../components/HeroCarousel'
 import {CATEGORY_CONFIG,CONDITION_LABELS,ALL_CAMPUSES} from '../data/General'
 import RecommendEarnBanner from '../components/RecommendEarnNotice'
+import WelcomeTipsSheet  from "../components/WelcomeTipsSheet"
 import {ProductGridSkeleton} from '../components/SkeletonLoader'
 import VisualSearchFab from '../components/VisualSearchFab';
 import VendorSpotlight from '../components/VendorSpotlight';
@@ -796,7 +797,7 @@ const HomeScreen = () => {
 
         <View style={{ height: 100 }} />
       </ScrollView>
-       
+      <WelcomeTipsSheet />
       <VisualSearchFab navigation={navigation} bottom={118} right={20} />
       <AIFAB style={{ position: 'absolute', bottom: 24, right: 16 }} />
     </SafeAreaView>

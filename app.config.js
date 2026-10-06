@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "CediMart",
     slug: "freshyfoodfactory-mobile",
-    version: "5.1.1",
+    version: "5.1.2",
     orientation: "portrait",
     icon: "./assets/cedimart_logo.png",
     userInterfaceStyle: "light",
@@ -70,6 +70,12 @@ export default {
 
     android: {
       package: "com.freshyfood.factory",
+      permissions: [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ],
       intentFilters: [
         {
           action: "VIEW",
@@ -117,11 +123,7 @@ export default {
         foregroundImage: "./assets/cedimart_logo.png",
         backgroundColor: "#ffffff"
       },
-      blockedPermissions: [
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_EXTERNAL_STORAGE"
-      ],
+      
       edgeToEdgeEnabled: true,
       googleServicesFile: "./google-services.json"
     },
