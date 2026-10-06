@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "CediMart",
     slug: "freshyfoodfactory-mobile",
-    version: "5.1.2",
+    version: "5.1.1",
     orientation: "portrait",
     icon: "./assets/cedimart_logo.png",
     userInterfaceStyle: "light",
